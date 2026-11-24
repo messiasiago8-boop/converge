@@ -467,16 +467,60 @@
       <!-- ================= VISÃO 0: NOVO PAINEL INICIAL (VISÃO GERAL / TORRE DE CONTROLE) ================= -->
       <section id="view-dashboard-geral" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
         
-        <!-- Cabeçalho Compacto do Painel Inicial -->
-        <div class="bg-[#fffdf8]/90 backdrop-blur-md border border-[#1f2a27]/10 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span class="nx-eyebrow mb-2"><span class="dot"></span><span id="overview-date">hoje</span></span>
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 font-serif tracking-tight mt-1" id="overview-greeting">
-              Olá, <em>Estudante</em>
-            </h1>
+        <!-- ===== HERO: boas-vindas, progresso e retomada de aula (Menu Principal) ===== -->
+        <div id="nx-hero" class="nx-hero">
+          <div class="nx-hero-rings"><i></i><i></i><i></i></div>
+
+          <div class="nx-hero-left">
+            <span class="nx-eyebrow"><span class="dot"></span><span id="nx-date">hoje</span></span>
+            <h1 class="nx-hero-title" id="nx-greet">Olá,<br><em>Estudante</em></h1>
+            <p class="nx-hero-sub">Seu espaço de estudos e finanças em um só lugar. Respire fundo, escolha uma aula e avance no seu ritmo.</p>
+
+            <div class="nx-stats">
+              <div class="nx-stat"><b id="nx-s-total">0</b><span id="nx-l-total">Aulas</span></div>
+              <div class="nx-stat a"><b id="nx-s-done">0</b><span id="nx-l-done">Concluídas</span></div>
+              <div class="nx-stat b"><b id="nx-s-doing">0</b><span id="nx-l-doing">Em curso</span></div>
+              <div class="nx-stat nx-stat-finance cursor-pointer" id="nx-stat-finance-card" title="Acessar Gestão Financeira">
+                <div class="flex items-center justify-between">
+                  <b id="nx-s-finance" class="text-emerald-700">R$ --</b>
+                  <span class="text-xs text-emerald-600/70">↗</span>
+                </div>
+                <span>Disponível no mês</span>
+              </div>
+            </div>
           </div>
 
-          <div class="flex items-center gap-2.5">
+          <div class="nx-hero-right">
+            <div class="nx-ring-card">
+              <div class="nx-ring">
+                <svg viewBox="0 0 120 120">
+                  <defs>
+                    <linearGradient id="nxRingGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="#5b9086"/>
+                      <stop offset="100%" stop-color="#7e8ab4"/>
+                    </linearGradient>
+                  </defs>
+                  <circle class="bg" cx="60" cy="60" r="52"/>
+                  <circle class="fg" cx="60" cy="60" r="52"/>
+                </svg>
+                <div class="lbl"><span><span id="nx-ring-num">0</span><small>%</small></span></div>
+              </div>
+              <div class="nx-ring-text">
+                <h4>Progresso geral</h4>
+                <p id="nx-ring-msg">Carregando seu progresso…</p>
+              </div>
+            </div>
+            <div id="nx-resume-slot"></div>
+          </div>
+        </div>
+
+        <!-- Barra de Ações Rápidas do Painel Inicial -->
+        <div class="flex items-center justify-between gap-4">
+          <div class="hidden">
+            <span id="overview-date">hoje</span>
+            <h1 id="overview-greeting">Olá, <em>Estudante</em></h1>
+          </div>
+          <div class="flex items-center gap-2.5 ml-auto">
             <button id="btn-overview-quick-expense" type="button" class="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition shadow-2xs flex items-center gap-1.5 cursor-pointer">
               <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
@@ -658,53 +702,6 @@
 
       <!-- ================= VISÃO 1: GRADE DE VÍDEOS (CATÁLOGO) ================= -->
       <section id="view-grid" class="hidden p-8 max-w-7xl mx-auto">
-
-        <!-- ===== HERO: boas-vindas, progresso e retomada de aula ===== -->
-        <div id="nx-hero" class="nx-hero">
-          <div class="nx-hero-rings"><i></i><i></i><i></i></div>
-
-          <div class="nx-hero-left">
-            <span class="nx-eyebrow"><span class="dot"></span><span id="nx-date">hoje</span></span>
-            <h1 class="nx-hero-title" id="nx-greet">Olá,<br><em>Estudante</em></h1>
-            <p class="nx-hero-sub">Seu espaço de estudos e finanças em um só lugar. Respire fundo, escolha uma aula e avance no seu ritmo.</p>
-
-            <div class="nx-stats">
-              <div class="nx-stat"><b id="nx-s-total">0</b><span id="nx-l-total">Aulas</span></div>
-              <div class="nx-stat a"><b id="nx-s-done">0</b><span id="nx-l-done">Concluídas</span></div>
-              <div class="nx-stat b"><b id="nx-s-doing">0</b><span id="nx-l-doing">Em curso</span></div>
-              <div class="nx-stat nx-stat-finance cursor-pointer" id="nx-stat-finance-card" title="Acessar Gestão Financeira">
-                <div class="flex items-center justify-between">
-                  <b id="nx-s-finance" class="text-emerald-700">R$ --</b>
-                  <span class="text-xs text-emerald-600/70">↗</span>
-                </div>
-                <span>Disponível no mês</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="nx-hero-right">
-            <div class="nx-ring-card">
-              <div class="nx-ring">
-                <svg viewBox="0 0 120 120">
-                  <defs>
-                    <linearGradient id="nxRingGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stop-color="#5b9086"/>
-                      <stop offset="100%" stop-color="#7e8ab4"/>
-                    </linearGradient>
-                  </defs>
-                  <circle class="bg" cx="60" cy="60" r="52"/>
-                  <circle class="fg" cx="60" cy="60" r="52"/>
-                </svg>
-                <div class="lbl"><span><span id="nx-ring-num">0</span><small>%</small></span></div>
-              </div>
-              <div class="nx-ring-text">
-                <h4>Progresso geral</h4>
-                <p id="nx-ring-msg">Carregando seu progresso…</p>
-              </div>
-            </div>
-            <div id="nx-resume-slot"></div>
-          </div>
-        </div>
 
         <div class="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 pb-5 border-b border-slate-200">
           <div>
