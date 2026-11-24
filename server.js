@@ -136,6 +136,9 @@ if (fs.existsSync(FINANCAS_PUBLIC)) {
   // Servir rotas diretas caso o frontend do Finanças busque na raiz
   app.get('/login.html', (req, res) => res.sendFile(path.join(FINANCAS_PUBLIC, 'login.html')));
   app.get('/logo.jpg', (req, res) => res.sendFile(path.join(FINANCAS_PUBLIC, 'logo.jpg')));
+  app.get('/investimentos-dashboard.js', (req, res) => {
+    res.sendFile(path.join(FINANCAS_PUBLIC, 'investimentos-dashboard.js'));
+  });
 }
 
 // Proxy transparente para as APIs do Finanças (porta 3001) para que o iframe funcione perfeitamente na porta 3000

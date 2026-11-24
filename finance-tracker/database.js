@@ -91,7 +91,7 @@ if (!sqliteAvailable || !dbInstance) {
       const ctx = { lastID: Date.now(), changes: 1 };
 
       try {
-        if (/^CREATE TABLE/i.test(q) || /^ALTER TABLE/i.test(q) || /^PRAGMA/i.test(q)) {
+        if (/^CREATE (TABLE|TRIGGER)/i.test(q) || /^ALTER TABLE/i.test(q) || /^PRAGMA/i.test(q)) {
           if (cb) cb.call(ctx, null);
           return;
         }
@@ -156,8 +156,16 @@ if (!sqliteAvailable || !dbInstance) {
         }
 
         if (/^INSERT INTO aportes_projetos/i.test(q)) {
+          const [valor, projetoId, usuarioId] = params;
+          const projeto = store.projetos_compras.find(p => p.id === projetoId && p.usuario_id === usuarioId);
+          if (!projeto) {
+            ctx.changes = 0;
+            if (cb) cb.call(ctx, null);
+            return;
+          }
           const id = store.aportes_projetos.length ? Math.max(...store.aportes_projetos.map(x => x.id)) + 1 : 1;
-          store.aportes_projetos.push({ id, usuario_id: params[0], projeto_id: params[1], valor: Number(params[2]), data: new Date().toISOString() });
+          store.aportes_projetos.push({ id, usuario_id: usuarioId, projeto_id: projetoId, valor, data: new Date().toISOString() });
+          projeto.valor_acumulado = Number(projeto.valor_acumulado) + valor;
           persist();
           ctx.lastID = id;
           if (cb) cb.call(ctx, null);
@@ -212,16 +220,6 @@ if (!sqliteAvailable || !dbInstance) {
             item.nome = params[0]; item.tipo = params[1]; item.categoria_ativo = params[2];
             item.taxa_anual_pct = Number(params[3]); item.rendimento_mensal_pct = Number(params[4]);
             item.instituicao = params[5]; item.vencimento = params[6]; item.valor = Number(params[7]); item.data = params[8];
-            persist();
-          }
-          if (cb) cb.call(ctx, null);
-          return;
-        }
-
-        if (/^UPDATE projetos_compras/i.test(q)) {
-          const item = store.projetos_compras.find(p => p.id === params[1] && p.usuario_id === params[2]);
-          if (item) {
-            item.valor_acumulado = Number(params[0]);
             persist();
           }
           if (cb) cb.call(ctx, null);
@@ -443,6 +441,17 @@ db.serialize(() => {
       FOREIGN KEY (projeto_id) REFERENCES projetos_compras(id) ON DELETE CASCADE,
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
     )
+  `);
+
+  // Registra o histórico e atualiza o saldo na mesma operação SQLite.
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS atualizar_saldo_apos_aporte
+    AFTER INSERT ON aportes_projetos
+    BEGIN
+      UPDATE projetos_compras
+      SET valor_acumulado = valor_acumulado + NEW.valor
+      WHERE id = NEW.projeto_id AND usuario_id = NEW.usuario_id;
+    END
   `);
 
   // Migrações dinâmicas seguras (adiciona usuario_id caso as tabelas antigas ainda não tenham)

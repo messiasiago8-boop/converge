@@ -761,54 +761,44 @@ app.post('/api/projetos', autenticarToken, (req, res) => {
 
 // 11. PUT /api/projetos/:id/aportar (Adiciona aporte com verificação de posse)
 app.put('/api/projetos/:id/aportar', autenticarToken, (req, res) => {
-  const id = req.params.id;
-  const { valor } = req.body;
-
-  if (valor === undefined || isNaN(valor) || Number(valor) <= 0) {
-    return res.status(400).json({ error: 'Informe um valor de aporte positivo válido.' });
+  const id = Number(req.params.id);
+  const valor = Number(req.body.valor);
+  if (!Number.isSafeInteger(id) || id < 1 || !Number.isFinite(valor) || valor <= 0) {
+    return res.status(400).json({ error: 'Informe um projeto e um valor de aporte positivo válido.' });
   }
 
-  const valorAporte = Number(valor);
-
-  db.get('SELECT * FROM projetos_compras WHERE id = ? AND usuario_id = ?', [id, req.usuarioId], (errGet, projeto) => {
-    if (errGet) {
-      console.error('Erro ao buscar projeto:', errGet.message);
-      return res.status(500).json({ error: 'Erro ao buscar projeto: ' + errGet.message });
+  const registrarAporte = `
+    INSERT INTO aportes_projetos (usuario_id, projeto_id, valor)
+    SELECT usuario_id, id, ? FROM projetos_compras WHERE id = ? AND usuario_id = ?
+  `;
+  db.run(registrarAporte, [valor, id, req.usuarioId], function(err) {
+    if (err) {
+      console.error('Erro ao registrar aporte:', err.message);
+      return res.status(500).json({ error: 'Erro ao registrar aporte.' });
     }
-    if (!projeto) {
+    if (this.changes === 0) {
       return res.status(404).json({ error: 'Projeto não encontrado ou não pertence a este usuário.' });
     }
 
-    const novoAcumulado = Number(projeto.valor_acumulado) + valorAporte;
-
-    db.run('UPDATE projetos_compras SET valor_acumulado = ? WHERE id = ? AND usuario_id = ?', [novoAcumulado, id, req.usuarioId], function(errUpdate) {
-      if (errUpdate) {
-        console.error('Erro ao atualizar projeto:', errUpdate.message);
-        return res.status(500).json({ error: 'Erro ao atualizar saldo do projeto: ' + errUpdate.message });
+    db.get('SELECT * FROM projetos_compras WHERE id = ? AND usuario_id = ?', [id, req.usuarioId], (errGet, projeto) => {
+      if (errGet || !projeto) {
+        return res.status(500).json({ error: 'Aporte registrado, mas não foi possível consultar o saldo.' });
       }
-
-      // Registra no histórico de aportes com usuario_id
-      db.run('INSERT INTO aportes_projetos (usuario_id, projeto_id, valor) VALUES (?, ?, ?)', [req.usuarioId, id, valorAporte], (errHist) => {
-        if (errHist) {
-          console.error('Erro ao salvar histórico de aporte:', errHist.message);
+      const saldo = Number(projeto.valor_acumulado);
+      const objetivo = Number(projeto.valor_objetivo);
+      res.json({
+        success: true,
+        message: 'Aporte realizado com sucesso!',
+        data: {
+          id,
+          usuario_id: req.usuarioId,
+          nome: projeto.nome,
+          tipo: projeto.tipo,
+          valor_objetivo: objetivo,
+          valor_acumulado: saldo,
+          porcentagem: objetivo > 0 ? Number(((saldo / objetivo) * 100).toFixed(1)) : 0,
+          concluido: saldo >= objetivo
         }
-
-        const pct = projeto.valor_objetivo > 0 ? ((novoAcumulado / projeto.valor_objetivo) * 100).toFixed(1) : 0;
-
-        res.json({
-          success: true,
-          message: 'Aporte realizado com sucesso!',
-          data: {
-            id: Number(id),
-            usuario_id: req.usuarioId,
-            nome: projeto.nome,
-            tipo: projeto.tipo,
-            valor_objetivo: projeto.valor_objetivo,
-            valor_acumulado: novoAcumulado,
-            porcentagem: Number(pct),
-            concluido: novoAcumulado >= projeto.valor_objetivo
-          }
-        });
       });
     });
   });
