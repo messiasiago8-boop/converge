@@ -22,8 +22,27 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <style>
+    body {
+      position: relative;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url('/login-bg.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0.36;
+      filter: saturate(0.95);
+      pointer-events: none;
+      z-index: 0;
+    }
     .converge-shell {
-      background: rgba(255, 253, 248, 0.84);
+      position: relative;
+      z-index: 1;
+      background: rgba(255, 253, 248, 0.88);
       -webkit-backdrop-filter: blur(18px) saturate(1.2);
       backdrop-filter: blur(18px) saturate(1.2);
       border: 1px solid rgba(255, 255, 255, 0.9);
