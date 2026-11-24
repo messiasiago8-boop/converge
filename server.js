@@ -1348,8 +1348,8 @@ async function processarComandoInteligente(prompt, dbUser) {
   return { mensagem, acoesExecutadas };
 }
 
-app.listen(PORT, () => {
-  console.log(`[Portal Nexus Corporativo] Servidor ativo em http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Portal Nexus Corporativo] Servidor ativo em http://0.0.0.0:${PORT}`);
   console.log(`[Database] Banco de dados persistente conectado: ${DB_FILE}`);
   console.log(`[Finanças Integrado] Aplicação de Finanças disponível em http://localhost:${PORT}/financas-app`);
 });
