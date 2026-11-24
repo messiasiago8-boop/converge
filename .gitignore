@@ -22,3 +22,7 @@ logs/
 *.log
 .DS_Store
 Thumbs.db
+
+# Pacotes locais de distribuição
+/public/converge_app.zip
+/public/converge_pkg.tar.gz
