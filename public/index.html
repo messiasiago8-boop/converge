@@ -100,6 +100,20 @@
         padding: 1rem !important;
       }
 
+      /* No celular: cabeçalhos do topo rolam normalmente com a página (sem ficar fixos) */
+      body,
+      body > div.flex-1 {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow-y: auto !important;
+      }
+      header {
+        position: static !important;
+      }
+      main#main-content {
+        overflow-y: visible !important;
+      }
+
       /* No Celular: Visão de Aula com rolagem vertical natural, vídeo no topo e notas abaixo */
       #view-lesson {
         padding: 0 !important;

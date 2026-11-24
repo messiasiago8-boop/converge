@@ -76,6 +76,20 @@
         overflow-x: hidden !important;
       }
 
+      /* No celular: cabeçalho do topo rola junto com a página (não fica fixo ocupando a tela) */
+      header.topbar-content {
+        position: static !important;
+      }
+      body,
+      body > div.flex-1 {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow-y: auto !important;
+      }
+      main {
+        overflow-y: visible !important;
+      }
+
       body.modo-celular-ativo .topbar-content {
         padding-left: 0.75rem !important;
         padding-right: 0.75rem !important;
@@ -210,30 +224,6 @@
       </div>
       
       <div class="flex flex-wrap items-center gap-2.5 ml-auto">
-        <!-- SELETOR RÁPIDO DE VISUALIZAÇÃO COMPUTADOR / CELULAR -->
-        <div class="flex items-center bg-[#eae4d7]/70 border border-[#1f2a27]/10 p-0.5 rounded-lg text-[11px] font-semibold">
-          <button
-            type="button"
-            id="btnModoCompTopbar"
-            onclick="aplicarModoDispositivo('computador')"
-            title="Visualização Computador"
-            class="px-2.5 py-1 rounded-md text-[#1f2a27] bg-white shadow-2xs transition cursor-pointer flex items-center gap-1.5"
-          >
-            <i class="fa-solid fa-desktop text-emerald-700 text-[10px]"></i>
-            <span class="hidden sm:inline">PC</span>
-          </button>
-          <button
-            type="button"
-            id="btnModoCelTopbar"
-            onclick="aplicarModoDispositivo('celular')"
-            title="Visualização Celular"
-            class="px-2.5 py-1 rounded-md text-[#5d5c54] hover:text-[#1f2a27] transition cursor-pointer flex items-center gap-1.5"
-          >
-            <i class="fa-solid fa-mobile-screen text-[10px]"></i>
-            <span class="hidden sm:inline">Celular</span>
-          </button>
-        </div>
-
         <!-- NOVO FILTRO MENSAL DINÂMICO (<input type="month">) -->
         <div class="flex items-center gap-1.5 bg-slate-50/80 border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
           <label for="filtroMes" class="text-[11px] font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1 whitespace-nowrap">
