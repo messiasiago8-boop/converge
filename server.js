@@ -133,6 +133,10 @@ const aiRateLimiter = criarRateLimiter({
 
 app.use(autenticarTokenPortal);
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 let FINANCAS_PUBLIC = path.join(__dirname, 'finance-tracker', 'public');
 if (!fs.existsSync(FINANCAS_PUBLIC)) {
   FINANCAS_PUBLIC = path.join(__dirname, '..', 'finance-tracker', 'public');
