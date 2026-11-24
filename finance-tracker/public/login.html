@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Converge | Acesso à Plataforma</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="tw-theme.js"></script>
+  <link rel="stylesheet" href="theme.css" />
+  <!-- Google Fonts: Fraunces, Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    .converge-shell {
+      background: rgba(255, 253, 248, 0.84);
+      -webkit-backdrop-filter: blur(18px) saturate(1.2);
+      backdrop-filter: blur(18px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 28px 64px -26px rgba(24, 36, 33, 0.28), 0 4px 16px -4px rgba(24, 36, 33, 0.08);
+    }
+    .converge-aside {
+      background: linear-gradient(155deg, #27413a 0%, #1a2824 58%, #151f1d 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .converge-aside::before {
+      content: '';
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      right: -120px;
+      top: -110px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, rgba(126, 178, 162, 0.28), transparent 68%);
+      pointer-events: none;
+    }
+    .converge-aside::after {
+      content: '';
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      left: -90px;
+      bottom: -100px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 60% 40%, rgba(204, 145, 112, 0.22), transparent 68%);
+      pointer-events: none;
+    }
+    .converge-rings {
+      position: absolute;
+      right: -70px;
+      bottom: -70px;
+      width: 300px;
+      height: 300px;
+      opacity: 0.22;
+      pointer-events: none;
+    }
+    .converge-rings i {
+      position: absolute;
+      inset: 0;
+      border: 1px dashed rgba(190, 224, 212, 0.55);
+      border-radius: 50%;
+      animation: nxSpin 65s linear infinite;
+    }
+    .converge-rings i:nth-child(2) {
+      inset: 42px;
+      animation-duration: 46s;
+      animation-direction: reverse;
+    }
+    .converge-rings i:nth-child(3) {
+      inset: 84px;
+      animation-duration: 34s;
+    }
+    .converge-input {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(31, 42, 39, 0.12);
+      color: #1f2a27;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+    .converge-input:focus {
+      outline: none;
+      background: #ffffff;
+      border-color: #5b9086;
+      box-shadow: 0 0 0 3px rgba(91, 144, 134, 0.16);
+    }
+    .converge-btn-primary {
+      background: linear-gradient(135deg, #5b9086 0%, #3d6960 100%);
+      box-shadow: 0 12px 24px -10px rgba(61, 105, 96, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+    .converge-btn-primary:hover:not(:disabled) {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 sm:p-6 antialiased">
+
+  <!-- Container Principal Flutuante ("Sálvia & Areia") -->
+  <main class="converge-shell w-full max-w-[920px] rounded-[28px] overflow-hidden grid grid-cols-1 md:grid-cols-12">
+
+    <!-- Coluna Esquerda: Identidade Editorial Converge -->
+    <section class="converge-aside md:col-span-5 p-8 sm:p-9 text-[#f1efe8] flex flex-col justify-between">
+      <div class="converge-rings" aria-hidden="true"><i></i><i></i><i></i></div>
+
+      <div class="relative z-10 space-y-6">
+        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a7d4c6]">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#8fc2b4]"></span>
+          Converge Workspace
+        </span>
+
+        <div class="space-y-3">
+          <h1 class="text-2xl sm:text-[1.85rem] leading-[1.15] text-[#fffdf8]">
+            Clareza para estudar, <em class="italic font-medium text-[#9fd3c4]">precisão</em> para investir.
+          </h1>
+          <p class="text-xs leading-relaxed text-[#c9d5d0]/90">
+            Reúna suas trilhas de aprendizado, cronograma semanal e controle financeiro 50/30/20 em um ambiente sereno e unificado.
+          </p>
+        </div>
+      </div>
+
+      <div class="relative z-10 mt-8 pt-6 border-t border-white/10 space-y-2.5">
+        <div class="flex items-center gap-2.5 text-xs text-[#dce6e2]">
+          <span class="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-[#8fc2b4] text-[11px]">
+            <i class="fa-solid fa-layer-group"></i>
+          </span>
+          <span>Trilhas de estudo com notas por minuto</span>
+        </div>
+        <div class="flex items-center gap-2.5 text-xs text-[#dce6e2]">
+          <span class="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-[#8fc2b4] text-[11px]">
+            <i class="fa-solid fa-chart-pie"></i>
+          </span>
+          <span>Orçamento 50/30/20 e carteira de ativos</span>
+        </div>
+        <div class="flex items-center gap-2.5 text-xs text-[#dce6e2]">
+          <span class="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-[#8fc2b4] text-[11px]">
+            <i class="fa-solid fa-shield-halved"></i>
+          </span>
+          <span>Sessão autenticada e dados isolados</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Coluna Direita: Logo CONVERGE & Formulário -->
+    <section class="md:col-span-7 p-7 sm:p-10 flex flex-col justify-center">
+      <div class="w-full max-w-sm mx-auto space-y-6">
+
+        <!-- Logo Oficial CONVERGE -->
+        <div class="flex flex-col items-center text-center space-y-2.5">
+          <div class="w-[230px] h-[56px] overflow-hidden flex items-center justify-center">
+            <img src="logo-converge.jpg" alt="CONVERGE" class="w-[245px] h-[245px] max-w-none object-cover object-center mix-blend-multiply" />
+          </div>
+          <div>
+            <p class="text-xs text-[#5d5c54] font-medium">
+              Acesse sua conta para continuar de onde parou
+            </p>
+          </div>
+        </div>
+
+        <!-- Aviso discreto se já houver sessão ativa -->
+        <div id="bannerSessaoAtiva" class="hidden items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-[#e6f0ec] border border-[#b9d4ca] text-[11px] text-[#26473f]">
+          <span class="truncate">Conectado como <strong id="sessaoUsuarioNome">Usuário</strong></span>
+          <a id="linkAbrirPainelSessao" href="/" class="font-bold text-[#2b544a] hover:underline shrink-0 flex items-center gap-1">
+            <span>Abrir painel</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </a>
+        </div>
+
+        <!-- Seletor de Dispositivo (Computador ou Celular) -->
+        <div class="space-y-1.5">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-[#4d534e] flex items-center justify-between">
+            <span>Onde você está acessando?</span>
+            <span class="text-[10px] text-[#7a7f78] font-normal">Ajuste de visualização</span>
+          </label>
+          <div class="grid grid-cols-2 gap-2 p-1 bg-[#eae4d7]/60 border border-[#1f2a27]/5 rounded-xl text-xs font-semibold">
+            <button
+              type="button"
+              id="btnDispositivoComputador"
+              onclick="selecionarDispositivoVisual('computador')"
+              class="py-2.5 px-3 rounded-lg bg-white text-[#1f2a27] shadow-2xs transition cursor-pointer flex items-center justify-center gap-2 border border-[#1f2a27]/10"
+            >
+              <i class="fa-solid fa-desktop text-emerald-700"></i>
+              <span>Computador</span>
+            </button>
+            <button
+              type="button"
+              id="btnDispositivoCelular"
+              onclick="selecionarDispositivoVisual('celular')"
+              class="py-2.5 px-3 rounded-lg text-[#5d5c54] hover:text-[#1f2a27] hover:bg-white/50 transition cursor-pointer flex items-center justify-center gap-2 border border-transparent"
+            >
+              <i class="fa-solid fa-mobile-screen text-slate-500"></i>
+              <span>Celular</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Seletor Entrar / Criar Conta -->
+        <div class="grid grid-cols-2 p-1 bg-[#eae4d7]/80 border border-[#1f2a27]/5 rounded-xl text-xs font-semibold">
+          <button
+            type="button"
+            id="btnTabLogin"
+            onclick="alternarModoAuth('login')"
+            class="py-2 rounded-lg bg-white text-[#1f2a27] shadow-2xs transition cursor-pointer"
+          >
+            Entrar
+          </button>
+          <button
+            type="button"
+            id="btnTabRegistrar"
+            onclick="alternarModoAuth('registrar')"
+            class="py-2 rounded-lg text-[#5d5c54] hover:text-[#1f2a27] transition cursor-pointer"
+          >
+            Criar Conta
+          </button>
+        </div>
+
+        <!-- Alerta de Feedback -->
+        <div id="alertaMensagem" class="hidden p-3 rounded-xl text-xs font-medium flex items-center gap-2 border">
+          <i id="alertaIcone" class="fa-solid fa-circle-exclamation shrink-0"></i>
+          <span id="alertaTexto"></span>
+        </div>
+
+        <!-- Formulário de Autenticação -->
+        <form id="formAuth" class="space-y-4">
+          <!-- Campo Honeypot Oculto Anti-Bot/Anti-Spam (invisível para usuários legítimos) -->
+          <div style="display: none !important; position: absolute !important; left: -9999px !important; top: -9999px !important;">
+            <label for="inputHoneypot">Não preencha este campo:</label>
+            <input type="text" id="inputHoneypot" name="hp_field" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <!-- Nome (apenas em Criar Conta) -->
+          <div id="campoNomeContainer" class="hidden space-y-1.5">
+            <label for="inputNome" class="block text-[11px] font-bold uppercase tracking-wider text-[#4d534e]">
+              Nome completo
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#7a7f78] text-xs pointer-events-none">
+                <i class="fa-regular fa-user"></i>
+              </span>
+              <input
+                type="text"
+                id="inputNome"
+                placeholder="Ex: Maria Oliveira"
+                class="converge-input w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl"
+              />
+            </div>
+          </div>
+
+          <!-- E-mail -->
+          <div class="space-y-1.5">
+            <label for="inputEmail" class="block text-[11px] font-bold uppercase tracking-wider text-[#4d534e]">
+              E-mail
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#7a7f78] text-xs pointer-events-none">
+                <i class="fa-regular fa-envelope"></i>
+              </span>
+              <input
+                type="email"
+                id="inputEmail"
+                required
+                placeholder="voce@converge.com"
+                class="converge-input w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl"
+              />
+            </div>
+          </div>
+
+          <!-- Senha -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center">
+              <label for="inputSenha" class="block text-[11px] font-bold uppercase tracking-wider text-[#4d534e]">
+                Senha
+              </label>
+              <span id="labelAjudaSenha" class="text-[11px] text-[#7a7f78] hidden">Mínimo 6 caracteres</span>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#7a7f78] text-xs pointer-events-none">
+                <i class="fa-solid fa-lock"></i>
+              </span>
+              <input
+                type="password"
+                id="inputSenha"
+                required
+                placeholder="••••••••"
+                class="converge-input w-full pl-9 pr-10 py-2.5 text-xs rounded-xl"
+              />
+              <button
+                type="button"
+                id="btnToggleSenha"
+                onclick="alternarVisibilidadeSenha()"
+                class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#7a7f78] hover:text-[#1f2a27] text-xs cursor-pointer"
+                title="Mostrar ou ocultar senha"
+              >
+                <i id="iconeToggleSenha" class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Botão Principal -->
+          <button
+            type="submit"
+            id="btnSubmitAuth"
+            class="converge-btn-primary w-full text-white font-semibold py-3 px-4 rounded-xl text-xs tracking-wide transition flex items-center justify-center gap-2 cursor-pointer mt-2"
+          >
+            <span id="btnSubmitTexto">Entrar na Plataforma</span>
+            <i class="fa-solid fa-arrow-right text-[11px]"></i>
+          </button>
+        </form>
+
+        <!-- Rodapé -->
+        <div class="pt-3 border-t border-[#1f2a27]/8 text-center">
+          <p class="text-[11px] text-[#7a7f78]">
+            Acesso protegido por criptografia e token JWT.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let modoAtual = 'login';
+    let dispositivoSelecionado = localStorage.getItem('dispositivoVisual') || 'computador';
+
+    function selecionarDispositivoVisual(tipo) {
+      dispositivoSelecionado = tipo;
+      localStorage.setItem('dispositivoVisual', tipo);
+      const btnComp = document.getElementById('btnDispositivoComputador');
+      const btnCel = document.getElementById('btnDispositivoCelular');
+
+      if (!btnComp || !btnCel) return;
+
+      if (tipo === 'computador') {
+        btnComp.className = "py-2.5 px-3 rounded-lg bg-white text-[#1f2a27] shadow-2xs transition cursor-pointer flex items-center justify-center gap-2 border border-[#1f2a27]/10";
+        btnCel.className = "py-2.5 px-3 rounded-lg text-[#5d5c54] hover:text-[#1f2a27] hover:bg-white/50 transition cursor-pointer flex items-center justify-center gap-2 border border-transparent";
+        btnComp.querySelector('i').className = "fa-solid fa-desktop text-emerald-700";
+        btnCel.querySelector('i').className = "fa-solid fa-mobile-screen text-slate-500";
+      } else {
+        btnCel.className = "py-2.5 px-3 rounded-lg bg-white text-[#1f2a27] shadow-2xs transition cursor-pointer flex items-center justify-center gap-2 border border-[#1f2a27]/10";
+        btnComp.className = "py-2.5 px-3 rounded-lg text-[#5d5c54] hover:text-[#1f2a27] hover:bg-white/50 transition cursor-pointer flex items-center justify-center gap-2 border border-transparent";
+        btnCel.querySelector('i').className = "fa-solid fa-mobile-screen text-emerald-700";
+        btnComp.querySelector('i').className = "fa-solid fa-desktop text-slate-500";
+      }
+    }
+
+    // Inicializa o seletor com o dispositivo salvo previamente
+    selecionarDispositivoVisual(dispositivoSelecionado);
+
+    // Se já existir sessão ativa, exibe atalho discreto sem bloquear a visualização da tela de login
+    (function verificarSessaoExistente() {
+      const token = localStorage.getItem('token');
+      const nome = localStorage.getItem('usuarioNome');
+      if (token) {
+        const banner = document.getElementById('bannerSessaoAtiva');
+        const lblNome = document.getElementById('sessaoUsuarioNome');
+        if (lblNome && nome) lblNome.textContent = nome;
+        const linkPainel = document.getElementById('linkAbrirPainelSessao');
+        if (linkPainel) {
+          // No portal unificado (porta 3000 ou túnel Cloudflare), sempre abre a raiz '/' com Educação (Vídeos) + Finanças
+          linkPainel.href = (window.location.port === '3001') ? '/index.html' : '/';
+        }
+        if (banner) {
+          banner.classList.remove('hidden');
+          banner.classList.add('flex');
+        }
+      }
+    })();
+
+    function alternarVisibilidadeSenha() {
+      const input = document.getElementById('inputSenha');
+      const icone = document.getElementById('iconeToggleSenha');
+      if (!input || !icone) return;
+      if (input.type === 'password') {
+        input.type = 'text';
+        icone.className = 'fa-regular fa-eye-slash';
+      } else {
+        input.type = 'password';
+        icone.className = 'fa-regular fa-eye';
+      }
+    }
+
+    function alternarModoAuth(modo) {
+      modoAtual = modo;
+      const tabLogin = document.getElementById('btnTabLogin');
+      const tabRegistrar = document.getElementById('btnTabRegistrar');
+      const campoNome = document.getElementById('campoNomeContainer');
+      const inputNome = document.getElementById('inputNome');
+      const btnTexto = document.getElementById('btnSubmitTexto');
+      const ajudaSenha = document.getElementById('labelAjudaSenha');
+      esconderAlerta();
+
+      if (modo === 'login') {
+        tabLogin.className = 'py-2 rounded-lg bg-white text-[#1f2a27] shadow-2xs transition cursor-pointer';
+        tabRegistrar.className = 'py-2 rounded-lg text-[#5d5c54] hover:text-[#1f2a27] transition cursor-pointer';
+        campoNome.classList.add('hidden');
+        inputNome.required = false;
+        ajudaSenha.classList.add('hidden');
+        btnTexto.textContent = 'Entrar na Plataforma';
+      } else {
+        tabRegistrar.className = 'py-2 rounded-lg bg-white text-[#1f2a27] shadow-2xs transition cursor-pointer';
+        tabLogin.className = 'py-2 rounded-lg text-[#5d5c54] hover:text-[#1f2a27] transition cursor-pointer';
+        campoNome.classList.remove('hidden');
+        inputNome.required = true;
+        ajudaSenha.classList.remove('hidden');
+        btnTexto.textContent = 'Criar Minha Conta';
+      }
+    }
+
+    function exibirAlerta(msg, tipo = 'erro') {
+      const el = document.getElementById('alertaMensagem');
+      const txt = document.getElementById('alertaTexto');
+      const icone = document.getElementById('alertaIcone');
+      txt.textContent = msg;
+
+      if (tipo === 'erro') {
+        el.className = 'p-3 rounded-xl text-xs font-medium flex items-center gap-2 border bg-rose-50/90 border-rose-200 text-rose-800';
+        icone.className = 'fa-solid fa-circle-exclamation shrink-0';
+      } else {
+        el.className = 'p-3 rounded-xl text-xs font-medium flex items-center gap-2 border bg-[#e6f0ec] border-[#b9d4ca] text-[#26473f]';
+        icone.className = 'fa-solid fa-circle-check shrink-0';
+      }
+      el.classList.remove('hidden');
+    }
+
+    function esconderAlerta() {
+      document.getElementById('alertaMensagem').classList.add('hidden');
+    }
+
+    document.getElementById('formAuth').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      esconderAlerta();
+
+      // Verificação de Honeypot Anti-Bot
+      const honeypot = document.getElementById('inputHoneypot');
+      if (honeypot && honeypot.value.trim() !== '') {
+        console.warn('Bot submission blocked via honeypot.');
+        return;
+      }
+
+      const email = document.getElementById('inputEmail').value.trim();
+      const senha = document.getElementById('inputSenha').value;
+      const nome = document.getElementById('inputNome').value.trim();
+      const btn = document.getElementById('btnSubmitAuth');
+
+      if (!email || !senha) {
+        exibirAlerta('Preencha todos os campos obrigatórios.');
+        return;
+      }
+
+      if (modoAtual === 'registrar' && !nome) {
+        exibirAlerta('Por favor, informe o seu nome para cadastro.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add('opacity-60', 'cursor-not-allowed');
+
+      const url = modoAtual === 'login' ? '/api/auth/login' : '/api/auth/registrar';
+      const payload = modoAtual === 'login' ? { email, senha } : { nome, email, senha };
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Falha ao autenticar.');
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('dispositivoVisual', dispositivoSelecionado);
+        if (data.usuario) {
+          localStorage.setItem('usuarioNome', data.usuario.nome);
+          localStorage.setItem('usuarioEmail', data.usuario.email);
+        }
+
+        exibirAlerta(data.message || 'Autenticado com sucesso! Redirecionando...', 'sucesso');
+
+        setTimeout(() => {
+          // No portal unificado (porta 3000 ou túnel Cloudflare sem porta explícita), redireciona sempre para '/'
+          // onde estão os Vídeos/Educação + Finanças integrados!
+          if (window.location.port === '3001') {
+            window.location.href = '/index.html';
+          } else {
+            window.location.href = '/';
+          }
+        }, 500);
+
+      } catch (err) {
+        exibirAlerta(err.message, 'erro');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-60', 'cursor-not-allowed');
+      }
+    });
+  </script>
+</body>
+</html>

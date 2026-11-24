@@ -1,0 +1,14 @@
+{
+  "entradas": [
+    { "id": 1, "descricao": "Salário", "valor": 6500 }
+  ],
+  "despesas": [
+    { "id": 1, "descricao": "Aluguel", "categoria": "50", "valor": 2500 }
+  ],
+  "resumo": {
+    "totalEntradas": 6500,
+    "essenciais": 2500,
+    "desejos": 0,
+    "reserva": 0
+  }
+}

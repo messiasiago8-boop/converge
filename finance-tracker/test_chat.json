@@ -1,0 +1,11 @@
+{
+  "message": "Onde posso cortar gastos neste mês?",
+  "entradas": [{ "descricao": "Salário", "valor": 7000 }],
+  "despesas": [
+    { "descricao": "Aluguel", "categoria": "50", "valor": 3000 },
+    { "descricao": "Delivery e Restaurantes", "categoria": "30", "valor": 1500 },
+    { "descricao": "Assinaturas e Jogos", "categoria": "30", "valor": 800 },
+    { "descricao": "Aporte Selic", "categoria": "20", "valor": 1400 }
+  ],
+  "limites": { "50": 3500, "30": 2100, "20": 1400 }
+}

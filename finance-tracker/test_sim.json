@@ -1,0 +1,14 @@
+{
+  "item": "Notebook Novo",
+  "valor": 3500,
+  "categoria": "30",
+  "contexto": {
+    "rendaTotal": 8000,
+    "limites": { "30": 2400 },
+    "despesasAtuais": [
+      { "descricao": "Restaurantes e Bares", "categoria": "30", "valor": 800 },
+      { "descricao": "Assinaturas de Streaming", "categoria": "30", "valor": 200 }
+    ],
+    "totalGastoCategoria": 1000
+  }
+}
