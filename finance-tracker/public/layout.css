@@ -1,0 +1,46 @@
+/* Ritmo de leitura e controles compartilhados pelo portal e pelas finanças. */
+:is(.nx-portal, .nx-finance) main {
+  min-width: 0;
+  scrollbar-gutter: stable;
+}
+:is(.nx-portal, .nx-finance) main :is(h1, h2, h3) {
+  text-wrap: balance;
+  letter-spacing: -.025em;
+}
+:is(.nx-portal, .nx-finance) main .grid > * { min-width: 0; }
+:is(.nx-portal, .nx-finance) main :is(.font-mono, td) { font-variant-numeric: tabular-nums; }
+:is(button, a, summary, input, select, textarea):focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.nx-portal main > section.mx-auto,
+.nx-finance main {
+  padding-inline: clamp(1rem, 2.6vw, 2.75rem);
+  padding-block: clamp(1.1rem, 2vw, 2rem);
+}
+:is(.nx-portal, .nx-finance) main :is(article, section, div).bg-white.rounded-xl {
+  border-radius: 1.1rem;
+}
+.nx-portal #menu-acoes-rapidas[open] > div { padding: .4rem; border-radius: .85rem; }
+.nx-portal #menu-acoes-rapidas button { border-radius: .55rem; }
+@media (max-width: 767px) {
+  :is(.nx-portal, .nx-finance) main { scrollbar-gutter: auto; }
+  .nx-portal > div.flex-1 { padding: .35rem; }
+  .nx-portal main > section.mx-auto, .nx-finance main { padding: 1rem .8rem; }
+  .nx-portal > div.flex-1 > header { gap: .35rem; padding-inline: .6rem; }
+  .nx-portal #btn-toggle-ai-chat span:last-child { display: none; }
+  .nx-portal #btn-toggle-ai-chat { justify-content: center; }
+  .nx-portal header :is(button, summary), .nx-portal #sidebar-portal nav button,
+  .nx-finance nav button { min-height: 44px; }
+  .nx-portal header summary { align-content: center; }
+  .nx-portal #view-lesson { height: auto; overflow: visible; }
+  .nx-portal #view-lesson > div.flex-1 { flex: none; overflow: visible; padding: .8rem; }
+  .nx-portal #view-lesson > aside { height: auto; min-height: 18rem; }
+  .nx-portal .nx-ring-card { gap: .75rem; padding: .9rem; }
+  .nx-portal .nx-ring { width: 4rem; height: 4rem; }
+  :is(.nx-portal, .nx-finance) main .flex.items-center.justify-between:not(button) { flex-wrap: wrap; gap: .5rem; }
+  :is(.nx-portal, .nx-finance) [id^="modal-"].fixed { overflow-y: auto; }
+  :is(.nx-portal, .nx-finance) [id^="modal-"].fixed > div:not(.absolute) { max-height: 88dvh; overflow-y: auto; }
+  :is(.nx-portal, .nx-finance, body:has(.converge-shell)) :is(input, select, textarea):not([type=checkbox]):not([type=radio]) { font-size: 16px; }
+  .converge-shell > section:last-child { padding: 1.3rem; }
+}
