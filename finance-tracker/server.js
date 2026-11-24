@@ -35,6 +35,10 @@ const allowedOriginsConfig = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
   : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'];
 
+if (process.env.RENDER_EXTERNAL_URL) {
+  allowedOriginsConfig.push(process.env.RENDER_EXTERNAL_URL);
+}
+
 app.use(cors({
   origin: (origin, callback) => {
     // Permite chamadas locais, server-to-server sem origin (curl, mobile, proxies) ou origens permitidas
