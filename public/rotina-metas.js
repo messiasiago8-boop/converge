@@ -162,6 +162,7 @@ function renderizarPrioridades() {
           <button type="button" class="btn-demover-top3 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 border border-slate-200 transition cursor-pointer" title="Remover do Top 3">
             Desmarcar
           </button>
+          ${!isDone ? '<button type="button" class="btn-adiar-tarefa text-[10px] font-semibold text-slate-700 underline">Mover para amanhã</button>' : ''}
           <button type="button" class="btn-delete-prio p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Apagar Tarefa">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -176,6 +177,7 @@ function renderizarPrioridades() {
       el.querySelector('.btn-demover-top3').addEventListener('click', async () => {
         await alternarTop3Prioridade(item.id, false);
       });
+      el.querySelector('.btn-adiar-tarefa')?.addEventListener('click', () => adiarTarefa(item));
       el.querySelector('.btn-delete-prio').addEventListener('click', async () => {
         await excluirPrioridade(item.id);
       });
@@ -206,9 +208,9 @@ function renderizarPrioridades() {
           <span class="text-xs truncate ${isDone ? 'line-through text-slate-400' : 'text-slate-700'}">${escapeHTML(item.texto)}</span>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <button type="button" class="btn-promover-top3 text-[10px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md transition cursor-pointer" title="Promover ao Top 3">
-            Promover Top 3
-          </button>
+          ${item.adiada_ate && item.adiada_ate > dataLocalRotina(new Date()) ? '<span class="text-[10px] text-slate-500">Adiada</span>' : `
+            <button type="button" class="btn-promover-top3 text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md" title="Promover ao Top 3">Promover Top 3</button>`}
+          ${!isDone ? `<button type="button" class="btn-adiar-tarefa text-[10px] font-semibold text-slate-700 underline">${item.adiada_ate && item.adiada_ate > dataLocalRotina(new Date()) ? 'Trazer para hoje' : 'Mover para amanhã'}</button>` : ''}
           <button type="button" class="btn-delete-prio p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Apagar Tarefa">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -220,19 +222,40 @@ function renderizarPrioridades() {
       el.querySelector('.btn-check-prio').addEventListener('click', async () => {
         await alternarStatusPrioridade(item.id, !isDone);
       });
-      el.querySelector('.btn-promover-top3').addEventListener('click', async () => {
+      el.querySelector('.btn-promover-top3')?.addEventListener('click', async () => {
         if (top3Items.length >= 3) {
           alert('Você já atingiu as 3 prioridades máximas do dia! Conclua ou desmarque uma delas antes de promover outra.');
           return;
         }
         await alternarTop3Prioridade(item.id, true);
       });
+      el.querySelector('.btn-adiar-tarefa')?.addEventListener('click', () => adiarTarefa(item));
       el.querySelector('.btn-delete-prio').addEventListener('click', async () => {
         await excluirPrioridade(item.id);
       });
 
       containerQuick.appendChild(el);
     });
+  }
+}
+
+function dataLocalRotina(data) {
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+}
+
+async function adiarTarefa(item) {
+  const hoje = new Date();
+  const adiada = item.adiada_ate && item.adiada_ate > dataLocalRotina(hoje);
+  const amanha = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
+  try {
+    const resposta = await fetchRotinaAuth(`/api/rotina/prioridades/${item.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adiar_ate: adiada ? null : dataLocalRotina(amanha) })
+    });
+    if (!resposta.ok) throw new Error('Falha ao reagendar.');
+    await carregarPrioridades();
+  } catch {
+    alert('Não foi possível reagendar a tarefa.');
   }
 }
 
@@ -585,6 +608,28 @@ function renderizarAgendaHojeTimeline(diaSemanaNome) {
 // 5. RENDERIZAÇÃO: AGENDA COMPLETA (SEMANAL E MENSAL)
 // ========================================================================= //
 
+function origemCompromisso(compromisso) {
+  return { estudos: 'Aula / Estudo', financas: 'Vencimento', pessoal: 'Compromisso' }[compromisso.categoria] || 'Compromisso';
+}
+
+function eventosIntegradosAgenda(dataIso, mostrarEstudos, mostrarFinancas) {
+  const data = new Date(`${dataIso}T12:00:00`);
+  const dia = DIAS_SEMANA[(data.getDay() + 6) % 7];
+  const eventos = [];
+  if (mostrarEstudos) {
+    for (const aula of state.agendamentos.filter(item => item.dia_semana === dia)) {
+      const video = state.allVideos.find(item => item.id === Number(aula.id_video));
+      eventos.push({ titulo: video?.titulo || 'Aula agendada', categoria: 'estudos', integrado: true });
+    }
+  }
+  if (mostrarFinancas && dataIso === dataLocalRotina(new Date())) {
+    for (const conta of rotinaState.agendaHoje.filter(item => item.tipo === 'financas')) {
+      eventos.push({ ...conta, integrado: true });
+    }
+  }
+  return eventos;
+}
+
 function renderizarAgendaSemanal() {
   const container = document.getElementById('grid-agenda-semanal');
   if (!container) return;
@@ -609,7 +654,7 @@ function renderizarAgendaSemanal() {
       if (c.categoria === 'estudos' && !filtroEstudos) return false;
       if (c.categoria === 'pessoal' && !filtroPessoal) return false;
       return true;
-    });
+    }).concat(eventosIntegradosAgenda(dia.iso, filtroEstudos, filtroFinancas));
 
     card.innerHTML = `
       <div>
@@ -624,11 +669,11 @@ function renderizarAgendaSemanal() {
             <div class="p-1.5 rounded-md text-[11px] font-medium bg-white border border-slate-200 shadow-2xs flex items-center justify-between gap-1 group">
               <div class="truncate flex items-center gap-1.5 min-w-0">
                 <span class="w-1.5 h-1.5 rounded-full ${c.categoria === 'financas' ? 'bg-emerald-500' : (c.categoria === 'estudos' ? 'bg-purple-500' : 'bg-blue-500')} shrink-0"></span>
-                <span class="truncate">${escapeHTML(c.titulo)}</span>
+                <span class="truncate">${origemCompromisso(c)} · ${escapeHTML(c.titulo)}</span>
               </div>
-              <button class="btn-del-comp text-slate-300 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition cursor-pointer text-[10px]" data-id="${c.id}">
+              ${c.integrado ? '' : `<button class="btn-del-comp text-slate-300 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition cursor-pointer text-[10px]" data-id="${c.id}">
                 ✕
-              </button>
+              </button>`}
             </div>
           `).join('')}
           ${compsDoDia.length === 0 ? '<p class="text-[10px] text-slate-400 italic py-4 text-center">Vazio</p>' : ''}
@@ -697,7 +742,7 @@ function renderizarAgendaMensal() {
 
   for (let diaNum = 1; diaNum <= totalDias; diaNum++) {
     const dataIso = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaNum).padStart(2, '0')}`;
-    const isHoje = dataIso === hoje.toISOString().slice(0, 10);
+    const isHoje = dataIso === dataLocalRotina(hoje);
 
     const compsDoDia = rotinaState.compromissos.filter(c => {
       if (c.data !== dataIso) return false;
@@ -705,7 +750,7 @@ function renderizarAgendaMensal() {
       if (c.categoria === 'estudos' && !filtroEstudos) return false;
       if (c.categoria === 'pessoal' && !filtroPessoal) return false;
       return true;
-    });
+    }).concat(eventosIntegradosAgenda(dataIso, filtroEstudos, filtroFinancas));
 
     const dayCell = document.createElement('div');
     dayCell.className = `min-h-[75px] p-1.5 rounded-lg border flex flex-col justify-between text-left transition ${
@@ -720,7 +765,7 @@ function renderizarAgendaMensal() {
       <div class="space-y-1 overflow-hidden">
         ${compsDoDia.slice(0, 2).map(c => `
           <div class="text-[9px] truncate px-1 py-0.5 rounded bg-slate-50 border border-slate-200 text-slate-700 font-medium" title="${escapeHTML(c.titulo)}">
-            ${escapeHTML(c.titulo)}
+            ${origemCompromisso(c)} · ${escapeHTML(c.titulo)}
           </div>
         `).join('')}
         ${compsDoDia.length > 2 ? `<span class="text-[8px] font-bold text-slate-400 block">+${compsDoDia.length - 2} mais</span>` : ''}
@@ -1054,11 +1099,16 @@ function renderizarMetas() {
             ${calculoMensalTexto ? `<p class="text-[10px] font-semibold text-emerald-800 border-t border-emerald-200/50 pt-1.5">${calculoMensalTexto}</p>` : ''}
           </div>
           <div class="mt-2.5 flex items-center justify-between">
+            ${meta.projeto_id ? `
+              <span class="text-xs text-slate-600">${meta.projeto_status === 'vinculado' ? 'Saldo vinculado a Finanças' : 'Projeto vinculado indisponível'}</span>
+              <button type="button" class="btn-abrir-projeto-meta text-xs font-semibold text-emerald-800 underline">Abrir Projetos & Compras</button>
+            ` : `
             <span class="text-[10px] text-slate-400">Aporte direto no saldo</span>
             <button type="button" class="btn-aportar-meta px-3 py-1 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-md border border-emerald-200 transition cursor-pointer flex items-center gap-1" data-id="${meta.id}" data-nome="${escapeHTML(meta.titulo)}" data-atual="${meta.valor_atual || 0}">
               <span>+</span>
               <span>Aportar</span>
             </button>
+            `}
           </div>
         ` : ''}
 
@@ -1102,6 +1152,9 @@ function renderizarMetas() {
     });
 
     const btnAporte = card.querySelector('.btn-aportar-meta');
+    card.querySelector('.btn-abrir-projeto-meta')?.addEventListener('click', () => {
+      window.abrirAcaoFinanceira('projetosCompras');
+    });
     if (btnAporte) {
       btnAporte.addEventListener('click', () => {
         abrirModalAporte(meta.id, meta.titulo, meta.valor_atual || 0);
@@ -1456,6 +1509,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const selectMetaTipo = document.getElementById('select-meta-tipo');
   const campoMetaValores = document.getElementById('campo-meta-valores');
   const campoMetaChecklist = document.getElementById('campo-meta-checklist');
+  const selectMetaProjeto = document.getElementById('select-meta-projeto');
+  const statusMeta = document.getElementById('status-meta-form');
+  const valoresMeta = [document.getElementById('input-meta-valor-atual'), document.getElementById('input-meta-valor-alvo')];
+  selectMetaProjeto.addEventListener('change', () => {
+    valoresMeta.forEach(campo => { campo.disabled = Boolean(selectMetaProjeto.value); });
+  });
+
+  async function carregarProjetosVinculaveis() {
+    selectMetaProjeto.replaceChildren(new Option('Meta independente', ''));
+    selectMetaProjeto.dispatchEvent(new Event('change'));
+    statusMeta.textContent = '';
+    try {
+      const resposta = await fetchRotinaAuth('/api/projetos');
+      if (!resposta.ok) throw new Error('Falha ao consultar projetos.');
+      const { projetos } = await resposta.json();
+      for (const projeto of projetos || []) selectMetaProjeto.add(new Option(projeto.nome, projeto.id));
+    } catch {
+      statusMeta.textContent = 'Não foi possível carregar os projetos. Você pode criar uma meta independente.';
+    }
+  }
 
   if (selectMetaTipo) {
     selectMetaTipo.addEventListener('change', () => {
@@ -1463,6 +1536,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tipo === 'financeira') {
         campoMetaValores?.classList.remove('hidden');
         campoMetaChecklist?.classList.add('hidden');
+        carregarProjetosVinculaveis();
       } else if (tipo === 'pessoal') {
         campoMetaValores?.classList.add('hidden');
         campoMetaChecklist?.classList.remove('hidden');
@@ -1477,6 +1551,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btnNovaMeta.addEventListener('click', () => {
       // Limpa os campos para um novo cadastro limpo
       if (formNovaMeta) formNovaMeta.reset();
+      statusMeta.textContent = '';
+      selectMetaProjeto.dispatchEvent(new Event('change'));
       if (selectMetaTipo) selectMetaTipo.value = 'pessoal';
       campoMetaValores?.classList.add('hidden');
       campoMetaChecklist?.classList.remove('hidden');
@@ -1501,17 +1577,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }));
 
       try {
-        await fetchRotinaAuth('/api/metas', {
+        const resposta = await fetchRotinaAuth('/api/metas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ titulo, tipo, valor_atual, valor_alvo, prazo, checklist })
+          body: JSON.stringify({ titulo, tipo, valor_atual, valor_alvo, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
         });
+        const dados = await resposta.json();
+        if (!resposta.ok) throw new Error(dados.message || 'Não foi possível salvar a meta.');
         document.getElementById('input-meta-titulo').value = '';
         modalMeta.classList.add('hidden');
         modalMeta.classList.remove('flex');
         await carregarMetas();
       } catch (err) {
-        console.error(err);
+        statusMeta.textContent = err.message;
       }
     });
   }

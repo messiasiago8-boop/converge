@@ -197,6 +197,9 @@
             </div>
             <span class="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">Objetivos</span>
           </button>
+          <button type="button" id="nav-btn-revisao" class="w-full rounded-lg px-3 py-2.5 text-left text-xs font-medium text-slate-300 hover:bg-slate-900 hover:text-white">
+            <span aria-hidden="true" class="mr-2">◷</span> Revisão Semanal
+          </button>
         </div>
       </div>
 
@@ -444,7 +447,7 @@
       <div class="flex items-center space-x-3">
         <button id="btn-toggle-ai-chat" class="px-3 py-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-md border border-brand-200 transition flex items-center space-x-1.5 shadow-2xs focus:outline-none focus:ring-1 focus:ring-brand-400">
           <span class="text-sm">✨</span>
-          <span>Assistente IA</span>
+          <span>Assistente de Estudos</span>
         </button>
 
         <button id="btn-back-to-origin" class="hidden px-3.5 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 rounded-md border border-slate-300 transition flex items-center space-x-1.5 shadow-xs focus:outline-none focus:ring-1 focus:ring-slate-400">
@@ -454,10 +457,15 @@
           <span id="btn-back-text">Voltar ao Catálogo</span>
         </button>
 
-        <button id="btn-quick-new-expense" class="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-md border border-emerald-200 transition flex items-center space-x-1.5 shadow-2xs focus:outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer" title="Ir para Finanças">
-          <span class="text-sm">➕</span>
-          <span>Ação Rápida</span>
-        </button>
+        <details id="menu-acoes-rapidas" class="relative">
+          <summary class="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 rounded-md border border-emerald-200 cursor-pointer">Ação rápida</summary>
+          <div class="absolute right-0 top-full mt-1 w-40 z-30 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+            <button type="button" id="acao-rapida-gasto" class="block w-full text-left p-2 text-xs hover:bg-slate-100">Novo gasto</button>
+            <button type="button" id="acao-rapida-tarefa" class="block w-full text-left p-2 text-xs hover:bg-slate-100">Nova tarefa</button>
+            <button type="button" id="acao-rapida-compromisso" class="block w-full text-left p-2 text-xs hover:bg-slate-100">Novo compromisso</button>
+            <button type="button" id="acao-rapida-aula" class="block w-full text-left p-2 text-xs hover:bg-slate-100">Nova aula</button>
+          </div>
+        </details>
       </div>
     </header>
 
@@ -1119,6 +1127,31 @@
       </section>
 
       <!-- ================= VISÃO 6: NOVO PILAR - METAS ================= -->
+      <section id="view-revisao" class="hidden mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8" aria-labelledby="titulo-revisao">
+        <header class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 id="titulo-revisao" class="text-2xl font-bold text-slate-900">Revisão Semanal</h1>
+            <p id="periodo-revisao" class="mt-1 text-sm text-slate-600"></p>
+          </div>
+          <label class="text-xs font-semibold text-slate-700">Período
+            <select id="semana-revisao" class="ml-1 rounded-lg border border-slate-300 bg-white p-2">
+              <option value="0">Semana atual</option>
+              <option value="-1">Semana anterior</option>
+            </select>
+          </label>
+        </header>
+        <p id="status-revisao" role="status" class="text-sm text-slate-600"></p>
+        <div id="cards-revisao" class="grid gap-4 lg:grid-cols-2"></div>
+        <section class="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-lg font-semibold text-slate-900">Plano semanal</h2>
+            <button type="button" id="preparar-revisao" class="rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white">Preparar próxima semana</button>
+          </div>
+          <div id="planos-revisao" class="space-y-3 text-sm text-slate-700"></div>
+          <div id="editor-revisao" class="hidden space-y-3 border-t border-slate-200 pt-3"></div>
+        </section>
+      </section>
+
       <section id="view-metas" class="hidden p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
         
         <!-- Topo de Metas -->
@@ -1398,6 +1431,11 @@
           </select>
         </div>
         <div id="campo-meta-valores" class="hidden grid grid-cols-2 gap-3">
+          <label class="col-span-2 block text-xs font-semibold text-slate-700">Projeto financeiro vinculado
+            <select id="select-meta-projeto" class="w-full rounded-lg border border-slate-300 p-2">
+              <option value="">Meta independente</option>
+            </select>
+          </label>
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">Valor Atual (R$)</label>
             <input type="number" step="any" id="input-meta-valor-atual" value="0" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg" />
@@ -1407,6 +1445,7 @@
             <input type="number" step="any" id="input-meta-valor-alvo" value="1000" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg" />
           </div>
         </div>
+        <p id="status-meta-form" role="status" class="text-xs text-slate-700"></p>
         <div id="campo-meta-checklist">
           <label class="block text-xs font-semibold text-slate-700 mb-1">Etapas / Marcos (Separados por vírgula ou linha)</label>
           <textarea id="textarea-meta-checklist" rows="3" placeholder="Ex: Planejamento inicial, Protótipo validado, Lançamento oficial" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg resize-none"></textarea>
@@ -1495,7 +1534,7 @@
 
   <!-- Modal 2: Adicionar Novo Vídeo -->
   <div id="modal-video" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
       <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
         <div class="flex items-center space-x-2">
           <div class="w-6 h-6 rounded bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xs">▶</div>
@@ -1520,6 +1559,16 @@
           <p class="text-[10px] text-slate-400">Aceita formatos: youtube.com/watch?v=..., youtu.be/... ou ID de 11 caracteres.</p>
         </div>
 
+        <label class="block text-xs font-semibold text-slate-700">Criar uma trilha para esta aula (opcional)
+          <input id="input-video-new-topic" maxlength="120" class="w-full rounded-lg border border-slate-300 p-2 font-normal" placeholder="Nome da nova trilha" />
+        </label>
+        <label class="block text-xs font-semibold text-slate-700">Agendar após salvar (opcional)
+          <select id="select-video-schedule-day" class="w-full rounded-lg border border-slate-300 p-2 font-normal">
+            <option value="">Sem agendamento</option>
+            <option>Segunda</option><option>Terça</option><option>Quarta</option><option>Quinta</option><option>Sexta</option><option>Sábado</option><option>Domingo</option>
+          </select>
+        </label>
+        <p id="status-video-form" role="status" class="text-xs text-slate-700"></p>
         <div class="mt-6 flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
           <button type="button" id="btn-cancel-modal-video" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-300 transition">
             Cancelar
@@ -1758,6 +1807,7 @@
   <script src="/script.js"></script>
   <script src="/notifications.js"></script>
   <script src="/rotina-metas.js"></script>
+  <script src="/revisao-semanal.js"></script>
   <script src="/rotina-ux.js"></script>
   <script src="/theme.js"></script>
 </body>

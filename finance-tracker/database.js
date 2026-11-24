@@ -147,7 +147,9 @@ if (!sqliteAvailable || !dbInstance) {
         }
 
         if (/^INSERT INTO projetos_compras/i.test(q)) {
-          const id = store.projetos_compras.length ? Math.max(...store.projetos_compras.map(x => x.id)) + 1 : 1;
+          const maiorId = store.projetos_compras.reduce((maior, projeto) => Math.max(maior, projeto.id), 0);
+          const id = Math.max(maiorId, Number(store.ultimo_projeto_id) || 0) + 1;
+          store.ultimo_projeto_id = id;
           store.projetos_compras.push({ id, usuario_id: params[0], nome: params[1], tipo: params[2], valor_objetivo: Number(params[3]), valor_acumulado: 0, data_criacao: new Date().toISOString() });
           persist();
           ctx.lastID = id;
@@ -215,11 +217,18 @@ if (!sqliteAvailable || !dbInstance) {
         }
 
         if (/^UPDATE potes/i.test(q)) {
-          const item = store.potes.find(p => p.id === params[9] && p.usuario_id === params[10]);
+          const campos = q.match(/^UPDATE potes SET (.+) WHERE id = \? AND usuario_id = \?$/i)?.[1]
+            .split(',').map(campo => campo.trim().split(' ')[0]);
+          if (!campos || campos.some(campo => !['categoria_ativo', 'vencimento', 'valor', 'nome'].includes(campo))) {
+            throw new Error('Campos de investimento inválidos.');
+          }
+          const [id, usuarioId] = params.slice(-2);
+          const item = store.potes.find(p => p.id === Number(id) && p.usuario_id === usuarioId);
+          ctx.changes = item ? 1 : 0;
           if (item) {
-            item.nome = params[0]; item.tipo = params[1]; item.categoria_ativo = params[2];
-            item.taxa_anual_pct = Number(params[3]); item.rendimento_mensal_pct = Number(params[4]);
-            item.instituicao = params[5]; item.vencimento = params[6]; item.valor = Number(params[7]); item.data = params[8];
+            campos.forEach((campo, indice) => {
+              item[campo] = campo === 'valor' ? Number(params[indice]) : params[indice];
+            });
             persist();
           }
           if (cb) cb.call(ctx, null);

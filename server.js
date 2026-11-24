@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { randomUUID } = require('node:crypto');
 let yts = null;
 try {
   yts = require('yt-search');
@@ -532,8 +533,11 @@ app.patch('/api/videos/:id/progresso', (req, res) => {
 
   if (segundo_atual !== undefined) {
     video.segundo_atual = Math.max(0, parseInt(segundo_atual, 10));
+    video.progresso_atualizado_em = new Date().toISOString();
   }
   if (concluido !== undefined) {
+    if (concluido && !video.concluido) video.concluido_em = new Date().toISOString();
+    if (!concluido) delete video.concluido_em;
     video.concluido = Boolean(concluido);
   }
 
@@ -705,7 +709,7 @@ app.post('/api/rotina/prioridades', (req, res) => {
 
 app.patch('/api/rotina/prioridades/:id', (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const { concluida, top3, texto } = req.body;
+  const { concluida, top3, texto, adiar_ate } = req.body;
   const dbUser = obterBancoUsuario(req.usuarioId);
 
   const tarefa = (dbUser.prioridades_dia || []).find(t => t.id === idNum);
@@ -734,6 +738,11 @@ app.patch('/api/rotina/prioridades/:id', (req, res) => {
   }
   if (typeof top3 === 'boolean') tarefa.top3 = top3;
   if (typeof texto === 'string' && texto.trim()) tarefa.texto = texto.trim();
+  if (adiar_ate === null) delete tarefa.adiada_ate;
+  if (typeof adiar_ate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(adiar_ate) && !tarefa.concluida) {
+    tarefa.adiada_ate = adiar_ate;
+    tarefa.top3 = false;
+  }
 
   salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, data: tarefa });
@@ -1005,6 +1014,15 @@ app.get('/api/agenda/hoje-integrado', async (req, res) => {
 });
 
 // --- 5. METAS (FINANCEIRAS, ESTUDOS E PESSOAIS) ---
+async function listarProjetosDaConta(req) {
+  const resposta = await fetch(`http://127.0.0.1:${FINANCE_API_PORT}/api/projetos`, {
+    headers: { Authorization: req.headers.authorization },
+    signal: AbortSignal.timeout(4000)
+  });
+  if (!resposta.ok) throw new Error('Projetos financeiros indisponíveis.');
+  return (await resposta.json()).projetos || [];
+}
+
 app.get('/api/metas', async (req, res) => {
   try {
     const dbUser = obterBancoUsuario(req.usuarioId);
@@ -1014,10 +1032,27 @@ app.get('/api/metas', async (req, res) => {
     const totalAulas = (dbUser.videos || []).length;
     const aulasConcluidas = (dbUser.videos || []).filter(v => v.concluido).length;
 
-    metas = metas.map(m => {
+    let projetos = null;
+    if (metas.some(meta => meta.projeto_id)) {
+      try {
+        projetos = await listarProjetosDaConta(req);
+      } catch (error) {
+        console.warn('[Metas]', error.message);
+      }
+    }
+    metas = metas.map(meta => {
+      const m = { ...meta };
       let progresso = Number(m.progresso || 0);
 
-      if (m.tipo === 'estudos') {
+      if (m.tipo === 'financeira' && m.projeto_id) {
+        const projeto = projetos?.find(p => p.id === m.projeto_id);
+        m.projeto_status = projeto ? 'vinculado' : (projetos ? 'removido' : 'indisponivel');
+        if (projeto) {
+          m.valor_atual = Number(projeto.valor_acumulado);
+          m.valor_alvo = Number(projeto.valor_objetivo);
+          progresso = m.valor_alvo > 0 ? Math.round((m.valor_atual / m.valor_alvo) * 100) : 0;
+        }
+      } else if (m.tipo === 'estudos') {
         progresso = totalAulas > 0 ? Math.round((aulasConcluidas / totalAulas) * 100) : 0;
         m.valor_atual = aulasConcluidas;
         m.valor_alvo = totalAulas;
@@ -1039,12 +1074,22 @@ app.get('/api/metas', async (req, res) => {
   }
 });
 
-app.post('/api/metas', (req, res) => {
-  const { titulo, tipo, valor_alvo, valor_atual, prazo, checklist } = req.body;
+app.post('/api/metas', async (req, res) => {
+  const { titulo, tipo, valor_alvo, valor_atual, prazo, checklist, projeto_id } = req.body;
   if (!titulo || !titulo.trim()) {
     return res.status(400).json({ success: false, message: 'Título da meta é obrigatório.' });
   }
 
+  let projetoId = null;
+  if (tipo === 'financeira' && projeto_id) {
+    try {
+      const projeto = (await listarProjetosDaConta(req)).find(p => p.id === Number(projeto_id));
+      if (!projeto) return res.status(404).json({ success: false, message: 'Projeto financeiro não encontrado.' });
+      projetoId = projeto.id;
+    } catch {
+      return res.status(503).json({ success: false, message: 'Não foi possível consultar os projetos financeiros.' });
+    }
+  }
   const dbUser = obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.metas)) dbUser.metas = [];
 
@@ -1052,6 +1097,7 @@ app.post('/api/metas', (req, res) => {
     id: dbUser.metas.length > 0 ? Math.max(...dbUser.metas.map(m => m.id)) + 1 : 1,
     titulo: titulo.trim(),
     tipo: tipo || 'pessoal', // 'financeira' | 'estudos' | 'pessoal'
+    ...(projetoId ? { projeto_id: projetoId } : {}),
     valor_alvo: Number(valor_alvo) || 100,
     valor_atual: Number(valor_atual) || 0,
     progresso: 0,
@@ -1083,8 +1129,12 @@ app.patch('/api/metas/:id', (req, res) => {
     return res.status(404).json({ success: false, message: 'Meta não encontrada.' });
   }
 
+  const progressoAnterior = Number(meta.progresso || 0);
   if (typeof titulo === 'string' && titulo.trim()) meta.titulo = titulo.trim();
   if (prazo !== undefined) meta.prazo = prazo;
+  if (meta.projeto_id && valor_atual !== undefined) {
+    return res.status(409).json({ success: false, message: 'Registre o aporte no projeto financeiro vinculado.' });
+  }
   if (valor_atual !== undefined && !isNaN(Number(valor_atual))) {
     meta.valor_atual = Number(valor_atual);
     if (meta.valor_alvo > 0) {
@@ -1098,9 +1148,48 @@ app.patch('/api/metas/:id', (req, res) => {
       meta.progresso = Math.round((done / meta.checklist.length) * 100);
     }
   }
+  if (meta.progresso > progressoAnterior) {
+    meta.avancos = [...(meta.avancos || []).slice(-49), {
+      data: new Date().toISOString(), de: progressoAnterior, para: meta.progresso
+    }];
+  }
 
   salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, data: meta });
+});
+
+app.get('/api/revisao-semanal/planos', (req, res) => {
+  const dados = obterBancoUsuario(req.usuarioId);
+  res.json({ success: true, data: Object.values(dados.planos_semanais || {}) });
+});
+
+app.put('/api/revisao-semanal/planos/:semana', (req, res) => {
+  const { semana } = req.params;
+  const data = new Date(`${semana}T12:00:00Z`);
+  const { tarefas, aulas } = req.body;
+  const idsValidos = (ids, maximo) => Array.isArray(ids) && ids.length <= maximo
+    && ids.every(id => Number.isSafeInteger(id) && id > 0) && new Set(ids).size === ids.length;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(semana) || data.getUTCDay() !== 1 ||
+      data.toISOString().slice(0, 10) !== semana || !idsValidos(tarefas, 3) || !idsValidos(aulas, 7)) {
+    return res.status(400).json({ success: false, message: 'Use uma segunda-feira e selecione até três tarefas e sete aulas.' });
+  }
+
+  const dados = obterBancoUsuario(req.usuarioId);
+  const prioridades = tarefas.map(id => (dados.prioridades_dia || []).find(tarefa => tarefa.id === id && !tarefa.concluida));
+  const estudos = aulas.map(id => (dados.videos || []).find(aula => aula.id === id && !aula.concluido));
+  if (prioridades.some(tarefa => !tarefa) || estudos.some(aula => !aula)) {
+    return res.status(409).json({ success: false, message: 'Uma tarefa ou aula já não está disponível. Atualize a revisão e tente novamente.' });
+  }
+  const plano = {
+    semana,
+    tarefas: prioridades.map(({ id, texto }) => ({ id, texto })),
+    aulas: estudos.map(({ id, titulo }) => ({ id, titulo }))
+  };
+  dados.planos_semanais ||= {};
+  if (tarefas.length || aulas.length) dados.planos_semanais[semana] = plano;
+  else delete dados.planos_semanais[semana];
+  salvarBancoUsuario(dados, req.usuarioId);
+  res.json({ success: true, data: plano });
 });
 
 app.delete('/api/metas/:id', (req, res) => {
@@ -1171,22 +1260,44 @@ app.post('/api/ai/confirmar-video', aiRateLimiter, (req, res) => {
 
 // ================= MOTOR DE IA COM PRÉVIAS INTERATIVAS ================= //
 
+const propostasEstudo = new Map();
 app.post('/api/ai/chat', aiRateLimiter, async (req, res) => {
-  const { prompt } = req.body;
+  const { prompt, propostaId } = req.body;
 
-  if (!prompt || !prompt.trim()) {
+  if (!propostaId && (typeof prompt !== 'string' || !prompt.trim())) {
     return res.status(400).json({ success: false, message: 'Mensagem vazia.' });
   }
 
   try {
     const dbUser = obterBancoUsuario(req.usuarioId);
-    const resultado = await processarComandoInteligente(prompt.trim(), dbUser);
-    salvarBancoUsuario(dbUser, req.usuarioId);
+    const atual = JSON.stringify(dbUser);
+    if (propostaId) {
+      const proposta = propostasEstudo.get(req.usuarioId);
+      if (!proposta || proposta.id !== propostaId || proposta.expira < Date.now() || proposta.anterior !== atual) {
+        return res.status(409).json({ success: false, message: 'A proposta expirou ou os dados mudaram. Solicite uma nova prévia.' });
+      }
+      salvarBancoUsuario(proposta.dados, req.usuarioId);
+      propostasEstudo.delete(req.usuarioId);
+      return res.json({ success: true, mensagem: proposta.resultado.mensagem, acoesExecutadas: proposta.resultado.acoesExecutadas });
+    }
+    const proposto = JSON.parse(atual);
+    const resultado = await processarComandoInteligente(prompt.trim(), proposto);
+    let previa = null;
+    if (JSON.stringify(proposto) !== atual) {
+      for (const [id, proposta] of propostasEstudo) {
+        if (proposta.expira <= Date.now()) propostasEstudo.delete(id);
+      }
+      previa = randomUUID();
+      propostasEstudo.set(req.usuarioId, {
+        id: previa, expira: Date.now() + 300000, anterior: atual, dados: proposto, resultado
+      });
+    }
 
     res.json({
       success: true,
-      mensagem: resultado.mensagem,
-      acoesExecutadas: resultado.acoesExecutadas,
+      mensagem: previa ? 'Confira a proposta antes de aplicar.' : resultado.mensagem,
+      acoesExecutadas: previa ? [] : resultado.acoesExecutadas,
+      previa: previa ? { id: previa, acoes: resultado.acoesExecutadas } : null,
       opcoesSugeridas: resultado.opcoesSugeridas || null,
       diasAlvo: resultado.diasAlvo || []
     });

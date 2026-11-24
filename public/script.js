@@ -102,6 +102,7 @@ function updateCompletedButtonUI(isCompleted) {
 }
 
 function createOrUpdatePlayer(youtubeId) {
+  const startSeconds = Math.max(0, Number(state.activeVideo?.segundo_atual) || 0);
   if (!state.player) {
     state.player = new YT.Player('youtube-player', {
       videoId: youtubeId,
@@ -110,7 +111,8 @@ function createOrUpdatePlayer(youtubeId) {
         modestbranding: 1,
         rel: 0,
         controls: 1,
-        fs: 1
+        fs: 1,
+        start: Math.floor(startSeconds)
       },
       events: {
         onReady: onPlayerReady,
@@ -118,8 +120,7 @@ function createOrUpdatePlayer(youtubeId) {
       }
     });
   } else {
-    state.isPlayerReady = false;
-    state.player.loadVideoById(youtubeId);
+    state.player.loadVideoById({ videoId: youtubeId, startSeconds });
   }
 }
 
@@ -259,13 +260,22 @@ function startTimeTracking() {
   }, 500);
 }
 
-function parseYouTubeId(url) {
-  if (!url) return 'M7lc1UVf-VE';
-  const regExp = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/;
-  const match = url.match(regExp);
-  if (match && match[1]) return match[1];
-  if (url.trim().length === 11 && !url.includes('/')) return url.trim();
-  return 'M7lc1UVf-VE';
+function parseYouTubeId(url, fallback = 'M7lc1UVf-VE') {
+  const valor = String(url || '').trim();
+  const idValido = /^[\w-]{11}$/;
+  if (idValido.test(valor)) return valor;
+  try {
+    const link = new URL(valor);
+    if (!['https:', 'http:'].includes(link.protocol)) return fallback;
+    const host = link.hostname.replace(/^(www\.|m\.)/, '');
+    const [, rota, trecho] = link.pathname.split('/');
+    const id = host === 'youtu.be' ? rota : host === 'youtube.com'
+      ? link.searchParams.get('v') || (['embed', 'v', 'shorts', 'live'].includes(rota) ? trecho : '')
+      : '';
+    return id && idValido.test(id) ? id : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 // ================= 2. CONSUMO DA API REST DO BACKEND ================= //
@@ -367,7 +377,7 @@ async function createTopic(nome) {
     if (result.success) {
       await fetchTopics();
       selectTopic(result.data.id);
-      return true;
+      return result.data;
     } else {
       alert(`Erro: ${result.message}`);
       return false;
@@ -485,7 +495,7 @@ async function createVideo(titulo, url_youtube, id_topico) {
     if (result.success) {
       await fetchAllVideos();
       selectTopic(id_topico);
-      return true;
+      return result.data;
     } else {
       alert(`Erro: ${result.message}`);
       return false;
@@ -1100,7 +1110,7 @@ function openLessonView(video, fromView = 'grid') {
   const btnBackText = document.getElementById('btn-back-text');
   if (btnBack) btnBack.classList.remove('hidden');
   if (btnBackText) {
-    btnBackText.textContent = fromView === 'schedule' ? 'Voltar ao Cronograma' : 'Voltar ao Catálogo';
+    btnBackText.textContent = fromView === 'revisao' ? 'Voltar à Revisão' : fromView === 'schedule' ? 'Voltar ao Cronograma' : 'Voltar ao Catálogo';
   }
 
   const currentTopic = state.topics.find(t => t.id === video.id_topico);
@@ -1129,7 +1139,9 @@ function returnToPreviousView() {
     salvarProgressoVideo(sec);
   }
 
-  if (state.previousView === 'schedule') {
+  if (state.previousView === 'revisao') {
+    window.navIrParaRevisao();
+  } else if (state.previousView === 'schedule') {
     showScheduleView();
   } else {
     if (state.selectedTopicId) {
@@ -1306,9 +1318,13 @@ function setupModals() {
   const btnCloseVideo = document.getElementById('btn-close-modal-video');
   const btnCancelVideo = document.getElementById('btn-cancel-modal-video');
   const formVideo = document.getElementById('form-add-video');
+  const selectVideoTopic = document.getElementById('select-video-topic');
+  const statusVideo = document.getElementById('status-video-form');
+  selectVideoTopic.required = false;
 
   const openVideoModal = () => {
     renderTopicSelectOptions();
+    statusVideo.textContent = '';
     modalVideo.classList.remove('hidden');
     modalVideo.classList.add('flex');
     document.getElementById('input-video-title').focus();
@@ -1327,14 +1343,42 @@ function setupModals() {
   if (formVideo) {
     formVideo.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const id_topico = document.getElementById('select-video-topic').value;
+      let id_topico = selectVideoTopic.value;
       const titulo = document.getElementById('input-video-title').value.trim();
       const url_youtube = document.getElementById('input-video-url').value.trim();
-
-      if (!id_topico || !titulo || !url_youtube) return;
-
-      const success = await createVideo(titulo, url_youtube, id_topico);
-      if (success) closeVideoModal();
+      const youtubeId = parseYouTubeId(url_youtube, null);
+      const novaTrilha = document.getElementById('input-video-new-topic');
+      const dia = document.getElementById('select-video-schedule-day').value;
+      if (!titulo || !youtubeId || (!id_topico && !novaTrilha.value.trim())) {
+        statusVideo.textContent = 'Informe título, um link válido e uma trilha.';
+        return;
+      }
+      const submit = formVideo.querySelector('[type=submit]');
+      submit.disabled = true;
+      try {
+        if (novaTrilha.value.trim()) {
+          const trilha = await createTopic(novaTrilha.value.trim());
+          if (!trilha) {
+            statusVideo.textContent = 'Não foi possível criar a trilha.';
+            return;
+          }
+          id_topico = trilha.id;
+          novaTrilha.value = '';
+          renderTopicSelectOptions();
+          selectVideoTopic.value = id_topico;
+        }
+        const aula = await createVideo(titulo, `https://www.youtube.com/watch?v=${youtubeId}`, Number(id_topico));
+        if (!aula) {
+          statusVideo.textContent = 'Não foi possível salvar a aula.';
+          return;
+        }
+        closeVideoModal();
+        if (dia && !await createSchedule(dia, aula.id)) {
+          alert('A aula foi salva. Você pode agendá-la em Meu Cronograma.');
+        }
+      } finally {
+        submit.disabled = false;
+      }
     });
   }
 
@@ -1419,6 +1463,41 @@ function setupModals() {
             respostaFinal += `\n\n**Ações executadas:**\n• ` + result.acoesExecutadas.join('\n• ');
           }
           appendChatMessage('ai', respostaFinal, false, result.opcoesSugeridas, result.diasAlvo);
+          if (result.previa) {
+            const painel = document.getElementById('ai-messages-container');
+            const proposta = document.createElement('div');
+            proposta.className = 'space-y-2 rounded border border-slate-200 p-2 text-xs';
+            const lista = document.createElement('ul');
+            for (const acao of result.previa.acoes) {
+              const item = document.createElement('li');
+              item.textContent = acao;
+              lista.append(item);
+            }
+            const aplicar = document.createElement('button');
+            aplicar.type = 'button';
+            aplicar.className = 'font-semibold text-emerald-800 underline';
+            aplicar.textContent = 'Confirmar alterações';
+            aplicar.onclick = async () => {
+              aplicar.disabled = true;
+              try {
+                const resposta = await fetchAuth('/api/ai/chat', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ propostaId: result.previa.id })
+                });
+                const dados = await resposta.json();
+                appendChatMessage('ai', dados.mensagem || dados.message || 'Não foi possível aplicar a proposta.');
+                if (resposta.ok) {
+                  await fetchAllVideos();
+                  await fetchTopics();
+                  await fetchSchedule();
+                }
+              } catch {
+                appendChatMessage('ai', 'A confirmação não foi concluída. Consulte o cronograma antes de tentar novamente.');
+              }
+            };
+            proposta.append(lista, aplicar);
+            painel.append(proposta);
+          }
 
           // Atualiza dados na tela em tempo real
           await fetchAllVideos();
@@ -1457,7 +1536,11 @@ function appendChatMessage(sender, text, isLoading = false, opcoesSugeridas = nu
     if (Array.isArray(opcoesSugeridas) && opcoesSugeridas.length > 0) {
       optionsHtml = `
         <div class="mt-3 space-y-2 border-t border-slate-200/80 pt-2.5">
-          <p class="text-[11px] font-semibold text-slate-700 uppercase tracking-wider">Opções Encontradas (Clique para confirmar):</p>
+          <fieldset class="flex flex-wrap gap-2 text-[11px]">
+            <legend class="font-semibold">Dias propostos (você pode alterar)</legend>
+            ${DIAS_SEMANA.map(dia => `<label><input type="checkbox" class="dia-proposta-aula" value="${dia}" ${(diasAlvo.length ? diasAlvo : ['Segunda']).includes(dia) ? 'checked' : ''} /> ${dia}</label>`).join('')}
+          </fieldset>
+          <p class="text-[11px] font-semibold text-slate-700">Selecione a aula para confirmar:</p>
           <div class="space-y-1.5">
             ${opcoesSugeridas.map((item, idx) => `
               <button class="btn-confirm-option w-full text-left p-2 rounded-lg bg-slate-50 hover:bg-brand-50 border border-slate-200 hover:border-brand-300 transition flex items-center space-x-2.5 group" data-idx="${idx}">
@@ -1496,6 +1579,11 @@ function appendChatMessage(sender, text, isLoading = false, opcoesSugeridas = nu
         btn.addEventListener('click', async () => {
           const idx = parseInt(btn.getAttribute('data-idx'), 10);
           const videoEscolhido = opcoesSugeridas[idx];
+          const diasEscolhidos = Array.from(msgDiv.querySelectorAll('.dia-proposta-aula:checked'), input => input.value);
+          if (!diasEscolhidos.length) {
+            alert('Selecione pelo menos um dia para agendar.');
+            return;
+          }
           
           btn.disabled = true;
           btn.classList.add('opacity-50');
@@ -1505,7 +1593,7 @@ function appendChatMessage(sender, text, isLoading = false, opcoesSugeridas = nu
             const resp = await fetchAuth('/api/ai/confirmar-video', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ videoSelecionado: videoEscolhido, diasAlvo })
+              body: JSON.stringify({ videoSelecionado: videoEscolhido, diasAlvo: diasEscolhidos })
             });
             const data = await resp.json();
 
@@ -1568,6 +1656,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const sectionFinancasSubnav = document.getElementById('sidebar-section-financas-subnav');
   const sectionRotinaSubnav = document.getElementById('sidebar-section-rotina-subnav');
   const sectionMetasSubnav = document.getElementById('sidebar-section-metas-subnav');
+  const navBtnRevisao = document.getElementById('nav-btn-revisao');
+  const viewRevisao = document.getElementById('view-revisao');
+  const ocultarRevisao = () => {
+    viewRevisao.classList.add('hidden');
+    navBtnRevisao.classList.remove('bg-emerald-800', 'text-white');
+    navBtnRevisao.removeAttribute('aria-current');
+  };
   const sectionPlanning = document.getElementById('sidebar-section-planning');
   const sectionTopics = document.getElementById('sidebar-section-topics');
 
@@ -1595,6 +1690,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnOpenVideo = document.getElementById('btn-open-modal-video');
 
   const showInicioModule = () => {
+    ocultarRevisao();
     state.currentView = 'inicio';
     if (viewDashboardGeral) viewDashboardGeral.classList.remove('hidden');
     document.getElementById('view-grid').classList.add('hidden');
@@ -1637,6 +1733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showLmsModule = () => {
+    ocultarRevisao();
     state.currentView = 'grid';
     if (viewDashboardGeral) viewDashboardGeral.classList.add('hidden');
     if (viewFinancas) viewFinancas.classList.add('hidden');
@@ -1677,6 +1774,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showFinancasModule = () => {
+    ocultarRevisao();
     state.currentView = 'financas';
     if (viewDashboardGeral) viewDashboardGeral.classList.add('hidden');
     document.getElementById('view-grid').classList.add('hidden');
@@ -1723,6 +1821,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // MÓDULO 3: ROTINA & AGENDA
   const showRotinaModule = () => {
+    ocultarRevisao();
     state.currentView = 'rotina';
     if (viewDashboardGeral) viewDashboardGeral.classList.add('hidden');
     document.getElementById('view-grid').classList.add('hidden');
@@ -1772,6 +1871,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // MÓDULO 4: METAS & OBJETIVOS
   const showMetasModule = () => {
+    ocultarRevisao();
     state.currentView = 'metas';
     if (viewDashboardGeral) viewDashboardGeral.classList.add('hidden');
     document.getElementById('view-grid').classList.add('hidden');
@@ -1820,6 +1920,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.navIrParaFinancas = showFinancasModule;
   window.navIrParaRotina = showRotinaModule;
   window.navIrParaMetas = showMetasModule;
+  window.navIrParaRevisao = () => {
+    state.currentView = 'revisao';
+    atualizarSidebarDrilldown('inicio');
+    for (const id of ['view-dashboard-geral', 'view-grid', 'view-schedule', 'view-lesson', 'view-financas', 'view-rotina', 'view-metas']) {
+      document.getElementById(id)?.classList.add('hidden');
+    }
+    for (const botao of [navBtnInicio, navBtnLms, navBtnFinancas, navBtnRotina, navBtnMetas]) {
+      botao.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
+    }
+    sectionPlanning?.classList.add('hidden');
+    sectionTopics?.classList.add('hidden');
+    btnOpenTopic?.parentElement.classList.add('hidden');
+    btnBack?.classList.add('hidden');
+    if (state.player && state.isPlayerReady) state.player.pauseVideo();
+    navBtnRevisao.classList.add('bg-emerald-800', 'text-white');
+    navBtnRevisao.setAttribute('aria-current', 'page');
+    viewRevisao.classList.remove('hidden');
+    document.getElementById('breadcrumb-topic').textContent = 'Revisão Semanal';
+    window.carregarRevisaoSemanal();
+  };
+  navBtnRevisao.addEventListener('click', window.navIrParaRevisao);
+  window.abrirAulaDaRevisao = video => {
+    showLmsModule();
+    openLessonView(video, 'revisao');
+  };
 
   if (navBtnInicio) navBtnInicio.addEventListener('click', showInicioModule);
 
@@ -1904,17 +2029,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const btnQuickAction = document.getElementById('btn-quick-new-expense');
-  if (btnQuickAction) {
-    btnQuickAction.addEventListener('click', () => {
-      showFinancasModule();
-      // Opcional: foca na planilha ou orçamento após alternar
-      const iframe = document.getElementById('iframe-financas');
-      if (iframe && iframe.contentWindow && typeof iframe.contentWindow.alternarAba === 'function') {
-        iframe.contentWindow.alternarAba('dashboard');
+  const abrirAcaoFinanceira = (aba, campo) => {
+    showFinancasModule();
+    const iframe = document.getElementById('iframe-financas');
+    const abrir = () => {
+      document.querySelector(`.btn-subnav-financas[data-tab="${aba}"]`)?.click();
+      const input = iframe?.contentDocument?.getElementById(campo);
+      if (input) {
+        if (campo === 'btnEditReceita') input.click();
+        else input.focus();
       }
+    };
+    if (typeof iframe?.contentWindow?.alternarAba === 'function') abrir();
+    else iframe?.addEventListener('load', abrir, { once: true });
+  };
+  const abrirGasto = () => abrirAcaoFinanceira('planilha', 'descPlanilhaDespesa');
+  const abrirTarefa = () => {
+    showRotinaModule();
+    document.getElementById('btn-subaba-hoje')?.click();
+    document.getElementById('input-quick-task-text')?.focus();
+  };
+  const abrirAula = () => {
+    showLmsModule();
+    document.getElementById('btn-open-modal-video')?.click();
+  };
+  const acoesRapidas = {
+    gasto: abrirGasto,
+    tarefa: abrirTarefa,
+    compromisso: () => {
+      showRotinaModule();
+      document.getElementById('btn-subaba-agenda')?.click();
+      document.getElementById('btn-novo-compromisso')?.click();
+    },
+    aula: abrirAula
+  };
+  const menuAcoes = document.getElementById('menu-acoes-rapidas');
+  for (const [nome, acao] of Object.entries(acoesRapidas)) {
+    document.getElementById(`acao-rapida-${nome}`)?.addEventListener('click', () => {
+      menuAcoes.open = false;
+      acao();
     });
   }
+  window.abrirAcaoFinanceira = abrirAcaoFinanceira;
+  window.abrirPrimeiraAula = abrirAula;
 
   // Ações do Player na Visão de Aula
   const btnTogglePlay = document.getElementById('btn-toggle-play');
@@ -1972,20 +2129,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Ações Rápidas do Topo do Painel Inicial
   const btnOverviewExpense = document.getElementById('btn-overview-quick-expense');
   if (btnOverviewExpense) {
-    btnOverviewExpense.addEventListener('click', () => {
-      showFinancasModule();
-    });
+    btnOverviewExpense.addEventListener('click', abrirGasto);
   }
 
   const btnOverviewTask = document.getElementById('btn-overview-quick-task');
   if (btnOverviewTask) {
-    btnOverviewTask.addEventListener('click', () => {
-      showRotinaModule();
-      setTimeout(() => {
-        const inp = document.getElementById('input-nova-tarefa-rotina');
-        if (inp) inp.focus();
-      }, 150);
-    });
+    btnOverviewTask.addEventListener('click', abrirTarefa);
   }
 
   // Inicialização padrão do Life OS: Abre diretamente no Painel Inicial (Início / Visão Geral)
@@ -2125,7 +2274,10 @@ async function carregarDashboardGeral() {
 
   // 3. Card 2 - Finanças Inteligentes (Dados reais consolidados)
   try {
-    const resFin = await fetchAuth('/api/dados');
+    const hoje = new Date();
+    const mes = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    const resFin = await fetchAuth(`/api/dados?mes=${mes}`);
+    if (!resFin.ok) throw new Error('Orçamento indisponível');
     if (resFin.ok) {
       const jsonFin = await resFin.json();
       const disponivelEl = document.getElementById('overview-finance-disponivel');
@@ -2143,22 +2295,28 @@ async function carregarDashboardGeral() {
         if (disponivelEl) disponivelEl.textContent = formatarMoeda(jsonFin.saldoDisponivel);
         if (gastoEl) gastoEl.textContent = formatarMoeda(jsonFin.totalGastos || 0);
       } else {
-        if (disponivelEl) disponivelEl.textContent = 'R$ 0,00';
-        if (gastoEl) gastoEl.textContent = 'R$ 0,00';
+        const somar = itens => (itens || []).reduce((total, item) => total + (Number(item.valor) || 0), 0);
+        const gasto = somar(jsonFin.despesas);
+        if (disponivelEl) disponivelEl.textContent = formatarMoeda(somar(jsonFin.entradas) - gasto);
+        if (gastoEl) gastoEl.textContent = formatarMoeda(gasto);
       }
 
       // Vencimentos pendentes ou saúde financeira
       if (alertaEl) {
         const contas = jsonFin.contas || jsonFin.planejamento || [];
         const pendentes = contas.filter(c => !c.pago && c.vencimento);
-        if (pendentes.length > 0) {
+        if (!jsonFin.entradas?.length && !jsonFin.despesas?.length && !pendentes.length) {
+          alertaEl.className = 'p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs flex flex-wrap gap-2 text-slate-700';
+          alertaEl.innerHTML = '<span>Mês sem lançamentos.</span><button type="button" class="font-semibold underline">Registrar receita</button>';
+          alertaEl.querySelector('button').onclick = () => window.abrirAcaoFinanceira('dashboard', 'btnEditReceita');
+        } else if (pendentes.length > 0) {
           const proxConta = pendentes[0];
           alertaEl.className = 'p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs flex items-center gap-2 text-amber-800';
           alertaEl.innerHTML = `
             <svg class="w-4 h-4 text-amber-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
             </svg>
-            <span class="truncate">Conta a vencer: <strong>${escapeHTML(proxConta.nome || proxConta.descricao || 'Fatura')}</strong> (${proxConta.vencimento})</span>
+            <span class="truncate">Conta a vencer: <strong>${escapeHTML(proxConta.nome || proxConta.descricao || 'Fatura')}</strong> (${escapeHTML(proxConta.vencimento)})</span>
           `;
         } else {
           alertaEl.className = 'p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs flex items-center gap-2 text-emerald-800';
@@ -2166,13 +2324,19 @@ async function carregarDashboardGeral() {
             <svg class="w-4 h-4 text-emerald-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            <span class="truncate">Contas do mês em dia. Saúde financeira estável.</span>
+            <span>Resumo com base nas receitas e despesas registradas no mês.</span>
           `;
         }
       }
     }
   } catch (err) {
     console.warn('Erro ao carregar card de Finanças no Dashboard:', err);
+    const alerta = document.getElementById('overview-finance-alerta');
+    if (alerta) alerta.textContent = 'Não foi possível carregar o orçamento do mês.';
+    for (const id of ['overview-finance-disponivel', 'overview-finance-gasto']) {
+      const campo = document.getElementById(id);
+      if (campo) campo.textContent = '—';
+    }
   }
 
   // 4. Card 3 - Educação (Continuar Aula & Progresso Geral)
@@ -2192,8 +2356,8 @@ async function carregarDashboardGeral() {
     if (totalAulas === 0) {
       if (proximaAulaTitulo) proximaAulaTitulo.textContent = 'Nenhuma aula cadastrada ainda.';
       if (btnAssistir) {
-        btnAssistir.textContent = 'Abrir Catálogo';
-        btnAssistir.onclick = () => window.navIrParaLms();
+        btnAssistir.textContent = 'Cadastrar aula';
+        btnAssistir.onclick = () => window.abrirPrimeiraAula();
       }
     } else {
       // Prioridade 1: Aula em andamento (segundo_atual > 0 e não concluída)
@@ -2209,8 +2373,9 @@ async function carregarDashboardGeral() {
           proximaAulaTitulo.title = aulaSugerida.titulo;
         }
         if (btnAssistir) {
-          btnAssistir.textContent = emAndamento ? 'Continuar ▶' : 'Assistir ▶';
+          btnAssistir.textContent = emAndamento ? `Continuar em ${formatSeconds(Number(emAndamento.segundo_atual))}` : 'Assistir ▶';
           btnAssistir.onclick = () => {
+            window.navIrParaLms();
             openLessonView(aulaSugerida, 'grid');
           };
         }
