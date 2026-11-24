@@ -1563,6 +1563,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const navBtnFinancas = document.getElementById('nav-btn-financas');
   const navBtnRotina = document.getElementById('nav-btn-rotina');
   const navBtnMetas = document.getElementById('nav-btn-metas');
+  const sectionModulos = document.getElementById('sidebar-section-modulos');
   const sectionPlanning = document.getElementById('sidebar-section-planning');
   const sectionTopics = document.getElementById('sidebar-section-topics');
   const viewDashboardGeral = document.getElementById('view-dashboard-geral');
@@ -1583,6 +1584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (viewMetas) viewMetas.classList.add('hidden');
     if (btnBack) btnBack.classList.add('hidden');
 
+    if (sectionModulos) sectionModulos.classList.remove('hidden');
     if (sectionPlanning) sectionPlanning.classList.add('hidden');
     if (sectionTopics) sectionTopics.classList.add('hidden');
 
@@ -1625,6 +1627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const viewMetasEl = document.getElementById('view-metas');
     if (viewMetasEl) viewMetasEl.classList.add('hidden');
 
+    if (sectionModulos) sectionModulos.classList.remove('hidden');
     if (sectionPlanning) sectionPlanning.classList.remove('hidden');
     if (sectionTopics) sectionTopics.classList.remove('hidden');
     
@@ -1671,6 +1674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnBack) btnBack.classList.add('hidden');
 
     if (viewFinancas) viewFinancas.classList.remove('hidden');
+    if (sectionModulos) sectionModulos.classList.add('hidden');
     if (sectionPlanning) sectionPlanning.classList.add('hidden');
     if (sectionTopics) sectionTopics.classList.add('hidden');
 
@@ -1718,6 +1722,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnBack) btnBack.classList.add('hidden');
 
     if (viewRotina) viewRotina.classList.remove('hidden');
+    if (sectionModulos) sectionModulos.classList.remove('hidden');
     if (sectionPlanning) sectionPlanning.classList.add('hidden');
     if (sectionTopics) sectionTopics.classList.add('hidden');
 
@@ -1768,6 +1773,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnBack) btnBack.classList.add('hidden');
 
     if (viewMetas) viewMetas.classList.remove('hidden');
+    if (sectionModulos) sectionModulos.classList.remove('hidden');
     if (sectionPlanning) sectionPlanning.classList.add('hidden');
     if (sectionTopics) sectionTopics.classList.add('hidden');
 
@@ -1813,6 +1819,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (navBtnRotina) navBtnRotina.addEventListener('click', showRotinaModule);
   if (navBtnMetas) navBtnMetas.addEventListener('click', showMetasModule);
+
+  // Botão "Voltar aos Módulos" no submenu drill-down de Finanças
+  const btnFinancasVoltarModulos = document.getElementById('btn-financas-voltar-modulos');
+  if (btnFinancasVoltarModulos) {
+    btnFinancasVoltarModulos.addEventListener('click', () => {
+      const financasSubnav = document.getElementById('sidebar-section-financas-subnav');
+      if (financasSubnav) financasSubnav.classList.add('hidden');
+      if (sectionModulos) sectionModulos.classList.remove('hidden');
+    });
+  }
 
   // Cliques nas sub-abas de Finanças controlam o iframe diretamente
   document.querySelectorAll('.btn-subnav-financas').forEach(btn => {
