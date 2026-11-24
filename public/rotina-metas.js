@@ -1437,6 +1437,223 @@ document.addEventListener('DOMContentLoaded', () => {
     btnLimparHistorico.addEventListener('click', abrirModalLimparHistorico);
   }
 
+  // Modal Interativo de Exclusão Seletiva da Rotina & Agenda (Foco de Hoje / Agenda / Histórico / Apagar Tudo)
+  window.abrirModalExcluirRotina = function abrirModalExcluirRotina() {
+    let modal = document.getElementById('modal-excluir-rotina-seletivo');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modal-excluir-rotina-seletivo';
+      modal.className = 'fixed inset-0 z-[10000] hidden items-center justify-center p-4 bg-slate-950/65 backdrop-blur-sm';
+      modal.innerHTML = `
+        <div id="card-excluir-rotina" class="bg-[#fffdf8] border border-[#1f2a27]/12 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all duration-200 scale-95 opacity-0">
+          <!-- ETAPA 1: SELEÇÃO DO QUE EXCLUIR -->
+          <div id="etapa-excluir-selecao" class="p-6 space-y-5">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200/80 flex items-center justify-center text-rose-600 shrink-0">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-[#1f2a27] leading-tight">Excluir dados da Rotina</h3>
+                  <p class="text-[11px] text-[#5d5c54] mt-0.5">Selecione o que deseja remover ou apague tudo.</p>
+                </div>
+              </div>
+              <button type="button" id="btn-fechar-excluir-rotina" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer">✕</button>
+            </div>
+
+            <div class="space-y-2.5">
+              <label class="flex items-center gap-3 p-3.5 rounded-xl border border-[#1f2a27]/12 bg-white hover:border-emerald-400 cursor-pointer transition select-none">
+                <input type="checkbox" id="chk-excluir-foco" class="w-4 h-4 rounded accent-rose-600 cursor-pointer" />
+                <span class="text-base">☀️</span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-bold text-[#1f2a27]">Foco de Hoje</p>
+                  <p class="text-[11px] text-[#5d5c54]">Remove prioridades do Top 3 e caixa de entrada</p>
+                </div>
+              </label>
+
+              <label class="flex items-center gap-3 p-3.5 rounded-xl border border-[#1f2a27]/12 bg-white hover:border-emerald-400 cursor-pointer transition select-none">
+                <input type="checkbox" id="chk-excluir-agenda" class="w-4 h-4 rounded accent-rose-600 cursor-pointer" />
+                <span class="text-base">📅</span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-bold text-[#1f2a27]">Agenda</p>
+                  <p class="text-[11px] text-[#5d5c54]">Remove todos os compromissos agendados</p>
+                </div>
+              </label>
+
+              <label class="flex items-center gap-3 p-3.5 rounded-xl border border-[#1f2a27]/12 bg-white hover:border-emerald-400 cursor-pointer transition select-none">
+                <input type="checkbox" id="chk-excluir-historico" class="w-4 h-4 rounded accent-rose-600 cursor-pointer" />
+                <span class="text-base">🕘</span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-bold text-[#1f2a27]">Histórico de Tarefas</p>
+                  <p class="text-[11px] text-[#5d5c54]">Remove todas as tarefas concluídas e arquivadas</p>
+                </div>
+              </label>
+            </div>
+
+            <div class="space-y-2.5 pt-1">
+              <button type="button" id="btn-executar-excluir-selecionados" disabled class="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer flex items-center justify-center gap-2">
+                <span>Excluir Selecionados</span>
+              </button>
+
+              <div class="flex items-center gap-2">
+                <button type="button" id="btn-ir-apagar-tudo" class="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition cursor-pointer">
+                  ⚠️ Apagar Tudo
+                </button>
+                <button type="button" id="btn-cancelar-excluir-rotina" class="py-2.5 px-4 rounded-xl text-xs font-semibold text-[#5d5c54] bg-[#f1ede3] hover:bg-[#e5dfd0] border border-[#1f2a27]/10 transition cursor-pointer">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ETAPA 2: CONFIRMAÇÃO EXTRA PARA APAGAR TUDO -->
+          <div id="etapa-confirmar-apagar-tudo" class="hidden p-6 text-center space-y-5">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 text-2xl">
+              ⚠️
+            </div>
+            <div class="space-y-2">
+              <h3 class="text-base font-bold text-rose-900">Tem certeza que deseja apagar TUDO?</h3>
+              <p class="text-xs text-[#5d5c54] leading-relaxed">
+                Você está prestes a excluir permanentemente todo o seu <strong>Foco de Hoje</strong>, sua <strong>Agenda</strong> e seu <strong>Histórico de Tarefas</strong>. Esta ação não pode ser desfeita.
+              </p>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5 pt-1">
+              <button type="button" id="btn-voltar-etapa-selecao" class="py-2.5 px-4 rounded-xl text-xs font-semibold text-[#5d5c54] bg-[#f1ede3] hover:bg-[#e5dfd0] border border-[#1f2a27]/10 transition cursor-pointer">
+                ← Voltar
+              </button>
+              <button type="button" id="btn-confirmar-apagar-tudo" class="py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 shadow-md shadow-rose-600/25 transition cursor-pointer flex items-center justify-center gap-1.5">
+                <span>Sim, apagar tudo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const card = modal.querySelector('#card-excluir-rotina');
+      const etapa1 = modal.querySelector('#etapa-excluir-selecao');
+      const etapa2 = modal.querySelector('#etapa-confirmar-apagar-tudo');
+      const chkFoco = modal.querySelector('#chk-excluir-foco');
+      const chkAgenda = modal.querySelector('#chk-excluir-agenda');
+      const chkHistorico = modal.querySelector('#chk-excluir-historico');
+      const btnSelecionados = modal.querySelector('#btn-executar-excluir-selecionados');
+      const btnIrApagarTudo = modal.querySelector('#btn-ir-apagar-tudo');
+      const btnVoltar = modal.querySelector('#btn-voltar-etapa-selecao');
+      const btnConfirmarTudo = modal.querySelector('#btn-confirmar-apagar-tudo');
+
+      const fechar = () => {
+        card.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+          etapa2.classList.add('hidden');
+          etapa1.classList.remove('hidden');
+        }, 150);
+      };
+
+      const atualizarBotaoSelecionados = () => {
+        const count = [chkFoco.checked, chkAgenda.checked, chkHistorico.checked].filter(Boolean).length;
+        btnSelecionados.disabled = count === 0;
+        btnSelecionados.innerHTML = count > 0
+          ? `<span>Excluir Selecionados (${count})</span>`
+          : '<span>Excluir Selecionados</span>';
+      };
+
+      [chkFoco, chkAgenda, chkHistorico].forEach(c => c.addEventListener('change', atualizarBotaoSelecionados));
+
+      modal.querySelector('#btn-fechar-excluir-rotina').addEventListener('click', fechar);
+      modal.querySelector('#btn-cancelar-excluir-rotina').addEventListener('click', fechar);
+      modal.addEventListener('click', (e) => { if (e.target === modal) fechar(); });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) fechar();
+      });
+
+      btnIrApagarTudo.addEventListener('click', () => {
+        etapa1.classList.add('hidden');
+        etapa2.classList.remove('hidden');
+      });
+
+      btnVoltar.addEventListener('click', () => {
+        etapa2.classList.add('hidden');
+        etapa1.classList.remove('hidden');
+      });
+
+      const executarExclusao = async ({ foco, agenda, historico }, botaoAlvo, textoOriginal, msgSucesso) => {
+        botaoAlvo.disabled = true;
+        botaoAlvo.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg><span>Excluindo...</span>';
+        try {
+          await salvarRotina('/api/rotina/limpar-selecao', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ foco, agenda, historico })
+          });
+          if (foco && typeof carregarPrioridades === 'function') await carregarPrioridades();
+          if (agenda) {
+            if (typeof carregarCompromissos === 'function') await carregarCompromissos();
+            if (typeof carregarAgendaHoje === 'function') await carregarAgendaHoje();
+          }
+          if (historico && typeof carregarHistoricoTarefas === 'function') await carregarHistoricoTarefas();
+          fechar();
+
+          const toast = document.createElement('div');
+          toast.className = 'fixed bottom-5 right-5 z-[10001] bg-[#1f2a27] text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl border border-emerald-500/30 flex items-center gap-2 transition-all duration-300';
+          toast.innerHTML = `<span class="text-emerald-400">✓</span><span>${msgSucesso}</span>`;
+          document.body.appendChild(toast);
+          setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(8px)';
+            setTimeout(() => toast.remove(), 300);
+          }, 2800);
+        } catch (e) {
+          avisarFalhaRotina(e);
+        } finally {
+          botaoAlvo.disabled = false;
+          botaoAlvo.innerHTML = textoOriginal;
+          atualizarBotaoSelecionados();
+        }
+      };
+
+      btnSelecionados.addEventListener('click', () => {
+        executarExclusao(
+          { foco: chkFoco.checked, agenda: chkAgenda.checked, historico: chkHistorico.checked },
+          btnSelecionados,
+          '<span>Excluir Selecionados</span>',
+          'Itens selecionados excluídos com sucesso!'
+        );
+      });
+
+      btnConfirmarTudo.addEventListener('click', () => {
+        executarExclusao(
+          { foco: true, agenda: true, historico: true },
+          btnConfirmarTudo,
+          '<span>Sim, apagar tudo</span>',
+          'Foco de Hoje, Agenda e Histórico apagados com sucesso!'
+        );
+      });
+    }
+
+    // Reseta checkboxes e abre na Etapa 1
+    modal.querySelector('#chk-excluir-foco').checked = false;
+    modal.querySelector('#chk-excluir-agenda').checked = false;
+    modal.querySelector('#chk-excluir-historico').checked = false;
+    const btnSel = modal.querySelector('#btn-executar-excluir-selecionados');
+    if (btnSel) {
+      btnSel.disabled = true;
+      btnSel.innerHTML = '<span>Excluir Selecionados</span>';
+    }
+    modal.querySelector('#etapa-confirmar-apagar-tudo').classList.add('hidden');
+    modal.querySelector('#etapa-excluir-selecao').classList.remove('hidden');
+
+    const card = modal.querySelector('#card-excluir-rotina');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    requestAnimationFrame(() => {
+      card.classList.remove('scale-95', 'opacity-0');
+    });
+  };
+
   // Inicializa Pomodoro
   const btnPomStart = document.getElementById('btn-pomodoro-start');
   const btnPomReset = document.getElementById('btn-pomodoro-reset');

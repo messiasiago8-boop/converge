@@ -964,6 +964,24 @@ app.delete('/api/rotina/historico-tarefas', rotaPortal(async (req, res) => {
   res.json({ success: true, message: 'Histórico de tarefas limpo com sucesso.' });
 }));
 
+// DELETE /api/rotina/limpar-selecao - Exclusão seletiva (Foco de Hoje / Agenda / Histórico)
+app.delete('/api/rotina/limpar-selecao', rotaPortal(async (req, res) => {
+  const { foco, agenda, historico } = req.body || {};
+  if (!foco && !agenda && !historico) {
+    return res.status(400).json({ success: false, message: 'Selecione ao menos uma opção para excluir.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  if (foco) dbUser.prioridades_dia = [];
+  if (agenda) dbUser.compromissos = [];
+  if (historico) dbUser.historico_tarefas = [];
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({
+    success: true,
+    message: 'Itens selecionados excluídos com sucesso.',
+    removidos: { foco: Boolean(foco), agenda: Boolean(agenda), historico: Boolean(historico) }
+  });
+}));
+
 // --- 2. RASTREADOR DE HÁBITOS (HABIT TRACKER & STREAK) ---
 app.get('/api/rotina/habitos', rotaPortal(async (req, res) => {
   const dbUser = await obterBancoUsuario(req.usuarioId);

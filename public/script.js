@@ -2073,6 +2073,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (action === 'historico') {
         const el = document.getElementById('btn-abrir-historico-tarefas');
         if (el) el.click();
+      } else if (action === 'excluir') {
+        if (typeof window.abrirModalExcluirRotina === 'function') {
+          window.abrirModalExcluirRotina();
+        }
       }
     });
   });
