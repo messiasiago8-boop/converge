@@ -964,21 +964,43 @@ app.delete('/api/rotina/historico-tarefas', rotaPortal(async (req, res) => {
   res.json({ success: true, message: 'Histórico de tarefas limpo com sucesso.' });
 }));
 
-// DELETE /api/rotina/limpar-selecao - Exclusão seletiva (Foco de Hoje / Agenda / Histórico)
+// DELETE /api/rotina/limpar-selecao - Exclusão seletiva por item ou total (Foco de Hoje / Agenda / Histórico)
 app.delete('/api/rotina/limpar-selecao', rotaPortal(async (req, res) => {
-  const { foco, agenda, historico } = req.body || {};
-  if (!foco && !agenda && !historico) {
-    return res.status(400).json({ success: false, message: 'Selecione ao menos uma opção para excluir.' });
+  const { foco, agenda, historico, focoIds, agendaIds, historicoIds } = req.body || {};
+  const temIds = (Array.isArray(focoIds) && focoIds.length > 0) ||
+                 (Array.isArray(agendaIds) && agendaIds.length > 0) ||
+                 (Array.isArray(historicoIds) && historicoIds.length > 0);
+
+  if (!foco && !agenda && !historico && !temIds) {
+    return res.status(400).json({ success: false, message: 'Selecione ao menos um item para excluir.' });
   }
+
   const dbUser = await obterBancoUsuario(req.usuarioId);
-  if (foco) dbUser.prioridades_dia = [];
-  if (agenda) dbUser.compromissos = [];
-  if (historico) dbUser.historico_tarefas = [];
+  if (foco) {
+    dbUser.prioridades_dia = [];
+  } else if (Array.isArray(focoIds) && focoIds.length > 0) {
+    const setFoco = new Set(focoIds.map(String));
+    dbUser.prioridades_dia = (dbUser.prioridades_dia || []).filter(item => !setFoco.has(String(item.id)));
+  }
+
+  if (agenda) {
+    dbUser.compromissos = [];
+  } else if (Array.isArray(agendaIds) && agendaIds.length > 0) {
+    const setAgenda = new Set(agendaIds.map(String));
+    dbUser.compromissos = (dbUser.compromissos || []).filter(item => !setAgenda.has(String(item.id)));
+  }
+
+  if (historico) {
+    dbUser.historico_tarefas = [];
+  } else if (Array.isArray(historicoIds) && historicoIds.length > 0) {
+    const setHist = new Set(historicoIds.map(String));
+    dbUser.historico_tarefas = (dbUser.historico_tarefas || []).filter(item => !setHist.has(String(item.id)));
+  }
+
   await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({
     success: true,
-    message: 'Itens selecionados excluídos com sucesso.',
-    removidos: { foco: Boolean(foco), agenda: Boolean(agenda), historico: Boolean(historico) }
+    message: 'Itens selecionados excluídos com sucesso.'
   });
 }));
 
