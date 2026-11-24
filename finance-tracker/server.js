@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import { randomBytes } from 'node:crypto';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,7 +16,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'financas-inteligente-jwt-secret-key-2026';
+const JWT_SECRET = process.env.JWT_SECRET || randomBytes(32).toString('hex');
 
 // Hardening de Segurança: Oculta identificação do servidor
 app.disable('x-powered-by');
@@ -62,14 +63,14 @@ if (process.env.GEMINI_API_KEY) {
 // Middleware de Autenticação JWT
 export const autenticarToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader?.match(/^Bearer (\S+)$/i)?.[1];
 
   if (!token) {
     return res.status(401).json({ error: 'Acesso negado. Token não fornecido.' });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
+    if (err || !Number.isSafeInteger(user?.id) || user.id < 1) {
       return res.status(403).json({ error: 'Sessão expirada ou token inválido. Faça login novamente.' });
     }
     req.usuarioId = user.id;
@@ -285,10 +286,10 @@ app.get('/api/auth/perfil', autenticarToken, (req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    hasApiKey: !!process.env.GEMINI_API_KEY
+app.get('/api/health', (_req, res) => {
+  db.get('SELECT 1 FROM usuarios LIMIT 1', [], erro => {
+    if (erro) return res.status(503).json({ status: 'unavailable' });
+    res.json({ status: 'ok', hasApiKey: !!process.env.GEMINI_API_KEY });
   });
 });
 
@@ -313,6 +314,23 @@ app.get('/api/dados', autenticarToken, async (req, res) => {
   } catch (err) {
     console.error('Erro na rota /api/dados:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/dados/exportacao', autenticarToken, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const tabelas = ['entradas', 'despesas', 'limites', 'potes', 'projetos_compras', 'aportes_projetos', 'investimentos_mensais'];
+  try {
+    const conjuntos = await Promise.all(tabelas.map(tabela => new Promise((resolve, reject) => {
+      db.all(`SELECT * FROM ${tabela} WHERE usuario_id = ? ORDER BY id ASC`, [req.usuarioId], (erro, linhas) => {
+        if (erro) return reject(erro);
+        resolve([tabela, linhas.map(({ usuario_id, ...linha }) => linha)]);
+      });
+    })));
+    res.json({ success: true, dados: Object.fromEntries(conjuntos) });
+  } catch (erro) {
+    console.error('[Exportação de Finanças]', erro.message);
+    res.status(503).json({ success: false, error: 'Não foi possível exportar os dados de Finanças.' });
   }
 });
 
@@ -368,6 +386,10 @@ app.delete('/api/entradas/:id', autenticarToken, (req, res) => {
 app.put('/api/entradas/:id', autenticarToken, (req, res) => {
   const id = req.params.id;
   const { descricao, valor } = req.body;
+  if ((descricao !== undefined && (typeof descricao !== 'string' || !descricao.trim())) ||
+      (valor !== undefined && (!Number.isFinite(Number(valor)) || Number(valor) <= 0))) {
+    return res.status(400).json({ error: 'Informe uma descrição e um valor positivo válido.' });
+  }
 
   let updates = [];
   let params = [];
@@ -436,8 +458,8 @@ app.post('/api/despesas', autenticarToken, (req, res) => {
 
 // 5. DELETE /api/despesas/bulk (Exclui múltiplas despesas de uma vez)
 app.delete('/api/despesas/bulk', autenticarToken, (req, res) => {
-  const { ids } = req.body;
-  if (!Array.isArray(ids) || ids.length === 0) {
+  const ids = Array.isArray(req.body.ids) ? [...new Set(req.body.ids.map(Number))] : [];
+  if (!ids.length || ids.length > 900 || ids.some(id => !Number.isSafeInteger(id) || id < 1)) {
     return res.status(400).json({ error: 'Lista de IDs para exclusão não fornecida ou inválida.' });
   }
 
@@ -473,6 +495,11 @@ app.delete('/api/despesas/:id', autenticarToken, (req, res) => {
 app.put('/api/despesas/:id', autenticarToken, (req, res) => {
   const id = req.params.id;
   const { descricao, valor, categoria } = req.body;
+  if ((descricao !== undefined && (typeof descricao !== 'string' || !descricao.trim())) ||
+      (valor !== undefined && (!Number.isFinite(Number(valor)) || Number(valor) <= 0)) ||
+      (categoria !== undefined && !['50', '30', '20'].includes(String(categoria)))) {
+    return res.status(400).json({ error: 'Informe uma descrição, um valor positivo e uma categoria válida.' });
+  }
 
   let updates = [];
   let params = [];
@@ -1088,44 +1115,25 @@ Mantenha um tom técnico, executivo, sem rodeios e com números claros em R$. Fo
 // MÓDULO DASHBOARD DE INVESTIMENTOS (GESTAO DA FATIA DE 20% DO ORÇAMENTO)
 // ============================================================================
 
-// Estrutura em memória isolada por usuário: { usuarioId: [ { id, mes, tipo_ativo, valor_aplicado, rendimento_atual } ] }
-const InvestimentosDB = {
-  1: [
-    { id: 1, mes: '2026-11', tipo_ativo: 'Tesouro Selic', valor_aplicado: 3500.00, rendimento_atual: 320.50 },
-    { id: 2, mes: '2026-11', tipo_ativo: 'CDB', valor_aplicado: 2500.00, rendimento_atual: 215.80 },
-    { id: 3, mes: '2026-10', tipo_ativo: 'Tesouro Selic', valor_aplicado: 3000.00, rendimento_atual: 270.00 },
-    { id: 4, mes: '2026-10', tipo_ativo: 'CDB', valor_aplicado: 2000.00, rendimento_atual: 160.00 }
-  ],
-  2: [
-    { id: 1, mes: '2026-11', tipo_ativo: 'Tesouro Selic', valor_aplicado: 4000.00, rendimento_atual: 368.20 },
-    { id: 2, mes: '2026-11', tipo_ativo: 'CDB', valor_aplicado: 3000.00, rendimento_atual: 254.10 },
-    { id: 3, mes: '2026-10', tipo_ativo: 'Tesouro Selic', valor_aplicado: 3500.00, rendimento_atual: 310.00 },
-    { id: 4, mes: '2026-10', tipo_ativo: 'CDB', valor_aplicado: 2500.00, rendimento_atual: 200.00 }
-  ]
-};
-
-let nextInvestimentoId = 100;
+const competenciaValida = mes => typeof mes === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(mes);
 
 // GET /api/investimentos - Retorna lista e totais calculados para o mês selecionado
-app.get('/api/investimentos', autenticarToken, (req, res) => {
+app.get('/api/investimentos', autenticarToken, async (req, res) => {
   try {
-    const usuarioId = req.usuarioId || 2;
     const mes = req.query.mes || new Date().toISOString().slice(0, 7);
-
-    if (!InvestimentosDB[usuarioId]) {
-      InvestimentosDB[usuarioId] = [
-        { id: ++nextInvestimentoId, mes, tipo_ativo: 'Tesouro Selic', valor_aplicado: 3000.00, rendimento_atual: 275.50 },
-        { id: ++nextInvestimentoId, mes, tipo_ativo: 'CDB', valor_aplicado: 2000.00, rendimento_atual: 172.40 }
-      ];
-    }
-
-    const listaUsuario = InvestimentosDB[usuarioId] || [];
-    const filtrados = listaUsuario.filter(i => i.mes === mes);
+    if (!competenciaValida(mes)) return res.status(400).json({ error: 'Competência inválida.' });
+    const filtrados = await new Promise((resolve, reject) => {
+      db.all(
+        'SELECT id, mes, tipo_ativo, valor_aplicado, rendimento_atual FROM investimentos_mensais WHERE usuario_id = ? AND mes = ? ORDER BY id DESC',
+        [req.usuarioId, mes],
+        (erro, registros) => erro ? reject(erro) : resolve(registros)
+      );
+    });
 
     // Agrupamento e totais executivos
     let totalAplicado = 0;
     let rendimentoTotal = 0;
-    const porAtivo = {};
+    const porAtivo = Object.create(null);
 
     filtrados.forEach(item => {
       const vAplicado = Number(item.valor_aplicado) || 0;
@@ -1166,7 +1174,7 @@ app.get('/api/investimentos', autenticarToken, (req, res) => {
       },
       distribuicao,
       porAtivo: Object.values(porAtivo),
-      investimentos: filtrados
+      investimentos: filtrados.map(({ id, mes, tipo_ativo, valor_aplicado, rendimento_atual }) => ({ id, mes, tipo_ativo, valor_aplicado, rendimento_atual }))
     });
   } catch (err) {
     console.error('Erro ao listar investimentos:', err);
@@ -1175,28 +1183,31 @@ app.get('/api/investimentos', autenticarToken, (req, res) => {
 });
 
 // POST /api/investimentos - Registra novo aporte ou atualização de rendimento
-app.post('/api/investimentos', autenticarToken, (req, res) => {
+app.post('/api/investimentos', autenticarToken, async (req, res) => {
   try {
-    const usuarioId = req.usuarioId || 2;
     const { mes, tipo_ativo, valor_aplicado, rendimento_atual } = req.body;
-
-    if (!tipo_ativo || valor_aplicado === undefined) {
-      return res.status(400).json({ error: 'Os campos tipo_ativo e valor_aplicado são obrigatórios.' });
+    const competencia = mes || new Date().toISOString().slice(0, 7);
+    const aplicado = Number(valor_aplicado);
+    const rendimento = Number(rendimento_atual ?? 0);
+    if (typeof tipo_ativo !== 'string' || !tipo_ativo.trim() || tipo_ativo.length > 120 ||
+        !competenciaValida(competencia) || !Number.isFinite(aplicado) || aplicado < 0 || !Number.isFinite(rendimento)) {
+      return res.status(400).json({ error: 'Informe uma competência, um tipo de ativo e valores válidos.' });
     }
-
-    if (!InvestimentosDB[usuarioId]) {
-      InvestimentosDB[usuarioId] = [];
-    }
-
+    const tipo = tipo_ativo.trim();
+    const id = await new Promise((resolve, reject) => {
+      db.run(
+        'INSERT INTO investimentos_mensais (usuario_id, mes, tipo_ativo, valor_aplicado, rendimento_atual) VALUES (?, ?, ?, ?, ?)',
+        [req.usuarioId, competencia, tipo, aplicado, rendimento],
+        function (erro) { if (erro) reject(erro); else resolve(this.lastID); }
+      );
+    });
     const novoRegistro = {
-      id: ++nextInvestimentoId,
-      mes: mes || new Date().toISOString().slice(0, 7),
-      tipo_ativo: tipo_ativo.trim(),
-      valor_aplicado: parseFloat(valor_aplicado) || 0,
-      rendimento_atual: parseFloat(rendimento_atual) || 0
+      id,
+      mes: competencia,
+      tipo_ativo: tipo,
+      valor_aplicado: aplicado,
+      rendimento_atual: rendimento
     };
-
-    InvestimentosDB[usuarioId].unshift(novoRegistro);
 
     return res.status(201).json({
       success: true,

@@ -851,6 +851,9 @@
             <ol id="previaPlanilhaCsv" class="max-h-44 list-decimal overflow-y-auto pl-5"></ol>
             <button id="importarPlanilhaCsv" type="button" class="mt-2 rounded bg-emerald-800 px-3 py-2 text-white disabled:opacity-50" disabled>Confirmar importação</button>
           </details>
+          <div class="px-4 pb-3">
+            <button id="exportarPlanilhaCsv" type="button" class="rounded border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-800 disabled:opacity-50">Exportar gastos filtrados</button>
+          </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
               <thead class="bg-slate-50 text-[11px] font-bold text-slate-600 border-b border-slate-200 uppercase tracking-wide">
@@ -1877,6 +1880,12 @@
       "20": "Futuro (Aportes / Investimentos)"
     };
 
+    function escaparTextoFinanceiro(valor) {
+      return String(valor ?? '').replace(/[&<>"']/g, caractere => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[caractere]);
+    }
+
     const formatMoeda = (val) => {
       return (Number(val) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     };
@@ -2758,7 +2767,7 @@
       } else {
         tbodyEntradas.innerHTML = mes.entradas.map(item => `
           <tr class="hover:bg-slate-50 transition-colors">
-            <td class="py-2.5 px-4 font-normal text-slate-800">${item.descricao}</td>
+            <td class="py-2.5 px-4 font-normal text-slate-800">${escaparTextoFinanceiro(item.descricao)}</td>
             <td class="py-2.5 px-4 text-right font-semibold text-slate-900">${formatMoeda(item.valor)}</td>
             <td class="py-2.5 px-2 text-center whitespace-nowrap">
               <button onclick="abrirModalEdicaoLancamento('entrada', ${item.id})" class="text-slate-400 hover:text-emerald-700 transition p-1 cursor-pointer mr-1" title="Editar Receita">
@@ -2785,7 +2794,7 @@
       } else {
         tbodyDespesas.innerHTML = mes.despesas.map(item => `
           <tr class="hover:bg-slate-50 transition-colors">
-            <td class="py-2.5 px-4 font-normal text-slate-800">${item.descricao}</td>
+            <td class="py-2.5 px-4 font-normal text-slate-800">${escaparTextoFinanceiro(item.descricao)}</td>
             <td class="py-2.5 px-3">${catBadges[item.categoria] || ''}</td>
             <td class="py-2.5 px-4 text-right font-semibold text-slate-900">${formatMoeda(item.valor)}</td>
             <td class="py-2.5 px-2 text-center whitespace-nowrap">
@@ -2892,10 +2901,12 @@
       }
     });
     document.getElementById('filtros-extra-planilha').addEventListener('input', () => {
+      despesasSelecionadasPlanilha.clear();
       if (historicoMeses[mesAtualKey]) renderizarPlanilhaCompleta();
     });
 
     function filtrarTabelaPlanilha(cat) {
+      if (cat !== filtroCategoriaPlanilhaAtivo) despesasSelecionadasPlanilha.clear();
       filtroCategoriaPlanilhaAtivo = cat;
       const botoes = [
         { id: 'btnFiltroTodas', val: 'todas' },
@@ -2921,6 +2932,36 @@
     // Seleção em lote de despesas na planilha
     let despesasSelecionadasPlanilha = new Set();
 
+    function obterDespesasVisiveis(mes) {
+      const busca = document.getElementById('buscaPlanilha').value.trim().toLocaleLowerCase('pt-BR');
+      const inicio = document.getElementById('inicioPlanilha').value;
+      const fim = document.getElementById('fimPlanilha').value;
+      const minimo = Number(document.getElementById('minPlanilha').value) || 0;
+      return (mes?.despesas || []).filter(despesa => {
+        const data = String(despesa.data || '').slice(0, 10);
+        return (filtroCategoriaPlanilhaAtivo === 'todas' || String(despesa.categoria) === filtroCategoriaPlanilhaAtivo)
+          && String(despesa.descricao || '').toLocaleLowerCase('pt-BR').includes(busca)
+          && (!inicio || data >= inicio) && (!fim || (data && data <= fim)) && Number(despesa.valor) >= minimo;
+      });
+    }
+
+    document.getElementById('exportarPlanilhaCsv').addEventListener('click', () => {
+      const linhas = obterDespesasVisiveis(historicoMeses[mesAtualKey]);
+      if (!linhas.length) return;
+      const csv = linhas.map(item => {
+        const descricao = String(item.descricao || '').replace(/[\r\n]+/g, ' ');
+        const segura = /^\s*[=+\-@]/.test(descricao) ? "'" + descricao : descricao;
+        return [String(item.data).slice(0, 10), '"' + segura.replaceAll('"', '""') + '"',
+          item.categoria, Number(item.valor).toFixed(2).replace('.', ',')].join(';');
+      });
+      const url = URL.createObjectURL(new Blob(['\uFEFFdata;descricao;categoria;valor\r\n' + csv.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `converge-gastos-${mesAtualKey}.csv`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
     function atualizarBotaoExcluirSelecionados() {
       const btn = document.getElementById('btnExcluirSelecionadosPlanilha');
       const countEl = document.getElementById('countSelecionadosPlanilha');
@@ -2938,12 +2979,10 @@
       }
 
       if (chkMaster) {
-        const mes = historicoMeses[mesAtualKey];
-        let despesasVisiveis = mes ? mes.despesas : [];
-        if (filtroCategoriaPlanilhaAtivo !== 'todas') {
-          despesasVisiveis = despesasVisiveis.filter(d => d.categoria === filtroCategoriaPlanilhaAtivo);
-        }
-        chkMaster.checked = despesasVisiveis.length > 0 && despesasVisiveis.every(d => despesasSelecionadasPlanilha.has(d.id));
+        const visiveis = obterDespesasVisiveis(historicoMeses[mesAtualKey]);
+        const marcadas = visiveis.filter(d => despesasSelecionadasPlanilha.has(Number(d.id))).length;
+        chkMaster.checked = visiveis.length > 0 && marcadas === visiveis.length;
+        chkMaster.indeterminate = marcadas > 0 && !chkMaster.checked;
       }
     }
 
@@ -2959,12 +2998,7 @@
     function alternarSelecionarTodasDespesas(checked) {
       const mes = historicoMeses[mesAtualKey];
       if (!mes) return;
-      let despesasVisiveis = mes.despesas;
-      if (filtroCategoriaPlanilhaAtivo !== 'todas') {
-        despesasVisiveis = despesasVisiveis.filter(d => d.categoria === filtroCategoriaPlanilhaAtivo);
-      }
-
-      despesasVisiveis.forEach(d => {
+      obterDespesasVisiveis(mes).forEach(d => {
         if (checked) {
           despesasSelecionadasPlanilha.add(Number(d.id));
         } else {
@@ -3043,11 +3077,11 @@
     }
 
     async function excluirDespesasSelecionadas() {
-      const ids = Array.from(despesasSelecionadasPlanilha);
+      const competencia = mesAtualKey;
+      const mes = historicoMeses[competencia];
+      const itensSelecionados = obterDespesasVisiveis(mes).filter(d => despesasSelecionadasPlanilha.has(Number(d.id)));
+      const ids = itensSelecionados.map(d => Number(d.id));
       if (ids.length === 0) return;
-
-      const mes = historicoMeses[mesAtualKey];
-      const itensSelecionados = mes ? mes.despesas.filter(d => despesasSelecionadasPlanilha.has(d.id)) : [];
 
       abrirModalConfirmacaoExclusao({
         titulo: `Excluir ${ids.length} Lançamento(s)`,
@@ -3068,17 +3102,8 @@
               return;
             }
 
-            // Remove do estado local
-            if (mes) {
-              mes.despesas = mes.despesas.filter(d => !despesasSelecionadasPlanilha.has(d.id));
-              dadosMesAtual.despesas = mes.despesas;
-            }
-
             despesasSelecionadasPlanilha.clear();
-            atualizarBotaoExcluirSelecionados();
-            atualizarDashboard();
-            atualizarGraficosInvestimentos();
-            renderizarPlanilhaCompleta();
+            if (mesAtualKey === competencia) await carregarDadosDoBanco(competencia);
           } catch (err) {
             alert('Falha na comunicação com o servidor ao excluir: ' + err.message);
           }
@@ -3137,19 +3162,10 @@
       if (txt20) txt20.textContent = lim20 > 0 ? `${p20.toFixed(0)}% da meta (${formatMoeda(lim20)})` : 'Sem meta';
 
       // Filtragem da tabela
-      let despesasFiltradas = mes.despesas;
-      if (filtroCategoriaPlanilhaAtivo !== 'todas') {
-        despesasFiltradas = despesasFiltradas.filter(d => d.categoria === filtroCategoriaPlanilhaAtivo);
-      }
-      const busca = document.getElementById('buscaPlanilha').value.trim().toLocaleLowerCase('pt-BR');
-      const inicio = document.getElementById('inicioPlanilha').value;
-      const fim = document.getElementById('fimPlanilha').value;
-      const minimo = Number(document.getElementById('minPlanilha').value) || 0;
-      despesasFiltradas = despesasFiltradas.filter(d => {
-        const data = String(d.data || '').slice(0, 10);
-        return String(d.descricao || '').toLocaleLowerCase('pt-BR').includes(busca)
-          && (!inicio || data >= inicio) && (!fim || (data && data <= fim)) && Number(d.valor) >= minimo;
-      });
+      const despesasFiltradas = obterDespesasVisiveis(mes);
+      const idsVisiveis = new Set(despesasFiltradas.map(d => Number(d.id)));
+      despesasSelecionadasPlanilha = new Set([...despesasSelecionadasPlanilha].filter(id => idsVisiveis.has(id)));
+      document.getElementById('exportarPlanilhaCsv').disabled = !despesasFiltradas.length;
 
       // Total filtrado para o rodapé
       const totalFiltrado = despesasFiltradas.reduce((acc, item) => acc + item.valor, 0);
@@ -3193,7 +3209,7 @@
             </td>
             <td class="py-3 px-6 font-semibold text-slate-900 flex items-center gap-3">
               <span class="w-6 h-6 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-black font-mono shadow-2xs">${idx + 1}</span>
-              <span class="text-xs tracking-tight">${item.descricao}</span>
+              <span class="text-xs tracking-tight">${escaparTextoFinanceiro(item.descricao)}</span>
             </td>
             <td class="py-3 px-4">${catBadges[item.categoria] || ''}</td>
             <td class="py-3 px-4">
@@ -3950,8 +3966,8 @@
               </div>
 
               <!-- Nome do Investimento -->
-              <h4 class="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition truncate" title="${inv.nome}">
-                ${inv.nome}
+              <h4 class="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition truncate" title="${escaparTextoFinanceiro(inv.nome)}">
+                ${escaparTextoFinanceiro(inv.nome)}
               </h4>
 
               <!-- Saldo Aplicado -->
@@ -4268,7 +4284,7 @@
             <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
               <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${cor}"></span>
-                <span class="font-medium text-slate-700 text-xs">${item.tipo_ativo}</span>
+                <span class="font-medium text-slate-700 text-xs">${escaparTextoFinanceiro(item.tipo_ativo)}</span>
               </div>
               <span class="font-bold text-slate-900 font-mono text-xs">${item.percentual}%</span>
             </div>
@@ -4295,7 +4311,7 @@
         const pct = patrimonioTotal > 0 ? ((vPat / patrimonioTotal) * 100).toFixed(1) : '0.0';
         return `
           <tr class="hover:bg-slate-50/80 transition">
-            <td class="py-2.5 px-3 font-semibold text-slate-900">${ativo.tipo_ativo}</td>
+            <td class="py-2.5 px-3 font-semibold text-slate-900">${escaparTextoFinanceiro(ativo.tipo_ativo)}</td>
             <td class="py-2.5 px-3 text-right text-slate-700 font-mono">${formatMoeda(ativo.valor_aplicado)}</td>
             <td class="py-2.5 px-3 text-right font-semibold text-emerald-700 font-mono">+ ${formatMoeda(ativo.rendimento_atual)}</td>
             <td class="py-2.5 px-3 text-right font-bold text-slate-900 font-mono">${formatMoeda(vPat)}</td>
@@ -4688,7 +4704,7 @@
             <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
               <span class="text-[10px] font-bold px-2.5 py-0.5 rounded border uppercase tracking-wide flex items-center gap-1.5 ${badgeCor}">
                 <i class="fa-solid ${icone}"></i>
-                <span>${item.tipo}</span>
+                <span>${escaparTextoFinanceiro(item.tipo)}</span>
               </span>
 
               <div class="flex items-center gap-1.5">
@@ -4704,8 +4720,8 @@
             </div>
 
             <!-- Título do Objetivo -->
-            <h4 class="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition truncate" title="${item.nome}">
-              ${item.nome}
+            <h4 class="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition truncate" title="${escaparTextoFinanceiro(item.nome)}">
+              ${escaparTextoFinanceiro(item.nome)}
             </h4>
 
             <!-- Indicadores Numéricos -->
@@ -4981,7 +4997,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erro na consulta à API');
 
-        const formattedHtml = data.analysis
+        const formattedHtml = escaparTextoFinanceiro(data.analysis)
           .replace(/### (.*?)\n/g, '<h5 class="text-xs font-bold text-slate-900 uppercase tracking-wide mt-4 mb-1.5 pb-1 border-b border-slate-200">$1</h5>')
           .replace(/## (.*?)\n/g, '<h4 class="text-sm font-bold text-blue-900 mt-4 mb-2 pb-1 border-b border-slate-200">$1</h4>')
           .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>')
@@ -5127,7 +5143,7 @@
 
       if (!pergunta) return;
 
-      adicionarMensagemChat('Você', pergunta, true);
+      adicionarMensagemChat('Você', escaparTextoFinanceiro(pergunta), true);
       input.value = '';
 
       // Indicador de digitação
@@ -5170,7 +5186,7 @@
 
         if (!res.ok) throw new Error(data.error || 'Erro na resposta do chat');
 
-        const formatted = data.reply
+        const formatted = escaparTextoFinanceiro(data.reply)
           .replace(/### (.*?)\n/g, '<h5 class="text-xs font-bold text-slate-900 uppercase mt-2 mb-1">$1</h5>')
           .replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-900 font-bold">$1</strong>')
           .replace(/^\* (.*?)$/gm, '<li class="ml-4 list-disc text-slate-700 my-1 leading-relaxed">$1</li>')
@@ -5181,7 +5197,7 @@
       } catch (err) {
         const elTyping = document.getElementById(idTemp);
         if (elTyping) elTyping.remove();
-        adicionarMensagemChat('IA', `<span class="text-rose-600 font-semibold">Falha ao se comunicar com a IA: ${err.message}</span>`, false);
+        adicionarMensagemChat('IA', `<span class="text-rose-600 font-semibold">Falha ao se comunicar com a IA: ${escaparTextoFinanceiro(err.message)}</span>`, false);
       } finally {
         btn.disabled = false;
       }

@@ -25,39 +25,27 @@ try {
 let dbInstance = null;
 
 if (sqliteAvailable) {
-  try {
-    const sqlite3 = sqlite3Pkg.verbose();
-    const dbPath = path.join(dataDir, 'financas.sqlite');
-    dbInstance = new sqlite3.Database(dbPath, (err) => {
-      if (err) console.error('Erro ao conectar ao banco SQLite:', err.message);
-      else console.log('Conectado ao banco SQLite local:', dbPath);
+  const sqlite3 = sqlite3Pkg.verbose();
+  const dbPath = path.join(dataDir, 'financas.sqlite');
+  dbInstance = await new Promise((resolve, reject) => {
+    const conexao = new sqlite3.Database(dbPath, erro => {
+      if (erro) reject(new Error('Não foi possível abrir o banco SQLite.', { cause: erro }));
+      else resolve(conexao);
     });
-  } catch (errInit) {
-    sqliteAvailable = false;
-  }
+  });
+  console.log('Conectado ao banco SQLite local:', dbPath);
 }
 
 if (!sqliteAvailable || !dbInstance) {
   // Pure JavaScript JSON Database Engine - Zero dependências nativas
   const jsonPath = path.join(dataDir, 'financas_data.json');
   let store = {
-    usuarios: [
-      {
-        id: 1,
-        nome: 'Messias Iago',
-        email: 'messiasiago8@gmail.com',
-        senha: '$2a$10$Y83Q1H7zC78p7G7G3Wz1ee9K4fWfR.b4tMv9Fj5Qo0r0OqCgqR7lC',
-        data_criacao: new Date().toISOString()
-      }
-    ],
+    usuarios: [],
     entradas: [],
     despesas: [],
-    limites: [
-      { id: 1, usuario_id: 1, categoria: '50', valor_maximo: 0 },
-      { id: 2, usuario_id: 1, categoria: '30', valor_maximo: 0 },
-      { id: 3, usuario_id: 1, categoria: '20', valor_maximo: 0 }
-    ],
+    limites: [],
     potes: [],
+    investimentos_mensais: [],
     projetos_compras: [],
     aportes_projetos: []
   };
@@ -97,6 +85,11 @@ if (!sqliteAvailable || !dbInstance) {
         }
 
         if (/^INSERT INTO usuarios/i.test(q)) {
+          if (store.usuarios.some(usuario => usuario.email === params[1])) {
+            const error = new Error('E-mail já cadastrado.');
+            error.code = 'SQLITE_CONSTRAINT';
+            throw error;
+          }
           const id = store.usuarios.length ? Math.max(...store.usuarios.map(u => u.id)) + 1 : 1;
           store.usuarios.push({ id, nome: params[0], email: params[1], senha: params[2], data_criacao: new Date().toISOString() });
           persist();
@@ -123,6 +116,16 @@ if (!sqliteAvailable || !dbInstance) {
           return;
         }
 
+        if (/^INSERT INTO investimentos_mensais/i.test(q)) {
+          const [usuario_id, mes, tipo_ativo, valor_aplicado, rendimento_atual] = params;
+          const id = store.investimentos_mensais.reduce((maior, item) => Math.max(maior, item.id), 0) + 1;
+          store.investimentos_mensais.push({ id, usuario_id, mes, tipo_ativo, valor_aplicado, rendimento_atual });
+          persist();
+          ctx.lastID = id;
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
         if (/^INSERT INTO potes/i.test(q)) {
           const id = store.potes.length ? Math.max(...store.potes.map(x => x.id)) + 1 : 1;
           store.potes.push({
@@ -136,10 +139,17 @@ if (!sqliteAvailable || !dbInstance) {
           return;
         }
 
-        if (/^INSERT INTO limites/i.test(q)) {
+        if (/^INSERT (?:OR IGNORE )?INTO limites/i.test(q)) {
           const uid = params[0], cat = String(params[1]), val = Number(params[2]);
           const ex = store.limites.find(l => l.usuario_id === uid && l.categoria === cat);
-          if (ex) ex.valor_maximo = val;
+          if (ex) {
+            if (/^INSERT OR IGNORE/i.test(q)) {
+              ctx.changes = 0;
+              if (cb) cb.call(ctx, null);
+              return;
+            }
+            ex.valor_maximo = val;
+          }
           else store.limites.push({ id: store.limites.length + 1, usuario_id: uid, categoria: cat, valor_maximo: val });
           persist();
           if (cb) cb.call(ctx, null);
@@ -174,23 +184,20 @@ if (!sqliteAvailable || !dbInstance) {
           return;
         }
 
-        if (/^DELETE FROM entradas/i.test(q)) {
-          store.entradas = store.entradas.filter(e => !(e.id === params[0] && e.usuario_id === params[1]));
-          persist();
-          if (cb) cb.call(ctx, null);
-          return;
-        }
-
-        if (/^DELETE FROM despesas/i.test(q)) {
-          store.despesas = store.despesas.filter(d => !(d.id === params[0] && d.usuario_id === params[1]));
-          persist();
-          if (cb) cb.call(ctx, null);
-          return;
-        }
-
-        if (/^DELETE FROM potes/i.test(q)) {
-          store.potes = store.potes.filter(p => !(p.id === params[0] && p.usuario_id === params[1]));
-          persist();
+        const exclusao = q.match(/^DELETE FROM (entradas|despesas|potes|projetos_compras) WHERE id (?:= \?|IN \([?,]+\)) AND usuario_id = \?$/i);
+        if (exclusao) {
+          const tabela = exclusao[1];
+          const usuarioId = params.at(-1);
+          const ids = new Set(params.slice(0, -1).map(Number));
+          const anteriores = store[tabela];
+          store[tabela] = anteriores.filter(item => item.usuario_id !== usuarioId || !ids.has(item.id));
+          ctx.changes = anteriores.length - store[tabela].length;
+          if (ctx.changes) {
+            if (tabela === 'projetos_compras') {
+              store.aportes_projetos = store.aportes_projetos.filter(aporte => aporte.usuario_id !== usuarioId || !ids.has(aporte.projeto_id));
+            }
+            persist();
+          }
           if (cb) cb.call(ctx, null);
           return;
         }
@@ -202,28 +209,27 @@ if (!sqliteAvailable || !dbInstance) {
           return;
         }
 
-        if (/^DELETE FROM projetos_compras/i.test(q)) {
-          store.projetos_compras = store.projetos_compras.filter(p => !(p.id === params[0] && p.usuario_id === params[1]));
-          persist();
-          if (cb) cb.call(ctx, null);
-          return;
-        }
-
         if (/^DELETE FROM aportes_projetos/i.test(q)) {
-          store.aportes_projetos = store.aportes_projetos.filter(a => !(a.projeto_id === params[0] && a.usuario_id === params[1]));
+          store.aportes_projetos = store.aportes_projetos.filter(a => !(a.projeto_id === Number(params[0]) && a.usuario_id === params[1]));
           persist();
           if (cb) cb.call(ctx, null);
           return;
         }
 
-        if (/^UPDATE potes/i.test(q)) {
-          const campos = q.match(/^UPDATE potes SET (.+) WHERE id = \? AND usuario_id = \?$/i)?.[1]
-            .split(',').map(campo => campo.trim().split(' ')[0]);
-          if (!campos || campos.some(campo => !['categoria_ativo', 'vencimento', 'valor', 'nome'].includes(campo))) {
-            throw new Error('Campos de investimento inválidos.');
+        const atualizacao = q.match(/^UPDATE (entradas|despesas|potes) SET (.+) WHERE id = \? AND usuario_id = \?$/i);
+        if (atualizacao) {
+          const [, tabela, atribuicoes] = atualizacao;
+          const campos = atribuicoes.split(',').map(campo => campo.trim().split(' ')[0]);
+          const permitidos = {
+            entradas: ['descricao', 'valor'],
+            despesas: ['descricao', 'valor', 'categoria'],
+            potes: ['categoria_ativo', 'vencimento', 'valor', 'nome']
+          };
+          if (campos.some(campo => !permitidos[tabela].includes(campo))) {
+            throw new Error('Campos de atualização inválidos.');
           }
           const [id, usuarioId] = params.slice(-2);
-          const item = store.potes.find(p => p.id === Number(id) && p.usuario_id === usuarioId);
+          const item = store[tabela].find(p => p.id === Number(id) && p.usuario_id === usuarioId);
           ctx.changes = item ? 1 : 0;
           if (item) {
             campos.forEach((campo, indice) => {
@@ -288,6 +294,14 @@ if (!sqliteAvailable || !dbInstance) {
           return;
         }
 
+        if (/FROM investimentos_mensais/i.test(q)) {
+          const [usuarioId, mes] = params;
+          const lista = store.investimentos_mensais.filter(item => item.usuario_id === usuarioId && (!mes || item.mes === mes))
+            .sort((a, b) => b.id - a.id);
+          if (cb) cb(null, lista);
+          return;
+        }
+
         if (/FROM potes/i.test(q)) {
           const uid = params[0];
           const res = store.potes.filter(p => p.usuario_id === uid);
@@ -299,6 +313,11 @@ if (!sqliteAvailable || !dbInstance) {
           const uid = params[0];
           const res = store.projetos_compras.filter(p => p.usuario_id === uid);
           if (cb) cb(null, res);
+          return;
+        }
+
+        if (/FROM aportes_projetos/i.test(q)) {
+          if (cb) cb(null, store.aportes_projetos.filter(item => item.usuario_id === params[0]));
           return;
         }
 
@@ -462,6 +481,19 @@ db.serialize(() => {
       WHERE id = NEW.projeto_id AND usuario_id = NEW.usuario_id;
     END
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS investimentos_mensais (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usuario_id INTEGER NOT NULL,
+      mes TEXT NOT NULL,
+      tipo_ativo TEXT NOT NULL,
+      valor_aplicado REAL NOT NULL,
+      rendimento_atual REAL NOT NULL DEFAULT 0,
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+    )
+  `);
+  db.run('CREATE INDEX IF NOT EXISTS idx_investimentos_usuario_mes ON investimentos_mensais (usuario_id, mes)');
 
   // Migrações dinâmicas seguras (adiciona usuario_id caso as tabelas antigas ainda não tenham)
   const tabelasParaMigrar = ['entradas', 'despesas', 'potes', 'projetos_compras', 'aportes_projetos'];

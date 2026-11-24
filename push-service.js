@@ -8,6 +8,20 @@ try {
   console.warn('[WebPush] Pacote web-push não carregado:', err.message);
 }
 
+function endpointPushPermitido(endpoint) {
+  if (typeof endpoint !== 'string' || endpoint.length > 2048) return false;
+  try {
+    const url = new URL(endpoint);
+    return url.protocol === 'https:' && !url.port && !url.username && !url.password && !url.hash
+      && (url.hostname === 'fcm.googleapis.com'
+        || url.hostname === 'updates.push.services.mozilla.com'
+        || url.hostname.endsWith('.push.apple.com')
+        || url.hostname.endsWith('.notify.windows.com'));
+  } catch {
+    return false;
+  }
+}
+
 function getLocalDateParts(date, timeZone) {
   const tz = timeZone || 'America/Sao_Paulo';
   try {
@@ -89,8 +103,10 @@ function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario }) {
   }
 
   function subscribeUser(usuarioId, subscription, meta = {}) {
-    if (!subscription || !subscription.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
-      throw new Error('Inscrição Push inválida (endpoint ou chaves ausentes).');
+    const { endpoint, keys } = subscription || {};
+    if (!endpointPushPermitido(endpoint) || typeof keys?.p256dh !== 'string' || typeof keys?.auth !== 'string'
+        || !/^[\w-]{87}=?$/.test(keys.p256dh) || !/^[\w-]{22}={0,2}$/.test(keys.auth)) {
+      throw new Error('Inscrição Push inválida ou provedor não suportado.');
     }
 
     const dbUser = obterBancoUsuario(usuarioId);
@@ -103,16 +119,16 @@ function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario }) {
       ? meta.device.trim()
       : 'web';
 
-    const existente = dbUser.push_subscriptions.find(s => s.endpoint === subscription.endpoint);
+    const existente = dbUser.push_subscriptions.find(s => s.endpoint === endpoint);
     if (existente) {
-      existente.keys = subscription.keys;
+      existente.keys = { p256dh: keys.p256dh, auth: keys.auth };
       existente.timezone = timezone;
       existente.device = device;
       existente.atualizado_em = new Date().toISOString();
     } else {
       dbUser.push_subscriptions.push({
-        endpoint: subscription.endpoint,
-        keys: subscription.keys,
+        endpoint,
+        keys: { p256dh: keys.p256dh, auth: keys.auth },
         timezone,
         device,
         criado_em: new Date().toISOString(),
@@ -171,11 +187,15 @@ function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario }) {
     const endpointsParaRemover = new Set();
 
     await Promise.all(subs.map(async (sub) => {
+      if (!endpointPushPermitido(sub.endpoint)) {
+        endpointsParaRemover.add(sub.endpoint);
+        return;
+      }
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: sub.keys },
           message,
-          { TTL: 3600 }
+          { TTL: 3600, timeout: 8000 }
         );
         sent += 1;
       } catch (err) {
@@ -190,14 +210,24 @@ function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario }) {
     }));
 
     if (endpointsParaRemover.size > 0) {
-      dbUser.push_subscriptions = subs.filter(s => !endpointsParaRemover.has(s.endpoint));
-      salvarBancoUsuario(dbUser, usuarioId);
+      const atual = obterBancoUsuario(usuarioId);
+      atual.push_subscriptions = (atual.push_subscriptions || []).filter(s => !endpointsParaRemover.has(s.endpoint));
+      salvarBancoUsuario(atual, usuarioId);
     }
 
     return { sent, failed, removed: endpointsParaRemover.size };
   }
 
-  async function checkAndDispatchDueNotifications() {
+  function marcarNotificacao(usuarioId, chave, agoraMs) {
+    const atual = obterBancoUsuario(usuarioId);
+    atual.push_notificados ||= {};
+    if (atual.push_notificados[chave]) return false;
+    atual.push_notificados[chave] = agoraMs;
+    salvarBancoUsuario(atual, usuarioId);
+    return true;
+  }
+
+  async function despachoPendentes() {
     if (!isEnabled()) {
       return { checkedUsers: 0, sent: 0, failed: 0, skipped: true };
     }
@@ -245,6 +275,7 @@ function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario }) {
           alterou = true;
         }
       }
+      if (alterou) salvarBancoUsuario(dbUser, usuarioId);
 
       const tz = subs[0].timezone || 'America/Sao_Paulo';
       const localNow = getLocalDateParts(agora, tz);
@@ -264,11 +295,7 @@ function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario }) {
         const chaveExato = `exato_${comp.id || comp.titulo}_${localNow.isoDate}_${comp.horario}`;
 
         // Janela de 10 minutos antes (compatível com cron de 5 em 5 min: entre 6 e 12 min antes)
-        if (diferencaMin >= 6 && diferencaMin <= 12 && !dbUser.push_notificados[chavePrevio]) {
-          dbUser.push_notificados[chavePrevio] = agoraMs;
-          alterou = true;
-          salvarBancoUsuario(dbUser, usuarioId);
-
+        if (diferencaMin >= 6 && diferencaMin <= 12 && marcarNotificacao(usuarioId, chavePrevio, agoraMs)) {
           const res = await sendPushToUser(usuarioId, {
             title: `⏳ Em ${diferencaMin} min: ${comp.titulo}`,
             body: `Compromisso agendado para às ${comp.horario}${comp.local ? ' • ' + comp.local : ''}`,
@@ -280,11 +307,7 @@ function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario }) {
         }
 
         // Janela do horário exato (compatível com cron de 5 em 5 min: entre -3 e +2 min)
-        if (diferencaMin >= -3 && diferencaMin <= 2 && !dbUser.push_notificados[chaveExato]) {
-          dbUser.push_notificados[chaveExato] = agoraMs;
-          alterou = true;
-          salvarBancoUsuario(dbUser, usuarioId);
-
+        if (diferencaMin >= -3 && diferencaMin <= 2 && marcarNotificacao(usuarioId, chaveExato, agoraMs)) {
           const res = await sendPushToUser(usuarioId, {
             title: `⏰ Começando agora: ${comp.titulo}`,
             body: `Horário: ${comp.horario}${comp.local ? ' • ' + comp.local : ''}`,
@@ -296,14 +319,6 @@ function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario }) {
         }
       }
 
-      if (alterou) {
-        try {
-          // Recarrega para não sobrescrever limpeza de subscriptions feita em sendPushToUser
-          const atualizado = obterBancoUsuario(usuarioId);
-          atualizado.push_notificados = dbUser.push_notificados;
-          salvarBancoUsuario(atualizado, usuarioId);
-        } catch (e) {}
-      }
     }
 
     return {
@@ -312,6 +327,12 @@ function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario }) {
       failed: totalFailed,
       timestamp: agora.toISOString()
     };
+  }
+
+  let despachoAtivo;
+  function checkAndDispatchDueNotifications() {
+    despachoAtivo ||= despachoPendentes().finally(() => { despachoAtivo = null; });
+    return despachoAtivo;
   }
 
   return {

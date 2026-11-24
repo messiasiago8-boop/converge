@@ -32,6 +32,31 @@ async function fetchAuth(url, options = {}) {
   return fetch(url, { ...options, headers });
 }
 
+document.getElementById('btn-exportar-meus-dados')?.addEventListener('click', async (evento) => {
+  const botao = evento.currentTarget;
+  const status = document.getElementById('status-exportar-meus-dados');
+  botao.disabled = true;
+  status.textContent = 'Preparando exportação…';
+  try {
+    const resposta = await fetchAuth('/api/meus-dados', { cache: 'no-store' });
+    if (!resposta.ok) {
+      const dados = await resposta.json();
+      throw new Error(dados.error || 'Não foi possível exportar seus dados.');
+    }
+    const url = URL.createObjectURL(await resposta.blob());
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'converge-meus-dados.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    status.textContent = 'Arquivo preparado para download.';
+  } catch (erro) {
+    status.textContent = erro.message;
+  } finally {
+    botao.disabled = false;
+  }
+});
+
 // ================= 1. INTEGRAÇÃO DA YOUTUBE IFRAME API ================= //
 
 function loadYouTubeIframeAPI() {

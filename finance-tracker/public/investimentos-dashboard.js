@@ -107,10 +107,7 @@ function renderizarGraficoDoughnut(distribuicao, patrimonioTotal) {
   const canvas = document.getElementById('graficoDoughnutDistribuicao');
   if (!canvas) return;
 
-  const lista = (distribuicao && distribuicao.length > 0) ? distribuicao : [
-    { tipo_ativo: 'Tesouro Selic', patrimonio: 4000, percentual: 60 },
-    { tipo_ativo: 'CDB', patrimonio: 3000, percentual: 40 }
-  ];
+  const lista = distribuicao || [];
 
   const labels = lista.map(i => i.tipo_ativo);
   const dataValues = lista.map(i => i.patrimonio);

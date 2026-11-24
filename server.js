@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { initPushService } = require('./push-service');
-const { randomUUID } = require('node:crypto');
+const { randomBytes, randomUUID, timingSafeEqual } = require('node:crypto');
 let yts = null;
 try {
   yts = require('yt-search');
@@ -42,7 +42,7 @@ app.use((req, res, next) => {
 
 // Middleware de Autenticação JWT do Portal (valida token do usuário)
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'financas-inteligente-jwt-secret-key-2026';
+const JWT_SECRET = process.env.JWT_SECRET || randomBytes(32).toString('hex');
 
 function autenticarTokenPortal(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -214,6 +214,12 @@ app.get('/api/push/public-key', (req, res) => {
 });
 
 app.get('/api/push/check', async (req, res) => {
+  const esperado = Buffer.from(process.env.PUSH_CRON_SECRET || '');
+  const recebido = Buffer.from(req.get('Authorization') || '');
+  const autorizacao = Buffer.concat([Buffer.from('Bearer '), esperado]);
+  if (!esperado.length || recebido.length !== autorizacao.length || !timingSafeEqual(recebido, autorizacao)) {
+    return res.status(401).json({ success: false, error: 'Verificação de alertas não autorizada.' });
+  }
   try {
     if (!pushService || !pushService.isEnabled()) {
       return res.json({ success: true, enabled: false, checkedUsers: 0, sent: 0 });
@@ -227,6 +233,31 @@ app.get('/api/push/check', async (req, res) => {
 });
 
 app.use('/api', autenticarTokenPortal);
+
+app.get('/api/meus-dados', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const portal = obterBancoUsuario(req.usuarioId);
+    const resposta = await fetch(`http://127.0.0.1:${FINANCE_API_PORT}/api/dados/exportacao`, {
+      headers: { Authorization: req.headers.authorization },
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!resposta.ok) {
+      await resposta.body?.cancel();
+      return res.status(503).json({ success: false, error: 'Finanças indisponível. Tente exportar novamente.' });
+    }
+    const { dados: financas } = await resposta.json();
+    if (!financas || typeof financas !== 'object') throw new Error('Resposta de exportação inválida.');
+    const campos = ['topicos', 'videos', 'notas', 'agendamentos', 'prioridades_dia', 'historico_tarefas', 'habitos', 'compromissos', 'metas'];
+    const estudosRotina = Object.fromEntries(campos.map(campo => [campo, portal[campo] || []]));
+    estudosRotina.planos_semanais = Object.values(portal.planos_semanais || {});
+    res.attachment('converge-meus-dados.json');
+    res.json({ versao: 1, exportado_em: new Date().toISOString(), portal: estudosRotina, financas });
+  } catch (erro) {
+    console.error('[Exportação da conta]', erro.message);
+    res.status(503).json({ success: false, error: 'Não foi possível exportar seus dados. Tente novamente.' });
+  }
+});
 
 // ================= ROTAS AUTENTICADAS DE WEB PUSH ================= //
 app.get('/api/push/status', (req, res) => {
