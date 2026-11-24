@@ -1349,16 +1349,92 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (btnLimparHistorico) {
-    btnLimparHistorico.addEventListener('click', async () => {
-      if (confirm('Tem certeza que deseja limpar todo o histórico de tarefas? Esta ação não pode ser desfeita.')) {
-        try {
-          await salvarRotina('/api/rotina/historico-tarefas', { method: 'DELETE' });
-          await carregarHistoricoTarefas();
-        } catch (e) {
-          avisarFalhaRotina(e);
-        }
+    const abrirModalLimparHistorico = () => {
+      let modal = document.getElementById('modal-confirmar-limpar-historico');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-confirmar-limpar-historico';
+        modal.className = 'fixed inset-0 z-[10000] hidden items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200';
+        modal.innerHTML = `
+          <div class="bg-[#fffdf8] border border-[#1f2a27]/12 rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4 transform transition-all duration-200 scale-95 opacity-0" id="card-confirmar-limpar-historico">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-rose-50 border border-rose-200/80 flex items-center justify-center text-rose-600 shadow-xs">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+
+            <div class="space-y-1.5">
+              <h3 class="text-base font-bold text-[#1f2a27] tracking-tight">Limpar histórico de tarefas?</h3>
+              <p class="text-xs text-[#5d5c54] leading-relaxed">
+                Todas as tarefas concluídas e arquivadas do histórico serão removidas permanentemente. <strong class="text-rose-700">Esta ação não pode ser desfeita.</strong>
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5 pt-2">
+              <button type="button" id="btn-cancelar-limpar-hist" class="py-2.5 px-4 rounded-xl text-xs font-semibold text-[#5d5c54] bg-[#f1ede3] hover:bg-[#e5dfd0] border border-[#1f2a27]/10 transition cursor-pointer">
+                Cancelar
+              </button>
+              <button type="button" id="btn-confirmar-limpar-hist" class="py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-700 hover:to-rose-800 shadow-md shadow-rose-600/20 transition cursor-pointer flex items-center justify-center gap-1.5">
+                <span>Sim, limpar</span>
+              </button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        const card = modal.querySelector('#card-confirmar-limpar-historico');
+        const fechar = () => {
+          card.classList.add('scale-95', 'opacity-0');
+          setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+          }, 150);
+        };
+
+        modal.querySelector('#btn-cancelar-limpar-hist').addEventListener('click', fechar);
+        modal.addEventListener('click', (e) => { if (e.target === modal) fechar(); });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !modal.classList.contains('hidden')) fechar();
+        });
+
+        const btnConfirm = modal.querySelector('#btn-confirmar-limpar-hist');
+        btnConfirm.addEventListener('click', async () => {
+          btnConfirm.disabled = true;
+          btnConfirm.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg><span>Limpando...</span>';
+          try {
+            await salvarRotina('/api/rotina/historico-tarefas', { method: 'DELETE' });
+            await carregarHistoricoTarefas();
+            fechar();
+
+            // Toast elegante de confirmação
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-5 right-5 z-[10001] bg-[#1f2a27] text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl border border-emerald-500/30 flex items-center gap-2 transition-all duration-300';
+            toast.innerHTML = '<span class="text-emerald-400">✓</span><span>Histórico de tarefas limpo com sucesso!</span>';
+            document.body.appendChild(toast);
+            setTimeout(() => {
+              toast.style.opacity = '0';
+              toast.style.transform = 'translateY(8px)';
+              setTimeout(() => toast.remove(), 300);
+            }, 2600);
+          } catch (e) {
+            avisarFalhaRotina(e);
+            fechar();
+          } finally {
+            btnConfirm.disabled = false;
+            btnConfirm.innerHTML = '<span>Sim, limpar</span>';
+          }
+        });
       }
-    });
+
+      const card = modal.querySelector('#card-confirmar-limpar-historico');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      requestAnimationFrame(() => {
+        card.classList.remove('scale-95', 'opacity-0');
+      });
+    };
+
+    btnLimparHistorico.addEventListener('click', abrirModalLimparHistorico);
   }
 
   // Inicializa Pomodoro
