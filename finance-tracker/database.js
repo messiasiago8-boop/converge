@@ -4,6 +4,10 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const dataDir = process.env.CONVERGE_DATA_DIR
+  ? path.resolve(process.env.CONVERGE_DATA_DIR, 'finance')
+  : __dirname;
+fs.mkdirSync(dataDir, { recursive: true });
 
 let sqlite3Pkg = null;
 let sqliteAvailable = false;
@@ -23,7 +27,7 @@ let dbInstance = null;
 if (sqliteAvailable) {
   try {
     const sqlite3 = sqlite3Pkg.verbose();
-    const dbPath = path.resolve(__dirname, 'financas.sqlite');
+    const dbPath = path.join(dataDir, 'financas.sqlite');
     dbInstance = new sqlite3.Database(dbPath, (err) => {
       if (err) console.error('Erro ao conectar ao banco SQLite:', err.message);
       else console.log('Conectado ao banco SQLite local:', dbPath);
@@ -35,7 +39,7 @@ if (sqliteAvailable) {
 
 if (!sqliteAvailable || !dbInstance) {
   // Pure JavaScript JSON Database Engine - Zero dependências nativas
-  const jsonPath = path.resolve(__dirname, 'financas_data.json');
+  const jsonPath = path.join(dataDir, 'financas_data.json');
   let store = {
     usuarios: [
       {
@@ -58,17 +62,25 @@ if (!sqliteAvailable || !dbInstance) {
     aportes_projetos: []
   };
 
-  if (fs.existsSync(jsonPath)) {
-    try {
-      store = { ...store, ...JSON.parse(fs.readFileSync(jsonPath, 'utf8')) };
-    } catch (e) {}
-  } else {
-    try { fs.writeFileSync(jsonPath, JSON.stringify(store, null, 2), 'utf8'); } catch(e) {}
+  const existingStore = fs.existsSync(jsonPath);
+  if (existingStore) {
+    store = { ...store, ...JSON.parse(fs.readFileSync(jsonPath, 'utf8')) };
   }
+  let committedStore = JSON.stringify(store);
 
   function persist() {
-    try { fs.writeFileSync(jsonPath, JSON.stringify(store, null, 2), 'utf8'); } catch(e) {}
+    const tempPath = `${jsonPath}.tmp`;
+    try {
+      const nextStore = JSON.stringify(store, null, 2);
+      fs.writeFileSync(tempPath, nextStore, 'utf8');
+      fs.renameSync(tempPath, jsonPath);
+      committedStore = nextStore;
+    } catch (error) {
+      store = JSON.parse(committedStore);
+      throw error;
+    }
   }
+  if (!existingStore) persist();
 
   dbInstance = {
     serialize(fn) { if (fn) fn(); },
@@ -219,6 +231,7 @@ if (!sqliteAvailable || !dbInstance) {
         if (cb) cb.call(ctx, null);
       } catch (err) {
         if (cb) cb.call(ctx, err);
+        else console.error('[Database] Falha ao gravar dados de Finanças:', err.message);
       }
     },
     all(query, params, cb) {

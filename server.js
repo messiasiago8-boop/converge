@@ -39,33 +39,24 @@ app.use((req, res, next) => {
 });
 
 // Middleware de Autenticação JWT do Portal (valida token do usuário)
-const jwt = (() => {
-  try {
-    return require('../finance-tracker/node_modules/jsonwebtoken');
-  } catch (e) {
-    return null;
-  }
-})();
+const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'financas-inteligente-jwt-secret-key-2026';
 
 function autenticarTokenPortal(req, res, next) {
   const authHeader = req.headers['authorization'];
-  let token = authHeader && authHeader.split(' ')[1];
-  if (!token && req.query.token) token = req.query.token;
+  const token = authHeader?.match(/^Bearer (\S+)$/i)?.[1];
 
-  if (!token || !jwt) {
-    req.usuarioId = 1; // Fallback seguro
-    return next();
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Entre para acessar sua conta.' });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      req.usuarioId = 1;
-    } else {
-      req.usuarioId = user.id;
-      req.usuarioNome = user.nome;
-      req.usuarioEmail = user.email;
+    if (err || !Number.isSafeInteger(user?.id) || user.id < 1) {
+      return res.status(401).json({ success: false, error: 'Sessão inválida ou expirada.' });
     }
+    req.usuarioId = user.id;
+    req.usuarioNome = user.nome;
+    req.usuarioEmail = user.email;
     next();
   });
 }
@@ -131,7 +122,6 @@ const aiRateLimiter = criarRateLimiter({
   mensagem: 'Limite de consultas à IA atingido temporariamente. Por favor, aguarde 1 minuto.'
 });
 
-app.use(autenticarTokenPortal);
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
@@ -159,6 +149,19 @@ const { createProxyMiddleware } = (() => {
 
 // Redirecionamento/Proxy de APIs do Finanças para a porta 3001
 const FINANCE_API_PORT = 3001;
+app.get('/api/health', async (req, res) => {
+  try {
+    const finance = await fetch(`http://127.0.0.1:${FINANCE_API_PORT}/api/health`, {
+      signal: AbortSignal.timeout(3000)
+    });
+    await finance.body?.cancel();
+    if (finance.ok) return res.json({ status: 'ok' });
+  } catch (error) {
+    console.warn('[Health] Backend de Finanças indisponível:', error.message);
+  }
+  return res.status(503).json({ status: 'unavailable' });
+});
+
 ['/api/auth', '/api/dados', '/api/potes', '/api/entradas', '/api/despesas', '/api/limites', '/api/projetos', '/api/analyze', '/api/simulate', '/api/invest-advice', '/api/investimentos'].forEach(route => {
   app.all(route + '*', async (req, res) => {
     try {
@@ -195,8 +198,12 @@ const FINANCE_API_PORT = 3001;
   });
 });
 
+app.use('/api', autenticarTokenPortal);
+
 // ================= BANCO DE DADOS PERSISTENTE EM ARQUIVO JSON ================= //
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.CONVERGE_DATA_DIR
+  ? path.resolve(process.env.CONVERGE_DATA_DIR, 'portal')
+  : path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
 
 if (!fs.existsSync(DATA_DIR)) {
@@ -254,35 +261,29 @@ const DADOS_PADRAO = {
 };
 
 function obterBancoUsuario(usuarioId) {
-  const uid = usuarioId || 1;
+  const uid = usuarioId;
   const userFile = path.join(DATA_DIR, `database_user_${uid}.json`);
 
   // Se o arquivo do usuário ainda não existir
   if (!fs.existsSync(userFile)) {
-    // Para o usuário principal (ID 1 e ID 2 que é o Iago), se existir database.json clássico, reaproveita
-    if ((uid === 1 || uid === 2) && fs.existsSync(DB_FILE)) {
-      try {
-        const conteudo = fs.readFileSync(DB_FILE, 'utf-8');
-        fs.writeFileSync(userFile, conteudo, 'utf-8');
-        return JSON.parse(conteudo);
-      } catch (e) {
-        console.error('Erro ao migrar dados de usuário antigo:', e);
-      }
+    // O arquivo legado só pode ser importado para um titular confirmado no ambiente.
+    if (String(uid) === process.env.LEGACY_PORTAL_USER_ID && fs.existsSync(DB_FILE)) {
+      const dados = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+      salvarBancoUsuario(dados, uid);
+    } else {
+      const dadosZerados = {
+        topicos: [],
+        videos: [],
+        agendamentos: [],
+        notas: [],
+        prioridades_dia: [],
+        habitos: [],
+        compromissos: [],
+        metas: []
+      };
+      salvarBancoUsuario(dadosZerados, uid);
+      return dadosZerados;
     }
-
-    // Para NOVOS USUÁRIOS: TUDO TOTALMENTE ZERADO
-    const dadosZerados = {
-      topicos: [],
-      videos: [],
-      agendamentos: [],
-      notas: [],
-      prioridades_dia: [],
-      habitos: [],
-      compromissos: [],
-      metas: []
-    };
-    salvarBancoUsuario(dadosZerados, uid);
-    return dadosZerados;
   }
 
   try {
@@ -295,21 +296,20 @@ function obterBancoUsuario(usuarioId) {
     return dados;
   } catch (err) {
     console.error(`[Database Error] Falha ao ler banco do usuario ${uid}:`, err);
-    return { topicos: [], videos: [], agendamentos: [], notas: [], prioridades_dia: [], habitos: [], compromissos: [], metas: [] };
+    throw err;
   }
 }
 
 function salvarBancoUsuario(dados, usuarioId) {
-  const uid = usuarioId || 1;
+  const uid = usuarioId;
   const userFile = path.join(DATA_DIR, `database_user_${uid}.json`);
+  const tempFile = `${userFile}.tmp`;
   try {
-    fs.writeFileSync(userFile, JSON.stringify(dados, null, 2), 'utf-8');
-    if (uid === 1 || uid === 2) {
-      // Mantém sincronizado o database.json global para retrocompatibilidade
-      fs.writeFileSync(DB_FILE, JSON.stringify(dados, null, 2), 'utf-8');
-    }
+    fs.writeFileSync(tempFile, JSON.stringify(dados, null, 2), 'utf-8');
+    fs.renameSync(tempFile, userFile);
   } catch (error) {
     console.error(`[Database Error] Falha ao persistir dados do usuario ${uid}:`, error);
+    throw error;
   }
 }
 

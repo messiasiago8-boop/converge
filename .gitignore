@@ -14,8 +14,11 @@ yarn-error.log*
 # Banco de dados e caches locais
 *.sqlite
 *.sqlite3
+/finance-tracker/financas_data.json
+/finance-tracker/financas_data.json.tmp
 database.json
 data/*.json
+data/*.json.tmp
 
 # Logs do sistema e temporários
 logs/

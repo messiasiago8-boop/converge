@@ -308,7 +308,7 @@ async function fetchAllVideos() {
 async function fetchVideos(topicId) {
   try {
     const url = topicId ? `/api/videos?id_topico=${topicId}` : '/api/videos';
-    const response = await fetch(url);
+    const response = await fetchAuth(url);
     const result = await response.json();
     if (result.success) {
       state.videos = result.data;
