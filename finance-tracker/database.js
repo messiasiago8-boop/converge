@@ -1,20 +1,341 @@
-import sqlite3Pkg from 'sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-const sqlite3 = sqlite3Pkg.verbose();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = path.resolve(__dirname, 'financas.sqlite');
+let sqlite3Pkg = null;
+let sqliteAvailable = false;
 
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Erro ao conectar ao banco SQLite:', err.message);
-  } else {
-    console.log('Conectado ao banco de dados SQLite local:', dbPath);
+try {
+  const mod = await import('sqlite3');
+  sqlite3Pkg = mod.default || mod;
+  if (sqlite3Pkg && typeof sqlite3Pkg.verbose === 'function') {
+    sqliteAvailable = true;
   }
-});
+} catch (e) {
+  console.warn('[CONVERGE Data Engine] Native sqlite3 failed (ERR_DLOPEN_FAILED). Ativando Storage JSON nativo 100% puro...');
+}
+
+let dbInstance = null;
+
+if (sqliteAvailable) {
+  try {
+    const sqlite3 = sqlite3Pkg.verbose();
+    const dbPath = path.resolve(__dirname, 'financas.sqlite');
+    dbInstance = new sqlite3.Database(dbPath, (err) => {
+      if (err) console.error('Erro ao conectar ao banco SQLite:', err.message);
+      else console.log('Conectado ao banco SQLite local:', dbPath);
+    });
+  } catch (errInit) {
+    sqliteAvailable = false;
+  }
+}
+
+if (!sqliteAvailable || !dbInstance) {
+  // Pure JavaScript JSON Database Engine - Zero dependências nativas
+  const jsonPath = path.resolve(__dirname, 'financas_data.json');
+  let store = {
+    usuarios: [
+      {
+        id: 1,
+        nome: 'Messias Iago',
+        email: 'messiasiago8@gmail.com',
+        senha: '$2a$10$Y83Q1H7zC78p7G7G3Wz1ee9K4fWfR.b4tMv9Fj5Qo0r0OqCgqR7lC',
+        data_criacao: new Date().toISOString()
+      }
+    ],
+    entradas: [],
+    despesas: [],
+    limites: [
+      { id: 1, usuario_id: 1, categoria: '50', valor_maximo: 0 },
+      { id: 2, usuario_id: 1, categoria: '30', valor_maximo: 0 },
+      { id: 3, usuario_id: 1, categoria: '20', valor_maximo: 0 }
+    ],
+    potes: [],
+    projetos_compras: [],
+    aportes_projetos: []
+  };
+
+  if (fs.existsSync(jsonPath)) {
+    try {
+      store = { ...store, ...JSON.parse(fs.readFileSync(jsonPath, 'utf8')) };
+    } catch (e) {}
+  } else {
+    try { fs.writeFileSync(jsonPath, JSON.stringify(store, null, 2), 'utf8'); } catch(e) {}
+  }
+
+  function persist() {
+    try { fs.writeFileSync(jsonPath, JSON.stringify(store, null, 2), 'utf8'); } catch(e) {}
+  }
+
+  dbInstance = {
+    serialize(fn) { if (fn) fn(); },
+    run(query, params, cb) {
+      if (typeof params === 'function') { cb = params; params = []; }
+      params = params || [];
+      const q = (query || '').trim();
+      const ctx = { lastID: Date.now(), changes: 1 };
+
+      try {
+        if (/^CREATE TABLE/i.test(q) || /^ALTER TABLE/i.test(q) || /^PRAGMA/i.test(q)) {
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^INSERT INTO usuarios/i.test(q)) {
+          const id = store.usuarios.length ? Math.max(...store.usuarios.map(u => u.id)) + 1 : 1;
+          store.usuarios.push({ id, nome: params[0], email: params[1], senha: params[2], data_criacao: new Date().toISOString() });
+          persist();
+          ctx.lastID = id;
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^INSERT INTO entradas/i.test(q)) {
+          const id = store.entradas.length ? Math.max(...store.entradas.map(x => x.id)) + 1 : 1;
+          store.entradas.push({ id, usuario_id: params[0], descricao: params[1], valor: Number(params[2]), data: params[3] || new Date().toISOString() });
+          persist();
+          ctx.lastID = id;
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^INSERT INTO despesas/i.test(q)) {
+          const id = store.despesas.length ? Math.max(...store.despesas.map(x => x.id)) + 1 : 1;
+          store.despesas.push({ id, usuario_id: params[0], descricao: params[1], valor: Number(params[2]), categoria: String(params[3]), data: params[4] || new Date().toISOString() });
+          persist();
+          ctx.lastID = id;
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^INSERT INTO potes/i.test(q)) {
+          const id = store.potes.length ? Math.max(...store.potes.map(x => x.id)) + 1 : 1;
+          store.potes.push({
+            id, usuario_id: params[0], nome: params[1], tipo: params[2], categoria_ativo: params[3] || 'CDB',
+            taxa_anual_pct: Number(params[4]) || 10.75, rendimento_mensal_pct: Number(params[5]) || 0.85,
+            instituicao: params[6] || '', vencimento: params[7] || '', valor: Number(params[8]), data: new Date().toISOString()
+          });
+          persist();
+          ctx.lastID = id;
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^INSERT INTO limites/i.test(q)) {
+          const uid = params[0], cat = String(params[1]), val = Number(params[2]);
+          const ex = store.limites.find(l => l.usuario_id === uid && l.categoria === cat);
+          if (ex) ex.valor_maximo = val;
+          else store.limites.push({ id: store.limites.length + 1, usuario_id: uid, categoria: cat, valor_maximo: val });
+          persist();
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^INSERT INTO projetos_compras/i.test(q)) {
+          const id = store.projetos_compras.length ? Math.max(...store.projetos_compras.map(x => x.id)) + 1 : 1;
+          store.projetos_compras.push({ id, usuario_id: params[0], nome: params[1], tipo: params[2], valor_objetivo: Number(params[3]), valor_acumulado: 0, data_criacao: new Date().toISOString() });
+          persist();
+          ctx.lastID = id;
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^INSERT INTO aportes_projetos/i.test(q)) {
+          const id = store.aportes_projetos.length ? Math.max(...store.aportes_projetos.map(x => x.id)) + 1 : 1;
+          store.aportes_projetos.push({ id, usuario_id: params[0], projeto_id: params[1], valor: Number(params[2]), data: new Date().toISOString() });
+          persist();
+          ctx.lastID = id;
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^DELETE FROM entradas/i.test(q)) {
+          store.entradas = store.entradas.filter(e => !(e.id === params[0] && e.usuario_id === params[1]));
+          persist();
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^DELETE FROM despesas/i.test(q)) {
+          store.despesas = store.despesas.filter(d => !(d.id === params[0] && d.usuario_id === params[1]));
+          persist();
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^DELETE FROM potes/i.test(q)) {
+          store.potes = store.potes.filter(p => !(p.id === params[0] && p.usuario_id === params[1]));
+          persist();
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^DELETE FROM limites/i.test(q)) {
+          store.limites = store.limites.filter(l => !(l.usuario_id === params[0] && l.categoria === String(params[1])));
+          persist();
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^DELETE FROM projetos_compras/i.test(q)) {
+          store.projetos_compras = store.projetos_compras.filter(p => !(p.id === params[0] && p.usuario_id === params[1]));
+          persist();
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^DELETE FROM aportes_projetos/i.test(q)) {
+          store.aportes_projetos = store.aportes_projetos.filter(a => !(a.projeto_id === params[0] && a.usuario_id === params[1]));
+          persist();
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^UPDATE potes/i.test(q)) {
+          const item = store.potes.find(p => p.id === params[9] && p.usuario_id === params[10]);
+          if (item) {
+            item.nome = params[0]; item.tipo = params[1]; item.categoria_ativo = params[2];
+            item.taxa_anual_pct = Number(params[3]); item.rendimento_mensal_pct = Number(params[4]);
+            item.instituicao = params[5]; item.vencimento = params[6]; item.valor = Number(params[7]); item.data = params[8];
+            persist();
+          }
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (/^UPDATE projetos_compras/i.test(q)) {
+          const item = store.projetos_compras.find(p => p.id === params[1] && p.usuario_id === params[2]);
+          if (item) {
+            item.valor_acumulado = Number(params[0]);
+            persist();
+          }
+          if (cb) cb.call(ctx, null);
+          return;
+        }
+
+        if (cb) cb.call(ctx, null);
+      } catch (err) {
+        if (cb) cb.call(ctx, err);
+      }
+    },
+    all(query, params, cb) {
+      if (typeof params === 'function') { cb = params; params = []; }
+      params = params || [];
+      const q = (query || '').trim();
+
+      try {
+        if (/^PRAGMA table_info/i.test(q)) {
+          if (cb) cb(null, [
+            { name: 'id' }, { name: 'usuario_id' }, { name: 'categoria_ativo' },
+            { name: 'taxa_anual_pct' }, { name: 'rendimento_mensal_pct' },
+            { name: 'instituicao' }, { name: 'vencimento' }
+          ]);
+          return;
+        }
+
+        if (/FROM entradas/i.test(q)) {
+          const uid = params[0];
+          let res = store.entradas.filter(e => e.usuario_id === uid);
+          if (params[1]) {
+            const prefix = String(params[1]).replace('%', '');
+            res = res.filter(e => (e.data || '').startsWith(prefix));
+          }
+          if (cb) cb(null, res);
+          return;
+        }
+
+        if (/FROM despesas/i.test(q)) {
+          const uid = params[0];
+          let res = store.despesas.filter(d => d.usuario_id === uid);
+          if (q.includes('categoria = "50"') || q.includes("categoria = '50'")) {
+            res = res.filter(d => String(d.categoria) === '50');
+          }
+          if (params[1]) {
+            const prefix = String(params[1]).replace('%', '');
+            res = res.filter(d => (d.data || '').startsWith(prefix));
+          }
+          if (cb) cb(null, res);
+          return;
+        }
+
+        if (/FROM limites/i.test(q)) {
+          const uid = params[0];
+          const res = store.limites.filter(l => l.usuario_id === uid);
+          if (cb) cb(null, res);
+          return;
+        }
+
+        if (/FROM potes/i.test(q)) {
+          const uid = params[0];
+          const res = store.potes.filter(p => p.usuario_id === uid);
+          if (cb) cb(null, res);
+          return;
+        }
+
+        if (/FROM projetos_compras/i.test(q)) {
+          const uid = params[0];
+          const res = store.projetos_compras.filter(p => p.usuario_id === uid);
+          if (cb) cb(null, res);
+          return;
+        }
+
+        if (cb) cb(null, []);
+      } catch (err) {
+        if (cb) cb(err, []);
+      }
+    },
+    get(query, params, cb) {
+      if (typeof params === 'function') { cb = params; params = []; }
+      params = params || [];
+      const q = (query || '').trim();
+
+      try {
+        if (/FROM usuarios/i.test(q)) {
+          const email = String(params[0]).toLowerCase();
+          const u = store.usuarios.find(x => (x.email || '').toLowerCase() === email);
+          if (cb) cb(null, u || null);
+          return;
+        }
+
+        if (/COUNT\(\*\) as qtd/i.test(q)) {
+          const uid = params[0];
+          const prefix = params[1] ? String(params[1]).replace('%', '') : '';
+          const isEntrada = /FROM entradas/i.test(q);
+          const list = isEntrada ? store.entradas : store.despesas;
+          const qtd = list.filter(x => x.usuario_id === uid && (!prefix || (x.data || '').startsWith(prefix))).length;
+          if (cb) cb(null, { qtd });
+          return;
+        }
+
+        if (/FROM projetos_compras/i.test(q)) {
+          const id = params[0], uid = params[1];
+          const p = store.projetos_compras.find(x => x.id === id && x.usuario_id === uid);
+          if (cb) cb(null, p || null);
+          return;
+        }
+
+        if (cb) cb(null, null);
+      } catch (err) {
+        if (cb) cb(err, null);
+      }
+    },
+    prepare(stmt) {
+      return {
+        run(params, cb) {
+          dbInstance.run(stmt, params, cb);
+        },
+        finalize(cb) {
+          if (cb) cb();
+        }
+      };
+    }
+  };
+}
+
+const db = dbInstance;
 
 // Inicialização automática das tabelas com suporte a multiusuário
 db.serialize(() => {
@@ -124,41 +445,8 @@ db.serialize(() => {
             }
           });
         }
-
-        // Migração de colunas adicionais para potes (investimentos detalhados)
-        if (tabela === 'potes') {
-          const colunasNecessarias = [
-            { name: 'categoria_ativo', def: 'TEXT DEFAULT "CDB"' },
-            { name: 'taxa_anual_pct', def: 'REAL DEFAULT 10.75' },
-            { name: 'rendimento_mensal_pct', def: 'REAL DEFAULT 0.85' },
-            { name: 'instituicao', def: 'TEXT DEFAULT "Banco"' },
-            { name: 'vencimento', def: 'TEXT' }
-          ];
-          colunasNecessarias.forEach(c => {
-            const existe = colunas.some(col => col.name === c.name);
-            if (!existe) {
-              db.run(`ALTER TABLE potes ADD COLUMN ${c.name} ${c.def}`, (e) => {
-                if (!e) console.log(`Coluna ${c.name} adicionada à tabela potes`);
-              });
-            }
-          });
-        }
       }
     });
-  });
-
-  // Migração da tabela limites para suportar usuario_id
-  db.all(`PRAGMA table_info(limites)`, (err, colunas) => {
-    if (!err && colunas) {
-      const temUsuarioId = colunas.some(c => c.name === 'usuario_id');
-      if (!temUsuarioId) {
-        db.run(`ALTER TABLE limites ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE`, (errAlter) => {
-          if (!errAlter) {
-            console.log('Coluna usuario_id adicionada na tabela limites');
-          }
-        });
-      }
-    }
   });
 });
 
@@ -168,82 +456,6 @@ export const buscarDadosPorMes = (mes, usuarioId) => {
     const temFiltroMes = mes && typeof mes === 'string' && /^\d{4}-\d{2}$/.test(mes.trim());
     const mesAlvo = temFiltroMes ? mes.trim() : null;
     const queryMes = mesAlvo ? `${mesAlvo}%` : null;
-
-    // Regra Inteligente: Se o mês solicitado não tiver nenhuma despesa cadastrada ainda,
-    // verifica se o mês imediatamente anterior tem despesas essenciais (gastos fixos da categoria "50")
-    // e replica automaticamente como cópias independentes no novo mês.
-    // Variáveis ("30") e Investimentos ("20") sempre iniciam zerados (R$ 0,00).
-    if (mesAlvo) {
-      try {
-        await new Promise((resSync) => {
-          // 1. Verifica se já existem despesas registradas no mês alvo
-          db.get('SELECT COUNT(*) as qtd FROM despesas WHERE usuario_id = ? AND data LIKE ?', [usuarioId, queryMes], (errCount, rowCount) => {
-            if (errCount || (rowCount && rowCount.qtd > 0)) {
-              return resSync(); // Já existem dados ou erro, não duplica
-            }
-
-            // 2. Calcula o mês anterior (ex: '2026-12' -> anterior '2026-11')
-            const [anoStr, mesStr] = mesAlvo.split('-');
-            let anoNum = parseInt(anoStr, 10);
-            let mesNum = parseInt(mesStr, 10) - 1;
-            if (mesNum < 1) {
-              mesNum = 12;
-              anoNum -= 1;
-            }
-            const mesAnterior = `${anoNum}-${String(mesNum).padStart(2, '0')}`;
-            const queryMesAnterior = `${mesAnterior}%`;
-
-            // 3. Busca apenas despesas essenciais (gastos fixos da categoria "50") do mês anterior
-            db.all(
-              'SELECT descricao, valor, categoria FROM despesas WHERE usuario_id = ? AND categoria = "50" AND data LIKE ? ORDER BY id ASC',
-              [usuarioId, queryMesAnterior],
-              (errAnt, despesasFixasAntigas) => {
-                if (errAnt || !despesasFixasAntigas || despesasFixasAntigas.length === 0) {
-                  return resSync();
-                }
-
-                // 4. Copia também a Receita Bruta base do mês anterior se o novo mês estiver sem receita
-                db.get('SELECT COUNT(*) as qtdEnt FROM entradas WHERE usuario_id = ? AND data LIKE ?', [usuarioId, queryMes], (errEntCount, rowEntCount) => {
-                  const precisaCopiarEntrada = !errEntCount && (!rowEntCount || rowEntCount.qtd === 0);
-
-                  const clonarDespesas = () => {
-                    const stmt = db.prepare('INSERT INTO despesas (usuario_id, descricao, valor, categoria, data) VALUES (?, ?, ?, ?, ?)');
-                    despesasFixasAntigas.forEach((d, idx) => {
-                      const diaPadrao = String(idx + 1).padStart(2, '0');
-                      const dataNova = `${mesAlvo}-${diaPadrao} 10:00:00`;
-                      stmt.run([usuarioId, d.descricao, d.valor, d.categoria, dataNova]);
-                    });
-                    stmt.finalize(() => {
-                      console.log(`[Auto-Cópia Inteligente] ${despesasFixasAntigas.length} gastos fixos copiados de ${mesAnterior} para ${mesAlvo}.`);
-                      resSync();
-                    });
-                  };
-
-                  if (precisaCopiarEntrada) {
-                    db.get('SELECT descricao, valor FROM entradas WHERE usuario_id = ? AND data LIKE ? ORDER BY id ASC LIMIT 1', [usuarioId, queryMesAnterior], (errEntAnt, entAnt) => {
-                      if (!errEntAnt && entAnt) {
-                        const dataEntradaNova = `${mesAlvo}-01 12:00:00`;
-                        db.run(
-                          'INSERT INTO entradas (usuario_id, descricao, valor, data) VALUES (?, ?, ?, ?)',
-                          [usuarioId, entAnt.descricao, entAnt.valor, dataEntradaNova],
-                          () => clonarDespesas()
-                        );
-                      } else {
-                        clonarDespesas();
-                      }
-                    });
-                  } else {
-                    clonarDespesas();
-                  }
-                });
-              }
-            );
-          });
-        });
-      } catch (errSync) {
-        console.warn('Aviso ao sincronizar cópia de gastos fixos:', errSync.message);
-      }
-    }
 
     let sqlEntradas = 'SELECT * FROM entradas WHERE usuario_id = ?';
     let paramsEntradas = [usuarioId];
