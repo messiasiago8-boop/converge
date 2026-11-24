@@ -1651,6 +1651,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const navBtnFinancas = document.getElementById('nav-btn-financas');
   const navBtnRotina = document.getElementById('nav-btn-rotina');
   const navBtnMetas = document.getElementById('nav-btn-metas');
+  const navBtnTutorialIos = document.getElementById('nav-btn-tutorial-ios');
   const sectionModulos = document.getElementById('sidebar-section-modulos');
   const sectionLmsSubnav = document.getElementById('sidebar-section-lms-subnav');
   const sectionFinancasSubnav = document.getElementById('sidebar-section-financas-subnav');
@@ -1686,6 +1687,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const viewFinancas = document.getElementById('view-financas');
   const viewRotina = document.getElementById('view-rotina');
   const viewMetas = document.getElementById('view-metas');
+  const viewTutorialIos = document.getElementById('view-tutorial-ios');
+
+  const pausarVideoTutorial = () => {
+    const vid = document.getElementById('video-tutorial-ios');
+    if (vid && !vid.paused) {
+      try { vid.pause(); } catch (e) {}
+    }
+  };
   const btnOpenTopic = document.getElementById('btn-open-modal-topic');
   const btnOpenVideo = document.getElementById('btn-open-modal-video');
 
@@ -1699,6 +1708,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (viewFinancas) viewFinancas.classList.add('hidden');
     if (viewRotina) viewRotina.classList.add('hidden');
     if (viewMetas) viewMetas.classList.add('hidden');
+    if (viewTutorialIos) viewTutorialIos.classList.add('hidden');
+    pausarVideoTutorial();
     if (btnBack) btnBack.classList.add('hidden');
 
     atualizarSidebarDrilldown('inicio');
@@ -1724,6 +1735,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (navBtnMetas) {
       navBtnMetas.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
     }
+    if (navBtnTutorialIos) {
+      navBtnTutorialIos.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
+    }
 
     if (state.player && state.isPlayerReady) {
       try { state.player.pauseVideo(); } catch (e) {}
@@ -1741,6 +1755,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (viewRotinaEl) viewRotinaEl.classList.add('hidden');
     const viewMetasEl = document.getElementById('view-metas');
     if (viewMetasEl) viewMetasEl.classList.add('hidden');
+    if (viewTutorialIos) viewTutorialIos.classList.add('hidden');
+    pausarVideoTutorial();
 
     atualizarSidebarDrilldown('lms');
     if (sectionPlanning) sectionPlanning.classList.remove('hidden');
@@ -1765,6 +1781,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (navBtnMetasEl) {
       navBtnMetasEl.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
     }
+    if (navBtnTutorialIos) {
+      navBtnTutorialIos.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
+    }
 
     if (state.selectedTopicId) {
       selectTopic(state.selectedTopicId);
@@ -1784,6 +1803,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (viewRotinaEl) viewRotinaEl.classList.add('hidden');
     const viewMetasEl = document.getElementById('view-metas');
     if (viewMetasEl) viewMetasEl.classList.add('hidden');
+    if (viewTutorialIos) viewTutorialIos.classList.add('hidden');
+    pausarVideoTutorial();
     if (btnBack) btnBack.classList.add('hidden');
 
     if (viewFinancas) viewFinancas.classList.remove('hidden');
@@ -1813,6 +1834,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (navBtnMetasEl) {
       navBtnMetasEl.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
     }
+    if (navBtnTutorialIos) {
+      navBtnTutorialIos.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
+    }
 
     if (state.player && state.isPlayerReady) {
       try { state.player.pauseVideo(); } catch (e) {}
@@ -1830,6 +1854,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (viewFinancas) viewFinancas.classList.add('hidden');
     const viewMetasEl = document.getElementById('view-metas');
     if (viewMetasEl) viewMetasEl.classList.add('hidden');
+    if (viewTutorialIos) viewTutorialIos.classList.add('hidden');
+    pausarVideoTutorial();
     if (btnBack) btnBack.classList.add('hidden');
 
     if (viewRotina) viewRotina.classList.remove('hidden');
@@ -1857,6 +1883,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (navBtnMetasEl) {
       navBtnMetasEl.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
     }
+    if (navBtnTutorialIos) {
+      navBtnTutorialIos.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
+    }
 
     if (state.player && state.isPlayerReady) {
       try { state.player.pauseVideo(); } catch (e) {}
@@ -1879,6 +1908,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('view-lesson').classList.add('hidden');
     if (viewFinancas) viewFinancas.classList.add('hidden');
     if (viewRotina) viewRotina.classList.add('hidden');
+    if (viewTutorialIos) viewTutorialIos.classList.add('hidden');
+    pausarVideoTutorial();
     if (btnBack) btnBack.classList.add('hidden');
 
     if (viewMetas) viewMetas.classList.remove('hidden');
@@ -1905,6 +1936,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (navBtnRotina) {
       navBtnRotina.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
     }
+    if (navBtnTutorialIos) {
+      navBtnTutorialIos.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
+    }
 
     if (state.player && state.isPlayerReady) {
       try { state.player.pauseVideo(); } catch (e) {}
@@ -1914,20 +1948,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof carregarMetas === 'function') carregarMetas();
   };
 
+  // ABA 5: TUTORIAL MOBILE (APP & ALERTAS iOS / ANDROID)
+  const showTutorialIosModule = () => {
+    ocultarRevisao();
+    state.currentView = 'tutorial-ios';
+    for (const id of ['view-dashboard-geral', 'view-grid', 'view-schedule', 'view-lesson', 'view-financas', 'view-rotina', 'view-metas']) {
+      document.getElementById(id)?.classList.add('hidden');
+    }
+    if (viewTutorialIos) viewTutorialIos.classList.remove('hidden');
+    if (btnBack) btnBack.classList.add('hidden');
+
+    atualizarSidebarDrilldown('inicio');
+    if (sectionPlanning) sectionPlanning.classList.add('hidden');
+    if (sectionTopics) sectionTopics.classList.add('hidden');
+    if (btnOpenTopic) btnOpenTopic.parentElement.classList.add('hidden');
+
+    const breadcrumb = document.getElementById('breadcrumb-topic');
+    if (breadcrumb) breadcrumb.textContent = 'Tutorial Mobile (App & Alertas iOS / Android)';
+
+    for (const botao of [navBtnInicio, navBtnLms, navBtnFinancas, navBtnRotina, navBtnMetas]) {
+      if (botao) {
+        botao.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
+      }
+    }
+    if (navBtnTutorialIos) {
+      navBtnTutorialIos.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group bg-sky-600 text-white font-semibold shadow-xs ring-1 ring-white/10';
+    }
+
+    if (state.player && state.isPlayerReady) {
+      try { state.player.pauseVideo(); } catch (e) {}
+    }
+  };
+
   // Expõe para chamadas globais inline dos cards
   window.navIrParaInicio = showInicioModule;
   window.navIrParaLms = showLmsModule;
   window.navIrParaFinancas = showFinancasModule;
   window.navIrParaRotina = showRotinaModule;
   window.navIrParaMetas = showMetasModule;
+  window.navIrParaTutorialIos = showTutorialIosModule;
   window.navIrParaRevisao = () => {
     state.currentView = 'revisao';
+    pausarVideoTutorial();
     atualizarSidebarDrilldown('inicio');
-    for (const id of ['view-dashboard-geral', 'view-grid', 'view-schedule', 'view-lesson', 'view-financas', 'view-rotina', 'view-metas']) {
+    for (const id of ['view-dashboard-geral', 'view-grid', 'view-schedule', 'view-lesson', 'view-financas', 'view-rotina', 'view-metas', 'view-tutorial-ios']) {
       document.getElementById(id)?.classList.add('hidden');
     }
-    for (const botao of [navBtnInicio, navBtnLms, navBtnFinancas, navBtnRotina, navBtnMetas]) {
-      botao.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
+    for (const botao of [navBtnInicio, navBtnLms, navBtnFinancas, navBtnRotina, navBtnMetas, navBtnTutorialIos]) {
+      if (botao) botao.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white';
     }
     sectionPlanning?.classList.add('hidden');
     sectionTopics?.classList.add('hidden');
@@ -1950,6 +2018,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (navBtnRotina) navBtnRotina.addEventListener('click', showRotinaModule);
   if (navBtnMetas) navBtnMetas.addEventListener('click', showMetasModule);
+  if (navBtnTutorialIos) navBtnTutorialIos.addEventListener('click', showTutorialIosModule);
 
   // Botões "Voltar aos Módulos" no submenu drill-down de todos os módulos
   const voltarAosModulos = () => atualizarSidebarDrilldown('inicio');

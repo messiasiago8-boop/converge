@@ -136,7 +136,8 @@ const ConvergeNotifications = {
             </div>
             <button type="button" id="btn-fechar-guia-ios" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer">✕</button>
           </div>
-          <ol class="text-xs text-slate-700 space-y-2.5 bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 list-decimal list-inside">
+          <video src="/tutorial-ios-notificacoes.mp4" controls playsinline preload="metadata" class="w-full max-h-64 rounded-xl bg-slate-950 border border-slate-200"></video>
+          <ol class="text-xs text-slate-700 space-y-2 bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 list-decimal list-inside">
             <li>No <strong>Safari</strong>, toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima na barra inferior).</li>
             <li>Role e toque em <strong>Adicionar à Tela de Início</strong>.</li>
             <li>Abra o <strong>CONVERGE</strong> pelo ícone criado na tela inicial e toque em <strong>Ativar Alertas</strong>.</li>
