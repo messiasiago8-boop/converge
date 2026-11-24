@@ -537,7 +537,7 @@ app.put('/api/despesas/:id', autenticarToken, (req, res) => {
 });
 
 // 6. POST /api/limites (Define limites para o usuário logado)
-app.post('/api/limites', autenticarToken, (req, res) => {
+app.post('/api/limites', autenticarToken, async (req, res) => {
   const { limites } = req.body;
   if (!limites || typeof limites !== 'object') {
     return res.status(400).json({ error: 'Objeto de limites é obrigatório.' });
@@ -547,6 +547,15 @@ app.post('/api/limites', autenticarToken, (req, res) => {
   const categorias = Object.keys(limites);
   if (categorias.length === 0) {
     return res.json({ success: true, limites });
+  }
+  if (db.salvarLimites) {
+    try {
+      await db.salvarLimites(req.usuarioId, limites);
+      return res.json({ success: true, limites });
+    } catch (erro) {
+      console.error('[Limites]', erro.code);
+      return res.status(500).json({ error: 'Não foi possível gravar os limites.' });
+    }
   }
 
   db.serialize(() => {
@@ -743,7 +752,7 @@ app.delete('/api/potes/:id', autenticarToken, (req, res) => {
 app.get('/api/projetos', autenticarToken, (req, res) => {
   const sql = `
     SELECT p.*,
-           ROUND(CASE WHEN p.valor_objetivo > 0 THEN (p.valor_acumulado / p.valor_objetivo) * 100 ELSE 0 END, 1) AS porcentagem
+           ROUND(CAST(CASE WHEN p.valor_objetivo > 0 THEN (p.valor_acumulado / p.valor_objetivo) * 100 ELSE 0 END AS NUMERIC), 1) AS porcentagem
     FROM projetos_compras p
     WHERE p.usuario_id = ?
     ORDER BY p.id DESC
@@ -753,7 +762,10 @@ app.get('/api/projetos', autenticarToken, (req, res) => {
       console.error('Erro ao listar projetos:', err.message);
       return res.status(500).json({ error: 'Erro ao carregar projetos: ' + err.message });
     }
-    res.json({ success: true, projetos: projetos || [] });
+    res.json({ success: true, projetos: (projetos || []).map(projeto => ({
+      ...projeto,
+      porcentagem: Number(projeto.porcentagem ?? (projeto.valor_objetivo > 0 ? (projeto.valor_acumulado / projeto.valor_objetivo * 100).toFixed(1) : 0))
+    })) });
   });
 });
 

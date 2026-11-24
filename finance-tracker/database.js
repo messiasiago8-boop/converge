@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -7,24 +8,35 @@ const __dirname = path.dirname(__filename);
 const dataDir = process.env.CONVERGE_DATA_DIR
   ? path.resolve(process.env.CONVERGE_DATA_DIR, 'finance')
   : __dirname;
-fs.mkdirSync(dataDir, { recursive: true });
+const usarPostgres = Boolean(process.env.DATABASE_URL);
+if (!usarPostgres) fs.mkdirSync(dataDir, { recursive: true });
 
 let sqlite3Pkg = null;
 let sqliteAvailable = false;
 
-try {
-  const mod = await import('sqlite3');
-  sqlite3Pkg = mod.default || mod;
-  if (sqlite3Pkg && typeof sqlite3Pkg.verbose === 'function') {
-    sqliteAvailable = true;
+if (!usarPostgres) {
+  try {
+    const mod = await import('sqlite3');
+    sqlite3Pkg = mod.default || mod;
+    sqliteAvailable = typeof sqlite3Pkg?.verbose === 'function';
+  } catch {
+    console.warn('[Finanças] SQLite indisponível. Usando armazenamento local em JSON.');
   }
-} catch (e) {
-  console.warn('[CONVERGE Data Engine] Native sqlite3 failed (ERR_DLOPEN_FAILED). Ativando Storage JSON nativo 100% puro...');
 }
 
 let dbInstance = null;
 
-if (sqliteAvailable) {
+if (usarPostgres) {
+  const { abrirFinancasPostgres } = await import('./postgres-database.js');
+  try {
+    dbInstance = await abrirFinancasPostgres();
+  } catch (erro) {
+    throw new Error(`Não foi possível inicializar o PostgreSQL de Finanças (${erro.code || erro.name}).`);
+  }
+  console.log('[Finanças] PostgreSQL conectado.');
+}
+
+if (!usarPostgres && sqliteAvailable) {
   const sqlite3 = sqlite3Pkg.verbose();
   const dbPath = path.join(dataDir, 'financas.sqlite');
   dbInstance = await new Promise((resolve, reject) => {
@@ -36,7 +48,7 @@ if (sqliteAvailable) {
   console.log('Conectado ao banco SQLite local:', dbPath);
 }
 
-if (!sqliteAvailable || !dbInstance) {
+if (!dbInstance) {
   // Pure JavaScript JSON Database Engine - Zero dependências nativas
   const jsonPath = path.join(dataDir, 'financas_data.json');
   let store = {
@@ -140,7 +152,7 @@ if (!sqliteAvailable || !dbInstance) {
         }
 
         if (/^INSERT (?:OR IGNORE )?INTO limites/i.test(q)) {
-          const uid = params[0], cat = String(params[1]), val = Number(params[2]);
+          const uid = params[0], cat = String(params[1]), val = Number(params[2] ?? 0);
           const ex = store.limites.find(l => l.usuario_id === uid && l.categoria === cat);
           if (ex) {
             if (/^INSERT OR IGNORE/i.test(q)) {
@@ -377,7 +389,7 @@ if (!sqliteAvailable || !dbInstance) {
 const db = dbInstance;
 
 // Inicialização automática das tabelas com suporte a multiusuário
-db.serialize(() => {
+if (!usarPostgres) db.serialize(() => {
   // 1. Tabela de Usuários
   db.run(`
     CREATE TABLE IF NOT EXISTS usuarios (

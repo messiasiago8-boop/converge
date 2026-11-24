@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { initPushService } = require('./push-service');
+const { abrirPortalPostgres } = require('./portal-postgres');
 const { randomBytes, randomUUID, timingSafeEqual } = require('node:crypto');
 let yts = null;
 try {
@@ -232,12 +233,16 @@ app.get('/api/push/check', async (req, res) => {
   }
 });
 
+function rotaPortal(handler) {
+  return (req, res, next) => Promise.resolve(handler(req, res)).catch(next);
+}
+
 app.use('/api', autenticarTokenPortal);
 
-app.get('/api/meus-dados', async (req, res) => {
+app.get('/api/meus-dados', rotaPortal(async (req, res) => {
   res.set('Cache-Control', 'no-store');
   try {
-    const portal = obterBancoUsuario(req.usuarioId);
+    const portal = await obterBancoUsuario(req.usuarioId);
     const resposta = await fetch(`http://127.0.0.1:${FINANCE_API_PORT}/api/dados/exportacao`, {
       headers: { Authorization: req.headers.authorization },
       signal: AbortSignal.timeout(15000)
@@ -257,39 +262,39 @@ app.get('/api/meus-dados', async (req, res) => {
     console.error('[Exportação da conta]', erro.message);
     res.status(503).json({ success: false, error: 'Não foi possível exportar seus dados. Tente novamente.' });
   }
-});
+}));
 
 // ================= ROTAS AUTENTICADAS DE WEB PUSH ================= //
-app.get('/api/push/status', (req, res) => {
+app.get('/api/push/status', rotaPortal(async (req, res) => {
   if (!pushService) {
     return res.json({ success: true, enabled: false, subscribedCount: 0 });
   }
-  res.json({ success: true, ...pushService.getStatusForUser(req.usuarioId) });
-});
+  res.json({ success: true, ...await pushService.getStatusForUser(req.usuarioId) });
+}));
 
-app.post('/api/push/subscribe', (req, res) => {
+app.post('/api/push/subscribe', rotaPortal(async (req, res) => {
   try {
     if (!pushService || !pushService.isEnabled()) {
       return res.status(503).json({ success: false, error: 'Web Push indisponível no servidor.' });
     }
     const { subscription, timezone, device } = req.body || {};
-    const result = pushService.subscribeUser(req.usuarioId, subscription, { timezone, device });
+    const result = await pushService.subscribeUser(req.usuarioId, subscription, { timezone, device });
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
-});
+}));
 
-app.post('/api/push/unsubscribe', (req, res) => {
+app.post('/api/push/unsubscribe', rotaPortal(async (req, res) => {
   try {
     if (!pushService) return res.json({ success: true, subscribedCount: 0 });
     const { endpoint } = req.body || {};
-    const result = pushService.unsubscribeUser(req.usuarioId, endpoint);
+    const result = await pushService.unsubscribeUser(req.usuarioId, endpoint);
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
-});
+}));
 
 app.post('/api/push/test', async (req, res) => {
   try {
@@ -314,7 +319,7 @@ const DATA_DIR = process.env.CONVERGE_DATA_DIR
   : path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
 
-if (!fs.existsSync(DATA_DIR)) {
+if (!process.env.DATABASE_URL && !fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
@@ -368,7 +373,23 @@ const DADOS_PADRAO = {
   ]
 };
 
-function obterBancoUsuario(usuarioId) {
+let portalPostgres = null;
+
+async function obterBancoUsuario(usuarioId) {
+  const dados = portalPostgres ? await portalPostgres.carregar(usuarioId) : obterBancoLocal(usuarioId);
+  for (const campo of ['topicos', 'videos', 'agendamentos', 'notas', 'prioridades_dia', 'habitos', 'compromissos', 'metas', 'push_subscriptions']) {
+    if (!Array.isArray(dados[campo])) dados[campo] = [];
+  }
+  if (!dados.push_notificados || typeof dados.push_notificados !== 'object') dados.push_notificados = {};
+  return dados;
+}
+
+async function salvarBancoUsuario(dados, usuarioId, anterior = dados) {
+  if (portalPostgres) return portalPostgres.salvar(dados, usuarioId, anterior);
+  salvarBancoLocal(dados, usuarioId);
+}
+
+function obterBancoLocal(usuarioId) {
   const uid = usuarioId;
   const userFile = path.join(DATA_DIR, `database_user_${uid}.json`);
 
@@ -377,7 +398,7 @@ function obterBancoUsuario(usuarioId) {
     // O arquivo legado só pode ser importado para um titular confirmado no ambiente.
     if (String(uid) === process.env.LEGACY_PORTAL_USER_ID && fs.existsSync(DB_FILE)) {
       const dados = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
-      salvarBancoUsuario(dados, uid);
+      salvarBancoLocal(dados, uid);
     } else {
       const dadosZerados = {
         topicos: [],
@@ -389,7 +410,7 @@ function obterBancoUsuario(usuarioId) {
         compromissos: [],
         metas: []
       };
-      salvarBancoUsuario(dadosZerados, uid);
+      salvarBancoLocal(dadosZerados, uid);
       return dadosZerados;
     }
   }
@@ -410,7 +431,7 @@ function obterBancoUsuario(usuarioId) {
   }
 }
 
-function salvarBancoUsuario(dados, usuarioId) {
+function salvarBancoLocal(dados, usuarioId) {
   const uid = usuarioId;
   const userFile = path.join(DATA_DIR, `database_user_${uid}.json`);
   const tempFile = `${userFile}.tmp`;
@@ -445,7 +466,7 @@ function salvarBanco(dados) {
   }
 }
 
-let db = lerBanco();
+const db = process.env.DATABASE_URL ? null : lerBanco();
 let previasAtivas = [];
 
 function extrairYouTubeId(url) {
@@ -489,29 +510,29 @@ async function buscarNoYouTube(termoBusca, palavrasChaveFiltro = []) {
 
 // ================= ROTAS DE TÓPICOS ================= //
 
-app.get('/api/topicos', (req, res) => {
-  const dbUser = obterBancoUsuario(req.usuarioId);
+app.get('/api/topicos', rotaPortal(async (req, res) => {
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   res.json({ success: true, data: dbUser.topicos });
-});
+}));
 
-app.post('/api/topicos', (req, res) => {
+app.post('/api/topicos', rotaPortal(async (req, res) => {
   const { nome } = req.body;
   if (!nome || !nome.trim()) {
     return res.status(400).json({ success: false, message: 'O nome do tópico é obrigatório.' });
   }
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const novoTopico = {
     id: dbUser.topicos.length > 0 ? Math.max(...dbUser.topicos.map(t => t.id)) + 1 : 1,
     nome: nome.trim()
   };
 
   dbUser.topicos.push(novoTopico);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novoTopico });
-});
+}));
 
-app.put('/api/topicos/:id', (req, res) => {
+app.put('/api/topicos/:id', rotaPortal(async (req, res) => {
   const { id } = req.params;
   const { nome } = req.body;
   const idNum = parseInt(id, 10);
@@ -520,22 +541,22 @@ app.put('/api/topicos/:id', (req, res) => {
     return res.status(400).json({ success: false, message: 'O nome do tópico é obrigatório.' });
   }
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const topico = dbUser.topicos.find(t => t.id === idNum);
   if (!topico) {
     return res.status(404).json({ success: false, message: 'Tópico não encontrado.' });
   }
 
   topico.nome = nome.trim();
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, data: topico });
-});
+}));
 
-app.delete('/api/topicos/:id', (req, res) => {
+app.delete('/api/topicos/:id', rotaPortal(async (req, res) => {
   const { id } = req.params;
   const idNum = parseInt(id, 10);
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const index = dbUser.topicos.findIndex(t => t.id === idNum);
   if (index === -1) {
     return res.status(404).json({ success: false, message: 'Tópico não encontrado.' });
@@ -552,15 +573,15 @@ app.delete('/api/topicos/:id', (req, res) => {
   dbUser.notas = dbUser.notas.filter(n => !idsVideosRemovidos.includes(n.id_video));
   dbUser.agendamentos = dbUser.agendamentos.filter(a => !idsVideosRemovidos.includes(a.id_video));
 
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Tópico e aulas vinculadas excluídos com sucesso.' });
-});
+}));
 
 // ================= ROTAS DE VÍDEOS ================= //
 
-app.get('/api/videos', (req, res) => {
+app.get('/api/videos', rotaPortal(async (req, res) => {
   const { id_topico } = req.query;
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   let resultado = dbUser.videos;
 
   if (id_topico) {
@@ -569,9 +590,9 @@ app.get('/api/videos', (req, res) => {
   }
 
   res.json({ success: true, data: resultado });
-});
+}));
 
-app.post('/api/videos', (req, res) => {
+app.post('/api/videos', rotaPortal(async (req, res) => {
   const { titulo, url_youtube, id_topico } = req.body;
 
   if (!titulo || !titulo.trim() || !url_youtube || !url_youtube.trim() || !id_topico) {
@@ -589,7 +610,7 @@ app.post('/api/videos', (req, res) => {
     });
   }
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const topicoExiste = dbUser.topicos.some(t => t.id === parseInt(id_topico, 10));
   if (!topicoExiste) {
     return res.status(400).json({ success: false, message: 'Tópico selecionado não existe.' });
@@ -603,15 +624,15 @@ app.post('/api/videos', (req, res) => {
   };
 
   dbUser.videos.push(novoVideo);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novoVideo });
-});
+}));
 
-app.delete('/api/videos/:id', (req, res) => {
+app.delete('/api/videos/:id', rotaPortal(async (req, res) => {
   const { id } = req.params;
   const idNum = parseInt(id, 10);
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const index = dbUser.videos.findIndex(v => v.id === idNum);
   if (index === -1) {
     return res.status(404).json({ success: false, message: 'Vídeo não encontrado.' });
@@ -621,17 +642,17 @@ app.delete('/api/videos/:id', (req, res) => {
   dbUser.notas = dbUser.notas.filter(n => n.id_video !== idNum);
   dbUser.agendamentos = dbUser.agendamentos.filter(a => a.id_video !== idNum);
 
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Vídeo, anotações e agendamentos vinculados excluídos com sucesso do banco de dados.' });
-});
+}));
 
 // Atualizar progresso do vídeo (segundo atual e status de conclusão)
-app.patch('/api/videos/:id/progresso', (req, res) => {
+app.patch('/api/videos/:id/progresso', rotaPortal(async (req, res) => {
   const { id } = req.params;
   const { segundo_atual, concluido } = req.body;
   const idNum = parseInt(id, 10);
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const video = dbUser.videos.find(v => v.id === idNum);
   if (!video) {
     return res.status(404).json({ success: false, message: 'Vídeo não encontrado.' });
@@ -647,14 +668,14 @@ app.patch('/api/videos/:id/progresso', (req, res) => {
     video.concluido = Boolean(concluido);
   }
 
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, data: video });
-});
+}));
 
 // ================= ROTAS DE AGENDAMENTOS ================= //
 
-app.get('/api/agendamentos', (req, res) => {
-  const dbUser = obterBancoUsuario(req.usuarioId);
+app.get('/api/agendamentos', rotaPortal(async (req, res) => {
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const resultado = dbUser.agendamentos.map(ag => {
     const video = dbUser.videos.find(v => v.id === ag.id_video);
     const topico = video ? dbUser.topicos.find(t => t.id === video.id_topico) : null;
@@ -665,9 +686,9 @@ app.get('/api/agendamentos', (req, res) => {
     };
   });
   res.json({ success: true, data: resultado });
-});
+}));
 
-app.post('/api/agendamentos', (req, res) => {
+app.post('/api/agendamentos', rotaPortal(async (req, res) => {
   const { dia_semana, id_video } = req.body;
   const diasValidos = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
@@ -676,7 +697,7 @@ app.post('/api/agendamentos', (req, res) => {
   }
 
   const videoIdNum = parseInt(id_video, 10);
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const videoExiste = dbUser.videos.some(v => v.id === videoIdNum);
   if (!videoExiste) {
     return res.status(400).json({ success: false, message: 'Vídeo selecionado não existe.' });
@@ -689,7 +710,7 @@ app.post('/api/agendamentos', (req, res) => {
   };
 
   dbUser.agendamentos.push(novoAgendamento);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
 
   const video = dbUser.videos.find(v => v.id === videoIdNum);
   const topico = video ? dbUser.topicos.find(t => t.id === video.id_topico) : null;
@@ -702,12 +723,12 @@ app.post('/api/agendamentos', (req, res) => {
       topico: topico ? topico.nome : 'Sem tópico'
     }
   });
-});
+}));
 
-app.delete('/api/agendamentos/:id', (req, res) => {
+app.delete('/api/agendamentos/:id', rotaPortal(async (req, res) => {
   const { id } = req.params;
   const idNum = parseInt(id, 10);
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const index = dbUser.agendamentos.findIndex(a => a.id === idNum);
 
   if (index === -1) {
@@ -715,28 +736,28 @@ app.delete('/api/agendamentos/:id', (req, res) => {
   }
 
   dbUser.agendamentos.splice(index, 1);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Agendamento removido com sucesso.' });
-});
+}));
 
 // ================= ROTAS DE ANOTAÇÕES ================= //
 
-app.get('/api/notas', (req, res) => {
+app.get('/api/notas', rotaPortal(async (req, res) => {
   const { id_video } = req.query;
   if (!id_video) {
     return res.status(400).json({ success: false, message: 'id_video é obrigatório.' });
   }
 
   const videoIdNum = parseInt(id_video, 10);
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const notasDoVideo = dbUser.notas
     .filter(n => n.id_video === videoIdNum)
     .sort((a, b) => a.segundos - b.segundos);
 
   res.json({ success: true, data: notasDoVideo });
-});
+}));
 
-app.post('/api/notas', (req, res) => {
+app.post('/api/notas', rotaPortal(async (req, res) => {
   const { id_video, segundos, texto } = req.body;
 
   if (!id_video || segundos === undefined || !texto || !texto.trim()) {
@@ -751,7 +772,7 @@ app.post('/api/notas', (req, res) => {
   const segundosRestantes = seg % 60;
   const tempo_formatado = `${String(minutos).padStart(2, '0')}:${String(segundosRestantes).padStart(2, '0')}`;
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const novaNota = {
     id: dbUser.notas.length > 0 ? Math.max(...dbUser.notas.map(n => n.id)) + 1 : 1,
     id_video: parseInt(id_video, 10),
@@ -762,14 +783,14 @@ app.post('/api/notas', (req, res) => {
   };
 
   dbUser.notas.push(novaNota);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novaNota });
-});
+}));
 
-app.delete('/api/notas/:id', (req, res) => {
+app.delete('/api/notas/:id', rotaPortal(async (req, res) => {
   const { id } = req.params;
   const idNum = parseInt(id, 10);
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const index = dbUser.notas.findIndex(n => n.id === idNum);
 
   if (index === -1) {
@@ -777,27 +798,27 @@ app.delete('/api/notas/:id', (req, res) => {
   }
 
   dbUser.notas.splice(index, 1);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Anotação excluída com sucesso.' });
-});
+}));
 
 // ============================================================================== //
 // ================= NOVOS PILARES LIFE OS: ROTINA & AGENDA + METAS ============= //
 // ============================================================================== //
 
 // --- 1. PRIORIDADES DO DIA (TOP 3 & CAIXA DE ENTRADA) ---
-app.get('/api/rotina/prioridades', (req, res) => {
-  const dbUser = obterBancoUsuario(req.usuarioId);
+app.get('/api/rotina/prioridades', rotaPortal(async (req, res) => {
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   res.json({ success: true, data: dbUser.prioridades_dia || [] });
-});
+}));
 
-app.post('/api/rotina/prioridades', (req, res) => {
+app.post('/api/rotina/prioridades', rotaPortal(async (req, res) => {
   const { texto, top3 } = req.body;
   if (!texto || !texto.trim()) {
     return res.status(400).json({ success: false, message: 'Texto da tarefa é obrigatório.' });
   }
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.prioridades_dia)) dbUser.prioridades_dia = [];
 
   const novaTarefa = {
@@ -809,14 +830,14 @@ app.post('/api/rotina/prioridades', (req, res) => {
   };
 
   dbUser.prioridades_dia.push(novaTarefa);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novaTarefa });
-});
+}));
 
-app.patch('/api/rotina/prioridades/:id', (req, res) => {
+app.patch('/api/rotina/prioridades/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
   const { concluida, top3, texto, adiar_ate } = req.body;
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const tarefa = (dbUser.prioridades_dia || []).find(t => t.id === idNum);
   if (!tarefa) {
@@ -850,13 +871,13 @@ app.patch('/api/rotina/prioridades/:id', (req, res) => {
     tarefa.top3 = false;
   }
 
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, data: tarefa });
-});
+}));
 
-app.delete('/api/rotina/prioridades/:id', (req, res) => {
+app.delete('/api/rotina/prioridades/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const idx = (dbUser.prioridades_dia || []).findIndex(t => t.id === idNum);
 
   if (idx === -1) {
@@ -876,51 +897,51 @@ app.delete('/api/rotina/prioridades/:id', (req, res) => {
     status: tarefaRemovida.concluida ? 'concluida' : 'excluida'
   });
 
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Tarefa removida com sucesso.', data: tarefaRemovida });
-});
+}));
 
 // GET /api/rotina/historico-tarefas - Retorna todo o histórico de tarefas concluídas e arquivadas
-app.get('/api/rotina/historico-tarefas', (req, res) => {
-  const dbUser = obterBancoUsuario(req.usuarioId);
+app.get('/api/rotina/historico-tarefas', rotaPortal(async (req, res) => {
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.historico_tarefas)) dbUser.historico_tarefas = [];
   res.json({ success: true, data: dbUser.historico_tarefas });
-});
+}));
 
 // DELETE /api/rotina/historico-tarefas/:id - Limpa item individual do histórico
-app.delete('/api/rotina/historico-tarefas/:id', (req, res) => {
+app.delete('/api/rotina/historico-tarefas/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.historico_tarefas)) dbUser.historico_tarefas = [];
   const idx = dbUser.historico_tarefas.findIndex(h => h.id === idNum);
   if (idx !== -1) {
     dbUser.historico_tarefas.splice(idx, 1);
-    salvarBancoUsuario(dbUser, req.usuarioId);
+    await salvarBancoUsuario(dbUser, req.usuarioId);
   }
   res.json({ success: true, message: 'Item do histórico removido.' });
-});
+}));
 
 // DELETE /api/rotina/historico-tarefas - Limpa todo o histórico de tarefas
-app.delete('/api/rotina/historico-tarefas', (req, res) => {
-  const dbUser = obterBancoUsuario(req.usuarioId);
+app.delete('/api/rotina/historico-tarefas', rotaPortal(async (req, res) => {
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   dbUser.historico_tarefas = [];
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Histórico de tarefas limpo com sucesso.' });
-});
+}));
 
 // --- 2. RASTREADOR DE HÁBITOS (HABIT TRACKER & STREAK) ---
-app.get('/api/rotina/habitos', (req, res) => {
-  const dbUser = obterBancoUsuario(req.usuarioId);
+app.get('/api/rotina/habitos', rotaPortal(async (req, res) => {
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   res.json({ success: true, data: dbUser.habitos || [] });
-});
+}));
 
-app.post('/api/rotina/habitos', (req, res) => {
+app.post('/api/rotina/habitos', rotaPortal(async (req, res) => {
   const { nome, icone } = req.body;
   if (!nome || !nome.trim()) {
     return res.status(400).json({ success: false, message: 'Nome do hábito é obrigatório.' });
   }
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.habitos)) dbUser.habitos = [];
 
   const novoHabito = {
@@ -933,14 +954,14 @@ app.post('/api/rotina/habitos', (req, res) => {
   };
 
   dbUser.habitos.push(novoHabito);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novoHabito });
-});
+}));
 
-app.post('/api/rotina/habitos/:id/checkin', (req, res) => {
+app.post('/api/rotina/habitos/:id/checkin', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
   const { data } = req.body; // 'YYYY-MM-DD' opcional, padrão hoje
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const habito = (dbUser.habitos || []).find(h => h.id === idNum);
   if (!habito) {
@@ -983,13 +1004,13 @@ app.post('/api/rotina/habitos/:id/checkin', (req, res) => {
   }
   habito.streak = streak;
 
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, data: habito });
-});
+}));
 
-app.delete('/api/rotina/habitos/:id', (req, res) => {
+app.delete('/api/rotina/habitos/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const idx = (dbUser.habitos || []).findIndex(h => h.id === idNum);
 
   if (idx === -1) {
@@ -997,15 +1018,15 @@ app.delete('/api/rotina/habitos/:id', (req, res) => {
   }
 
   dbUser.habitos.splice(idx, 1);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Hábito removido com sucesso.' });
-});
+}));
 
 // --- 3. AGENDA & COMPROMISSOS MANUAIS ---
-app.get('/api/agenda/compromissos', (req, res) => {
-  const dbUser = obterBancoUsuario(req.usuarioId);
+app.get('/api/agenda/compromissos', rotaPortal(async (req, res) => {
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   res.json({ success: true, data: dbUser.compromissos || [] });
-});
+}));
 
 function dataAgendaValida(valor) {
   if (typeof valor !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
@@ -1013,14 +1034,14 @@ function dataAgendaValida(valor) {
   return Number.isFinite(data.getTime()) && data.toISOString().slice(0, 10) === valor;
 }
 
-app.post('/api/agenda/compromissos', (req, res) => {
+app.post('/api/agenda/compromissos', rotaPortal(async (req, res) => {
   const { titulo, data, horario = '09:00', categoria, local } = req.body;
   if (typeof titulo !== 'string' || !titulo.trim() || !dataAgendaValida(data) ||
       typeof horario !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(horario)) {
     return res.status(400).json({ success: false, message: 'Informe um título, uma data e um horário válidos.' });
   }
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.compromissos)) dbUser.compromissos = [];
 
   const novoComp = {
@@ -1034,13 +1055,13 @@ app.post('/api/agenda/compromissos', (req, res) => {
   };
 
   dbUser.compromissos.push(novoComp);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novoComp });
-});
+}));
 
-app.delete('/api/agenda/compromissos/:id', (req, res) => {
+app.delete('/api/agenda/compromissos/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const idx = (dbUser.compromissos || []).findIndex(c => c.id === idNum);
 
   if (idx === -1) {
@@ -1048,12 +1069,12 @@ app.delete('/api/agenda/compromissos/:id', (req, res) => {
   }
 
   dbUser.compromissos.splice(idx, 1);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Compromisso removido com sucesso.' });
-});
+}));
 
 // --- 4. AGENDA DE HOJE INTEGRADA (MANUAL + FINANÇAS + EDUCAÇÃO) ---
-app.get('/api/agenda/hoje-integrado', async (req, res) => {
+app.get('/api/agenda/hoje-integrado', rotaPortal(async (req, res) => {
   try {
     const data = req.query.data;
     if (data !== undefined && !dataAgendaValida(data)) {
@@ -1066,7 +1087,7 @@ app.get('/api/agenda/hoje-integrado', async (req, res) => {
     const diasSemanaNomes = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const diaHojeNome = diasSemanaNomes[hoje.getUTCDay()];
 
-    const dbUser = obterBancoUsuario(req.usuarioId);
+    const dbUser = await obterBancoUsuario(req.usuarioId);
 
     // 1. Compromissos manuais para hoje
     const manuaisHoje = (dbUser.compromissos || [])
@@ -1130,7 +1151,7 @@ app.get('/api/agenda/hoje-integrado', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
-});
+}));
 
 // --- 5. METAS (FINANCEIRAS, ESTUDOS E PESSOAIS) ---
 async function listarProjetosDaConta(req) {
@@ -1142,9 +1163,9 @@ async function listarProjetosDaConta(req) {
   return (await resposta.json()).projetos || [];
 }
 
-app.get('/api/metas', async (req, res) => {
+app.get('/api/metas', rotaPortal(async (req, res) => {
   try {
-    const dbUser = obterBancoUsuario(req.usuarioId);
+    const dbUser = await obterBancoUsuario(req.usuarioId);
     let metas = dbUser.metas || [];
 
     // Calcula progresso dinâmico para metas de Estudos e Finanças
@@ -1191,9 +1212,9 @@ app.get('/api/metas', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
-});
+}));
 
-app.post('/api/metas', async (req, res) => {
+app.post('/api/metas', rotaPortal(async (req, res) => {
   const { titulo, tipo, valor_alvo, valor_atual, prazo, checklist, projeto_id } = req.body;
   if (!titulo || !titulo.trim()) {
     return res.status(400).json({ success: false, message: 'Título da meta é obrigatório.' });
@@ -1209,7 +1230,7 @@ app.post('/api/metas', async (req, res) => {
       return res.status(503).json({ success: false, message: 'Não foi possível consultar os projetos financeiros.' });
     }
   }
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.metas)) dbUser.metas = [];
 
   const novaMeta = {
@@ -1234,14 +1255,14 @@ app.post('/api/metas', async (req, res) => {
   }
 
   dbUser.metas.push(novaMeta);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novaMeta });
-});
+}));
 
-app.patch('/api/metas/:id', (req, res) => {
+app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
   const { titulo, valor_atual, checklist, prazo } = req.body;
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const meta = (dbUser.metas || []).find(m => m.id === idNum);
   if (!meta) {
@@ -1273,16 +1294,16 @@ app.patch('/api/metas/:id', (req, res) => {
     }];
   }
 
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, data: meta });
-});
+}));
 
-app.get('/api/revisao-semanal/planos', (req, res) => {
-  const dados = obterBancoUsuario(req.usuarioId);
+app.get('/api/revisao-semanal/planos', rotaPortal(async (req, res) => {
+  const dados = await obterBancoUsuario(req.usuarioId);
   res.json({ success: true, data: Object.values(dados.planos_semanais || {}) });
-});
+}));
 
-app.put('/api/revisao-semanal/planos/:semana', (req, res) => {
+app.put('/api/revisao-semanal/planos/:semana', rotaPortal(async (req, res) => {
   const { semana } = req.params;
   const data = new Date(`${semana}T12:00:00Z`);
   const { tarefas, aulas } = req.body;
@@ -1293,7 +1314,7 @@ app.put('/api/revisao-semanal/planos/:semana', (req, res) => {
     return res.status(400).json({ success: false, message: 'Use uma segunda-feira e selecione até três tarefas e sete aulas.' });
   }
 
-  const dados = obterBancoUsuario(req.usuarioId);
+  const dados = await obterBancoUsuario(req.usuarioId);
   const prioridades = tarefas.map(id => (dados.prioridades_dia || []).find(tarefa => tarefa.id === id && !tarefa.concluida));
   const estudos = aulas.map(id => (dados.videos || []).find(aula => aula.id === id && !aula.concluido));
   if (prioridades.some(tarefa => !tarefa) || estudos.some(aula => !aula)) {
@@ -1307,13 +1328,13 @@ app.put('/api/revisao-semanal/planos/:semana', (req, res) => {
   dados.planos_semanais ||= {};
   if (tarefas.length || aulas.length) dados.planos_semanais[semana] = plano;
   else delete dados.planos_semanais[semana];
-  salvarBancoUsuario(dados, req.usuarioId);
+  await salvarBancoUsuario(dados, req.usuarioId);
   res.json({ success: true, data: plano });
-});
+}));
 
-app.delete('/api/metas/:id', (req, res) => {
+app.delete('/api/metas/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   const idx = (dbUser.metas || []).findIndex(m => m.id === idNum);
 
   if (idx === -1) {
@@ -1321,20 +1342,20 @@ app.delete('/api/metas/:id', (req, res) => {
   }
 
   dbUser.metas.splice(idx, 1);
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Meta removida com sucesso.' });
-});
+}));
 
 // ================= ROTA DE CONFIRMAÇÃO DIRETA DE VÍDEO (OPÇÃO 2) ================= //
 
-app.post('/api/ai/confirmar-video', aiRateLimiter, (req, res) => {
+app.post('/api/ai/confirmar-video', aiRateLimiter, rotaPortal(async (req, res) => {
   const { videoSelecionado, diasAlvo } = req.body;
 
   if (!videoSelecionado || !videoSelecionado.url_youtube || !videoSelecionado.titulo) {
     return res.status(400).json({ success: false, message: 'Dados do vídeo inválidos.' });
   }
 
-  const dbUser = obterBancoUsuario(req.usuarioId);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
   let topicoDestino = dbUser.topicos.find(t => t.nome.toLowerCase().includes('vendas') || t.nome.toLowerCase().includes('conteúdos'));
   if (!topicoDestino) {
     topicoDestino = {
@@ -1368,19 +1389,19 @@ app.post('/api/ai/confirmar-video', aiRateLimiter, (req, res) => {
     acoes.push(`Agendado para ${dia}: "${videoFinal.titulo}"`);
   });
 
-  salvarBancoUsuario(dbUser, req.usuarioId);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
 
   res.json({
     success: true,
     mensagem: `Excelente escolha! O vídeo "${videoFinal.titulo}" foi confirmado e agendado com sucesso para ${dias.join(', ')}.`,
     acoesExecutadas: acoes
   });
-});
+}));
 
 // ================= MOTOR DE IA COM PRÉVIAS INTERATIVAS ================= //
 
 const propostasEstudo = new Map();
-app.post('/api/ai/chat', aiRateLimiter, async (req, res) => {
+app.post('/api/ai/chat', aiRateLimiter, rotaPortal(async (req, res) => {
   const { prompt, propostaId } = req.body;
 
   if (!propostaId && (typeof prompt !== 'string' || !prompt.trim())) {
@@ -1388,14 +1409,14 @@ app.post('/api/ai/chat', aiRateLimiter, async (req, res) => {
   }
 
   try {
-    const dbUser = obterBancoUsuario(req.usuarioId);
+    const dbUser = await obterBancoUsuario(req.usuarioId);
     const atual = JSON.stringify(dbUser);
     if (propostaId) {
       const proposta = propostasEstudo.get(req.usuarioId);
       if (!proposta || proposta.id !== propostaId || proposta.expira < Date.now() || proposta.anterior !== atual) {
         return res.status(409).json({ success: false, message: 'A proposta expirou ou os dados mudaram. Solicite uma nova prévia.' });
       }
-      salvarBancoUsuario(proposta.dados, req.usuarioId);
+      await salvarBancoUsuario(proposta.dados, req.usuarioId, dbUser);
       propostasEstudo.delete(req.usuarioId);
       return res.json({ success: true, mensagem: proposta.resultado.mensagem, acoesExecutadas: proposta.resultado.acoesExecutadas });
     }
@@ -1424,7 +1445,7 @@ app.post('/api/ai/chat', aiRateLimiter, async (req, res) => {
     console.error('[AI Error]', error);
     res.status(500).json({ success: false, message: 'Erro ao processar comando de IA.' });
   }
-});
+}));
 
 async function processarComandoInteligente(prompt, dbUser) {
   const dbAlvo = dbUser || db;
@@ -1590,15 +1611,29 @@ async function processarComandoInteligente(prompt, dbUser) {
   return { mensagem, acoesExecutadas };
 }
 
-pushService = initPushService({
-  dataDir: DATA_DIR,
-  obterBancoUsuario,
-  salvarBancoUsuario
+app.use((erro, req, res, next) => {
+  if (res.headersSent) return next(erro);
+  if (!req.path.startsWith('/api/')) return next(erro);
+  const status = [400, 409, 413].includes(erro.status) ? erro.status : 500;
+  if (status === 500) console.error('[API do portal]', erro.code || erro.name);
+  res.status(status).json({
+    success: false,
+    message: status === 409 ? erro.message : 'Não foi possível concluir a operação.'
+  });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+async function iniciarPortal() {
+  if (process.env.DATABASE_URL) portalPostgres = await abrirPortalPostgres();
+  pushService = await initPushService({
+    dataDir: DATA_DIR,
+    obterBancoUsuario,
+    salvarBancoUsuario,
+    listarUsuariosComAlertas: portalPostgres?.listarUsuariosComAlertas,
+    obterOuCriarVapid: portalPostgres?.obterOuCriarVapid
+  });
+  app.listen(PORT, '0.0.0.0', () => {
   console.log('[Portal Nexus Corporativo] Servidor ativo na porta ' + PORT);
-  console.log('[Database] Banco de dados persistente conectado: ' + DB_FILE);
+  console.log('[Database] Armazenamento do portal:', portalPostgres ? 'PostgreSQL' : DB_FILE);
   console.log('[Finanças Integrado] Aplicação de Finanças disponível em /financas-app');
 
   // Verificador interno automático a cada 1 minuto enquanto o servidor estiver acordado
@@ -1609,4 +1644,9 @@ app.listen(PORT, '0.0.0.0', () => {
       });
     }
   }, 60 * 1000);
+  });
+}
+iniciarPortal().catch(erro => {
+  console.error('[Portal] Não foi possível inicializar o armazenamento:', erro.code || erro.name);
+  process.exit(1);
 });
