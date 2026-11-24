@@ -1356,4 +1356,21 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`[Portal Nexus Corporativo] Servidor ativo em http://0.0.0.0:${PORT}`);
   console.log(`[Database] Banco de dados persistente conectado: ${DB_FILE}`);
   console.log(`[Finanças Integrado] Aplicação de Finanças disponível em http://localhost:${PORT}/financas-app`);
+
+  // Inicia o backend de Finanças automaticamente em background na porta 3001
+  try {
+    const { spawn } = require('child_process');
+    const finPath = path.join(__dirname, 'finance-tracker');
+    if (fs.existsSync(finPath)) {
+      console.log('[Autostart] Iniciando backend de Finanças na porta 3001...');
+      const child = spawn('node', ['server.js'], {
+        cwd: finPath,
+        stdio: 'inherit',
+        env: { ...process.env, PORT: '3001' }
+      });
+      child.on('error', (e) => console.error('[Finanças Error]', e.message));
+    }
+  } catch (errSpawn) {
+    console.error('[Autostart Error]', errSpawn.message);
+  }
 });
