@@ -1564,8 +1564,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   const navBtnRotina = document.getElementById('nav-btn-rotina');
   const navBtnMetas = document.getElementById('nav-btn-metas');
   const sectionModulos = document.getElementById('sidebar-section-modulos');
+  const sectionLmsSubnav = document.getElementById('sidebar-section-lms-subnav');
+  const sectionFinancasSubnav = document.getElementById('sidebar-section-financas-subnav');
+  const sectionRotinaSubnav = document.getElementById('sidebar-section-rotina-subnav');
+  const sectionMetasSubnav = document.getElementById('sidebar-section-metas-subnav');
   const sectionPlanning = document.getElementById('sidebar-section-planning');
   const sectionTopics = document.getElementById('sidebar-section-topics');
+
+  // Helper centralizado para o Drill-down da Sidebar (Opção 4 em todos os módulos)
+  const atualizarSidebarDrilldown = (moduloAtivo) => {
+    const subnavs = [sectionLmsSubnav, sectionFinancasSubnav, sectionRotinaSubnav, sectionMetasSubnav];
+    subnavs.forEach(el => { if (el) el.classList.add('hidden'); });
+
+    if (!moduloAtivo || moduloAtivo === 'inicio') {
+      if (sectionModulos) sectionModulos.classList.remove('hidden');
+      return;
+    }
+
+    if (sectionModulos) sectionModulos.classList.add('hidden');
+    if (moduloAtivo === 'lms' && sectionLmsSubnav) sectionLmsSubnav.classList.remove('hidden');
+    if (moduloAtivo === 'financas' && sectionFinancasSubnav) sectionFinancasSubnav.classList.remove('hidden');
+    if (moduloAtivo === 'rotina' && sectionRotinaSubnav) sectionRotinaSubnav.classList.remove('hidden');
+    if (moduloAtivo === 'metas' && sectionMetasSubnav) sectionMetasSubnav.classList.remove('hidden');
+  };
   const viewDashboardGeral = document.getElementById('view-dashboard-geral');
   const viewFinancas = document.getElementById('view-financas');
   const viewRotina = document.getElementById('view-rotina');
@@ -1584,12 +1605,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (viewMetas) viewMetas.classList.add('hidden');
     if (btnBack) btnBack.classList.add('hidden');
 
-    if (sectionModulos) sectionModulos.classList.remove('hidden');
+    atualizarSidebarDrilldown('inicio');
     if (sectionPlanning) sectionPlanning.classList.add('hidden');
     if (sectionTopics) sectionTopics.classList.add('hidden');
-
-    const financasSubnav = document.getElementById('sidebar-section-financas-subnav');
-    if (financasSubnav) financasSubnav.classList.add('hidden');
     if (btnOpenTopic) btnOpenTopic.parentElement.classList.add('hidden');
 
     const breadcrumb = document.getElementById('breadcrumb-topic');
@@ -1627,12 +1645,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const viewMetasEl = document.getElementById('view-metas');
     if (viewMetasEl) viewMetasEl.classList.add('hidden');
 
-    if (sectionModulos) sectionModulos.classList.remove('hidden');
+    atualizarSidebarDrilldown('lms');
     if (sectionPlanning) sectionPlanning.classList.remove('hidden');
     if (sectionTopics) sectionTopics.classList.remove('hidden');
-    
-    const financasSubnav = document.getElementById('sidebar-section-financas-subnav');
-    if (financasSubnav) financasSubnav.classList.add('hidden');
 
     if (btnOpenTopic) btnOpenTopic.parentElement.classList.remove('hidden');
 
@@ -1674,12 +1689,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnBack) btnBack.classList.add('hidden');
 
     if (viewFinancas) viewFinancas.classList.remove('hidden');
-    if (sectionModulos) sectionModulos.classList.add('hidden');
+    atualizarSidebarDrilldown('financas');
     if (sectionPlanning) sectionPlanning.classList.add('hidden');
     if (sectionTopics) sectionTopics.classList.add('hidden');
-
-    const financasSubnav = document.getElementById('sidebar-section-financas-subnav');
-    if (financasSubnav) financasSubnav.classList.remove('hidden');
 
     if (btnOpenTopic) btnOpenTopic.parentElement.classList.add('hidden');
 
@@ -1722,12 +1734,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnBack) btnBack.classList.add('hidden');
 
     if (viewRotina) viewRotina.classList.remove('hidden');
-    if (sectionModulos) sectionModulos.classList.remove('hidden');
+    atualizarSidebarDrilldown('rotina');
     if (sectionPlanning) sectionPlanning.classList.add('hidden');
     if (sectionTopics) sectionTopics.classList.add('hidden');
-
-    const financasSubnav = document.getElementById('sidebar-section-financas-subnav');
-    if (financasSubnav) financasSubnav.classList.add('hidden');
     if (btnOpenTopic) btnOpenTopic.parentElement.classList.add('hidden');
 
     const breadcrumb = document.getElementById('breadcrumb-topic');
@@ -1773,12 +1782,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnBack) btnBack.classList.add('hidden');
 
     if (viewMetas) viewMetas.classList.remove('hidden');
-    if (sectionModulos) sectionModulos.classList.remove('hidden');
+    atualizarSidebarDrilldown('metas');
     if (sectionPlanning) sectionPlanning.classList.add('hidden');
     if (sectionTopics) sectionTopics.classList.add('hidden');
-
-    const financasSubnav = document.getElementById('sidebar-section-financas-subnav');
-    if (financasSubnav) financasSubnav.classList.add('hidden');
     if (btnOpenTopic) btnOpenTopic.parentElement.classList.add('hidden');
 
     const breadcrumb = document.getElementById('breadcrumb-topic');
@@ -1820,15 +1826,56 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (navBtnRotina) navBtnRotina.addEventListener('click', showRotinaModule);
   if (navBtnMetas) navBtnMetas.addEventListener('click', showMetasModule);
 
-  // Botão "Voltar aos Módulos" no submenu drill-down de Finanças
+  // Botões "Voltar aos Módulos" no submenu drill-down de todos os módulos
+  const voltarAosModulos = () => atualizarSidebarDrilldown('inicio');
   const btnFinancasVoltarModulos = document.getElementById('btn-financas-voltar-modulos');
   if (btnFinancasVoltarModulos) {
-    btnFinancasVoltarModulos.addEventListener('click', () => {
-      const financasSubnav = document.getElementById('sidebar-section-financas-subnav');
-      if (financasSubnav) financasSubnav.classList.add('hidden');
-      if (sectionModulos) sectionModulos.classList.remove('hidden');
-    });
+    btnFinancasVoltarModulos.addEventListener('click', voltarAosModulos);
   }
+  document.querySelectorAll('.btn-voltar-modulos').forEach(btn => {
+    btn.addEventListener('click', voltarAosModulos);
+  });
+
+  // Sub-navegação Drill-down do Módulo Rotina & Agenda
+  document.querySelectorAll('.btn-subnav-rotina').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.btn-subnav-rotina').forEach(b => {
+        b.className = 'btn-subnav-rotina w-full text-left px-3 py-2 rounded-lg text-xs transition flex items-center space-x-2.5 text-slate-300 hover:bg-slate-900 hover:text-white';
+      });
+      btn.className = 'btn-subnav-rotina w-full text-left px-3 py-2 rounded-lg text-xs transition flex items-center space-x-2.5 text-white bg-slate-800 font-semibold';
+
+      const action = btn.getAttribute('data-rotina-action');
+      if (action === 'hoje') {
+        const el = document.getElementById('btn-subaba-hoje');
+        if (el) el.click();
+      } else if (action === 'agenda') {
+        const el = document.getElementById('btn-subaba-agenda');
+        if (el) el.click();
+      } else if (action === 'historico') {
+        const el = document.getElementById('btn-abrir-historico-tarefas');
+        if (el) el.click();
+      }
+    });
+  });
+
+  // Sub-navegação Drill-down do Módulo Metas
+  document.querySelectorAll('.btn-subnav-metas').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.btn-subnav-metas').forEach(b => {
+        b.className = 'btn-subnav-metas w-full text-left px-3 py-2 rounded-lg text-xs transition flex items-center space-x-2.5 text-slate-300 hover:bg-slate-900 hover:text-white';
+      });
+      btn.className = 'btn-subnav-metas w-full text-left px-3 py-2 rounded-lg text-xs transition flex items-center space-x-2.5 text-white bg-slate-800 font-semibold';
+
+      const action = btn.getAttribute('data-metas-action');
+      if (action === 'modelos') {
+        const el = document.getElementById('btn-metas-modelos');
+        if (el) el.click();
+      } else if (action === 'nova') {
+        const el = document.getElementById('btn-nova-meta');
+        if (el) el.click();
+      }
+    });
+  });
 
   // Cliques nas sub-abas de Finanças controlam o iframe diretamente
   document.querySelectorAll('.btn-subnav-financas').forEach(btn => {
