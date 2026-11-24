@@ -1007,10 +1007,17 @@ app.get('/api/agenda/compromissos', (req, res) => {
   res.json({ success: true, data: dbUser.compromissos || [] });
 });
 
+function dataAgendaValida(valor) {
+  if (typeof valor !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return false;
+  const data = new Date(`${valor}T12:00:00Z`);
+  return Number.isFinite(data.getTime()) && data.toISOString().slice(0, 10) === valor;
+}
+
 app.post('/api/agenda/compromissos', (req, res) => {
-  const { titulo, data, horario, categoria, local } = req.body;
-  if (!titulo || !data) {
-    return res.status(400).json({ success: false, message: 'Título e data são obrigatórios.' });
+  const { titulo, data, horario = '09:00', categoria, local } = req.body;
+  if (typeof titulo !== 'string' || !titulo.trim() || !dataAgendaValida(data) ||
+      typeof horario !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(horario)) {
+    return res.status(400).json({ success: false, message: 'Informe um título, uma data e um horário válidos.' });
   }
 
   const dbUser = obterBancoUsuario(req.usuarioId);
@@ -1019,8 +1026,8 @@ app.post('/api/agenda/compromissos', (req, res) => {
   const novoComp = {
     id: dbUser.compromissos.length > 0 ? Math.max(...dbUser.compromissos.map(c => c.id)) + 1 : 1,
     titulo: titulo.trim(),
-    data: data.slice(0, 10), // 'YYYY-MM-DD'
-    horario: horario || '09:00',
+    data,
+    horario,
     categoria: categoria || 'pessoal', // 'pessoal' | 'financas' | 'estudos' | 'trabalho'
     local: local || '',
     criado_em: new Date().toISOString()
@@ -1048,10 +1055,16 @@ app.delete('/api/agenda/compromissos/:id', (req, res) => {
 // --- 4. AGENDA DE HOJE INTEGRADA (MANUAL + FINANÇAS + EDUCAÇÃO) ---
 app.get('/api/agenda/hoje-integrado', async (req, res) => {
   try {
-    const hoje = new Date();
-    const hojeIso = hoje.toISOString().slice(0, 10);
+    const data = req.query.data;
+    if (data !== undefined && !dataAgendaValida(data)) {
+      return res.status(400).json({ success: false, message: 'Data da agenda inválida.' });
+    }
+    const hojeIso = data || new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date());
+    const hoje = new Date(`${hojeIso}T12:00:00Z`);
     const diasSemanaNomes = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    const diaHojeNome = diasSemanaNomes[hoje.getDay()];
+    const diaHojeNome = diasSemanaNomes[hoje.getUTCDay()];
 
     const dbUser = obterBancoUsuario(req.usuarioId);
 
@@ -1090,7 +1103,7 @@ app.get('/api/agenda/hoje-integrado', async (req, res) => {
       });
       if (respFin.ok) {
         const dadosFin = await respFin.json();
-        const diaAtualNum = hoje.getDate();
+        const diaAtualNum = hoje.getUTCDate();
         (dadosFin.despesas || []).forEach(d => {
           if (d.data_vencimento === diaAtualNum || d.dia_vencimento === diaAtualNum) {
             contasHoje.push({

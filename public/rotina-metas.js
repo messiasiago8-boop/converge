@@ -60,7 +60,7 @@ async function carregarHabitos() {
 
 async function carregarAgendaHoje() {
   try {
-    const res = await fetchRotinaAuth('/api/agenda/hoje-integrado');
+    const res = await fetchRotinaAuth(`/api/agenda/hoje-integrado?data=${dataLocalRotina(new Date())}`);
     const json = await res.json();
     if (json.success) {
       rotinaState.agendaHoje = json.data || [];
@@ -77,7 +77,7 @@ async function carregarCompromissos() {
     const json = await res.json();
     if (json.success) {
       rotinaState.compromissos = json.data || [];
-      renderizarAgendaSemanal();
+      renderizarAgendaAtiva();
     }
   } catch (e) {
     console.error('Erro ao carregar compromissos da agenda:', e);
@@ -396,13 +396,13 @@ async function carregarHistoricoTarefas() {
 // 3. RENDERIZAÇÃO: RASTREADOR DE HÁBITOS (HABIT TRACKER)
 // ========================================================================= //
 
-function obterDiasSemanaAtual() {
+function obterDiasSemanaAtual(referencia = new Date()) {
   const hoje = new Date();
-  const diaSemanaIndex = hoje.getDay(); // 0 Dom, 1 Seg...
+  const diaSemanaIndex = referencia.getDay(); // 0 Dom, 1 Seg...
   const diffSegunda = diaSemanaIndex === 0 ? -6 : 1 - diaSemanaIndex;
   
-  const segunda = new Date(hoje);
-  segunda.setDate(hoje.getDate() + diffSegunda);
+  const segunda = new Date(referencia);
+  segunda.setDate(referencia.getDate() + diffSegunda);
 
   const dias = [];
   const nomesCurtos = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
@@ -412,8 +412,8 @@ function obterDiasSemanaAtual() {
     d.setDate(segunda.getDate() + i);
     dias.push({
       nome: nomesCurtos[i],
-      iso: d.toISOString().slice(0, 10),
-      isHoje: d.toISOString().slice(0, 10) === hoje.toISOString().slice(0, 10)
+      iso: dataLocalRotina(d),
+      isHoje: dataLocalRotina(d) === dataLocalRotina(hoje)
     });
   }
   return dias;
@@ -630,12 +630,30 @@ function eventosIntegradosAgenda(dataIso, mostrarEstudos, mostrarFinancas) {
   return eventos;
 }
 
+function referenciaDaAgenda() {
+  const data = document.getElementById('data-navegacao-agenda')?.value;
+  return data ? new Date(`${data}T12:00:00`) : new Date();
+}
+
+function renderizarAgendaAtiva() {
+  if (rotinaState.agendaVisualizacao === 'mes') renderizarAgendaMensal();
+  else renderizarAgendaSemanal();
+}
+
+function abrirNovoCompromisso(data) {
+  const modal = document.getElementById('modal-compromisso');
+  document.getElementById('input-comp-data').value = data;
+  document.getElementById('status-novo-compromisso').textContent = '';
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
 function renderizarAgendaSemanal() {
   const container = document.getElementById('grid-agenda-semanal');
   if (!container) return;
 
   container.innerHTML = '';
-  const diasSemana = obterDiasSemanaAtual();
+  const diasSemana = obterDiasSemanaAtual(referenciaDaAgenda());
 
   const filtroPessoal = document.getElementById('chk-filtro-pessoal')?.checked ?? true;
   const filtroFinancas = document.getElementById('chk-filtro-financas')?.checked ?? true;
@@ -692,13 +710,7 @@ function renderizarAgendaSemanal() {
     });
 
     card.querySelector('.btn-add-comp-dia').addEventListener('click', () => {
-      const modal = document.getElementById('modal-compromisso');
-      const inputData = document.getElementById('input-comp-data');
-      if (inputData) inputData.value = dia.iso;
-      if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-      }
+      abrirNovoCompromisso(dia.iso);
     });
 
     container.appendChild(card);
@@ -711,8 +723,9 @@ function renderizarAgendaMensal() {
 
   container.innerHTML = '';
   const hoje = new Date();
-  const ano = hoje.getFullYear();
-  const mes = hoje.getMonth();
+  const referencia = referenciaDaAgenda();
+  const ano = referencia.getFullYear();
+  const mes = referencia.getMonth();
 
   const primeiroDia = new Date(ano, mes, 1);
   const ultimoDia = new Date(ano, mes + 1, 0);
@@ -777,13 +790,7 @@ function renderizarAgendaMensal() {
 
     dayCell.querySelector('.btn-add-comp-mes').addEventListener('click', (e) => {
       e.stopPropagation();
-      const modal = document.getElementById('modal-compromisso');
-      const inputData = document.getElementById('input-comp-data');
-      if (inputData) inputData.value = dataIso;
-      if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-      }
+      abrirNovoCompromisso(dataIso);
     });
 
     daysGrid.appendChild(dayCell);
@@ -1359,7 +1366,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSubHoje.className = 'px-4 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer flex items-center gap-1.5';
       if (subviewHoje) subviewHoje.classList.add('hidden');
       if (subviewAgenda) subviewAgenda.classList.remove('hidden');
-      renderizarAgendaSemanal();
+      renderizarAgendaAtiva();
     });
   }
 
@@ -1425,13 +1432,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnNovoComp = document.getElementById('btn-novo-compromisso');
   const modalComp = document.getElementById('modal-compromisso');
   const formNovoComp = document.getElementById('form-novo-compromisso');
+  const dataAgenda = document.getElementById('data-navegacao-agenda');
+  dataAgenda.value = dataLocalRotina(new Date());
+  dataAgenda.addEventListener('change', renderizarAgendaAtiva);
 
   if (btnNovoComp && modalComp) {
     btnNovoComp.addEventListener('click', () => {
-      const inputData = document.getElementById('input-comp-data');
-      if (inputData) inputData.value = new Date().toISOString().slice(0, 10);
-      modalComp.classList.remove('hidden');
-      modalComp.classList.add('flex');
+      abrirNovoCompromisso(dataAgenda.value || dataLocalRotina(new Date()));
     });
   }
 
@@ -1443,21 +1450,42 @@ document.addEventListener('DOMContentLoaded', () => {
       const horario = document.getElementById('input-comp-horario').value;
       const categoria = document.getElementById('select-comp-categoria').value;
 
-      if (!titulo || !data) return;
+      const status = document.getElementById('status-novo-compromisso');
+      if (!titulo || !data || !horario) {
+        status.textContent = 'Preencha o título, a data e o horário.';
+        return;
+      }
+      const botaoSalvar = formNovoComp.querySelector('[type=submit]');
+      if (botaoSalvar.disabled) return;
+      botaoSalvar.disabled = true;
+      status.textContent = '';
 
       try {
-        await fetchRotinaAuth('/api/agenda/compromissos', {
+        const resposta = await fetchRotinaAuth('/api/agenda/compromissos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ titulo, data, horario, categoria })
         });
-        document.getElementById('input-comp-titulo').value = '';
+        const json = await resposta.json().catch(() => null);
+        if (resposta.status === 401 || resposta.status === 403) throw new Error('Sua sessão expirou. Entre novamente para salvar.');
+        if (!resposta.ok || !json?.success || !json.data) {
+          throw new Error(json?.message || json?.error || 'Não foi possível confirmar o salvamento. Confira a agenda antes de tentar novamente.');
+        }
+        rotinaState.compromissos.push(json.data);
+        dataAgenda.value = json.data.data;
+        const filtro = { pessoal: 'pessoal', financas: 'financas', estudos: 'estudos' }[categoria];
+        if (filtro) document.getElementById(`chk-filtro-${filtro}`).checked = true;
+        formNovoComp.reset();
         modalComp.classList.add('hidden');
         modalComp.classList.remove('flex');
-        await carregarCompromissos();
-        await carregarAgendaHoje();
+        document.getElementById('status-agenda').textContent =
+          `Compromisso salvo para ${new Date(`${json.data.data}T12:00:00`).toLocaleDateString('pt-BR')} às ${json.data.horario}.`;
+        renderizarAgendaAtiva();
+        await Promise.all([carregarCompromissos(), carregarAgendaHoje()]);
       } catch (err) {
-        console.error(err);
+        status.textContent = err.message || 'Não foi possível conectar ao serviço.';
+      } finally {
+        botaoSalvar.disabled = false;
       }
     });
   }
