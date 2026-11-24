@@ -468,7 +468,9 @@
           body: JSON.stringify(payload)
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => {
+          throw new Error('O serviço de acesso está indisponível no momento. Aguarde e tente novamente.');
+        });
 
         if (!res.ok) {
           throw new Error(data.error || 'Falha ao autenticar.');

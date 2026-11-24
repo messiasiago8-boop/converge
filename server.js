@@ -162,15 +162,20 @@ const FINANCE_API_PORT = 3001;
 ['/api/auth', '/api/dados', '/api/potes', '/api/entradas', '/api/despesas', '/api/limites', '/api/projetos', '/api/analyze', '/api/simulate', '/api/invest-advice', '/api/investimentos'].forEach(route => {
   app.all(route + '*', async (req, res) => {
     try {
-      const targetUrl = `http://localhost:${FINANCE_API_PORT}${req.originalUrl}`;
-      const headers = { ...req.headers, host: `localhost:${FINANCE_API_PORT}` };
+      const targetUrl = `http://127.0.0.1:${FINANCE_API_PORT}${req.originalUrl}`;
+      const headers = { ...req.headers };
+      // O fetch calcula o tamanho do JSON serializado pelo proxy.
+      delete headers.host;
+      delete headers['content-length'];
+      delete headers['transfer-encoding'];
       
       const options = {
         method: req.method,
         headers
       };
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body && Object.keys(req.body).length > 0) {
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.is('application/json') && req.body !== undefined) {
         options.headers['content-type'] = 'application/json';
+        delete options.headers['content-encoding'];
         options.body = JSON.stringify(req.body);
       }
 
@@ -962,7 +967,7 @@ app.get('/api/agenda/hoje-integrado', async (req, res) => {
     try {
       const mesAtual = hojeIso.slice(0, 7);
       const authHeader = req.headers['authorization'];
-      const respFin = await fetch(`http://localhost:3001/api/dados?mes=${mesAtual}`, {
+      const respFin = await fetch(`http://127.0.0.1:${FINANCE_API_PORT}/api/dados?mes=${mesAtual}`, {
         headers: authHeader ? { 'Authorization': authHeader } : {}
       });
       if (respFin.ok) {
