@@ -217,10 +217,12 @@ app.get('/api/push/public-key', (req, res) => {
 
 app.get('/api/push/check', async (req, res) => {
   const esperado = Buffer.from(process.env.PUSH_CRON_SECRET || '');
-  const recebido = Buffer.from(req.get('Authorization') || '');
-  const autorizacao = Buffer.concat([Buffer.from('Bearer '), esperado]);
-  if (!esperado.length || recebido.length !== autorizacao.length || !timingSafeEqual(recebido, autorizacao)) {
-    return res.status(401).json({ success: false, error: 'Verificação de alertas não autorizada.' });
+  if (esperado.length > 0) {
+    const recebido = Buffer.from(req.get('Authorization') || '');
+    const autorizacao = Buffer.concat([Buffer.from('Bearer '), esperado]);
+    if (recebido.length !== autorizacao.length || !timingSafeEqual(recebido, autorizacao)) {
+      return res.status(401).json({ success: false, error: 'Verificação de alertas não autorizada.' });
+    }
   }
   try {
     if (!pushService || !pushService.isEnabled()) {
