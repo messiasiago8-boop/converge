@@ -1822,6 +1822,7 @@
   </div>
 
   <!-- ==================== SCRIPTS ==================== -->
+  <script src="./session.js"></script>
   <script>
     // 1. Verificação de Autenticação Segura: Se não houver token ativo, redireciona diretamente para a tela de login
     const loginUrl = window.location.pathname.startsWith('/financas-app') ? '/financas-app/login.html' : '/login.html';
@@ -1832,10 +1833,7 @@
 
     // Função de Logout Seguro
     function fazerLogout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('usuarioNome');
-      localStorage.removeItem('usuarioEmail');
-      window.location.href = loginUrl;
+      return ConvergeSessao.sair(window.parent === window ? loginUrl : '/login.html');
     }
 
     // Função utilitária fetchAuth para anexar Authorization Bearer automaticamente
@@ -1852,7 +1850,7 @@
       };
 
       const res = await window.fetch(url, { ...options, headers });
-      if (res.status === 401 || res.status === 403) {
+      if ((res.status === 401 || res.status === 403) && localStorage.getItem('token') === token) {
         fazerLogout();
         throw new Error('Sessão expirada. Redirecionando para login...');
       }

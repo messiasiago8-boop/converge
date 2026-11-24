@@ -44,6 +44,7 @@ const ConvergeNotifications = {
 
   // Inicializa o Service Worker, sincroniza assinatura Push existente e inicia o monitor
   async init() {
+    this.tokenSessao = localStorage.getItem('token');
     if ('serviceWorker' in navigator) {
       try {
         await navigator.serviceWorker.register('/sw.js');
@@ -64,7 +65,10 @@ const ConvergeNotifications = {
   async registrarWebPushSilencioso() {
     try {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
-      if (!localStorage.getItem('token')) return false;
+      const token = this.tokenSessao;
+      const conta = localStorage.getItem('usuarioEmail');
+      const sessaoAtiva = () => token && localStorage.getItem('token') === token && !ConvergeSessao.encerrando;
+      if (!conta || !sessaoAtiva()) return false;
 
       const keyResp = await fetch('/api/push/public-key');
       if (!keyResp.ok) return false;
@@ -74,6 +78,15 @@ const ConvergeNotifications = {
       const reg = await navigator.serviceWorker.ready;
       const expectedKey = this.urlBase64ToUint8Array(keyData.publicKey);
       let subscription = await reg.pushManager.getSubscription();
+      if (!sessaoAtiva()) return false;
+
+      if (subscription && localStorage.getItem(ConvergeSessao.chaveContaPush) !== conta) {
+        await ConvergeSessao.permitirPush(false);
+        if (!sessaoAtiva()) return false;
+        await subscription.unsubscribe();
+        subscription = await reg.pushManager.getSubscription();
+        if (subscription) return false;
+      }
 
       // Auto-recuperação: se a chave VAPID do servidor mudou, renova a assinatura
       if (subscription && subscription.options && subscription.options.applicationServerKey) {
@@ -86,11 +99,13 @@ const ConvergeNotifications = {
       }
 
       if (!subscription) {
+        if (!sessaoAtiva()) return false;
         subscription = await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: expectedKey
         });
       }
+      if (!sessaoAtiva()) return false;
 
       const timezone = (() => {
         try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo'; }
@@ -99,7 +114,7 @@ const ConvergeNotifications = {
 
       const saveResp = await fetch('/api/push/subscribe', {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subscription: subscription.toJSON(),
           timezone,
@@ -107,7 +122,10 @@ const ConvergeNotifications = {
         })
       });
 
-      if (saveResp.ok) {
+      if (saveResp.ok && sessaoAtiva()) {
+        await ConvergeSessao.permitirPush(true, sessaoAtiva);
+        if (!sessaoAtiva()) return false;
+        localStorage.setItem(ConvergeSessao.chaveContaPush, conta);
         this.pushSubscribed = true;
         return true;
       }
@@ -229,11 +247,13 @@ const ConvergeNotifications = {
   // Dispara uma notificação nativa local com som suave (quando o app está aberto)
   async dispararNotificacao({ titulo, corpo, tag, icone = '/icon-192.png' }) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!this.tokenSessao || this.tokenSessao !== localStorage.getItem('token')) return;
 
     this.tocarSomAlerta();
 
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.getRegistration();
+      if (this.tokenSessao !== localStorage.getItem('token')) return;
       if (reg && reg.showNotification) {
         reg.showNotification(titulo, {
           body: corpo,
@@ -287,6 +307,7 @@ const ConvergeNotifications = {
 
   verificarCompromissos() {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!this.tokenSessao || this.tokenSessao !== localStorage.getItem('token')) return;
     if (typeof rotinaState === 'undefined') return;
 
     const agora = new Date();

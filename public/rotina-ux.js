@@ -117,16 +117,18 @@
   const SUGESTOES_QUICK = ['Pagar uma conta', 'Responder mensagens', 'Organizar a mesa', 'Ligar para alguém'];
 
   async function adicionarPrioridade(texto, top3) {
-    if (!texto || !texto.trim()) return;
+    if (!texto || !texto.trim()) return false;
     try {
-      await fetchRotinaAuth('/api/rotina/prioridades', {
+      await salvarRotina('/api/rotina/prioridades', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto: texto.trim(), top3: !!top3 })
       });
       await carregarPrioridades();
+      return true;
     } catch (e) {
-      console.error('[rotina-ux] erro ao adicionar sugestão:', e);
+      avisarFalhaRotina(e);
+      return false;
     }
   }
 
@@ -150,19 +152,22 @@
       </div>`;
 
     container.querySelectorAll('.rx-chip').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         btn.disabled = true;
-        adicionarPrioridade(btn.getAttribute('data-texto'), top3);
+        await adicionarPrioridade(btn.getAttribute('data-texto'), top3);
+        btn.disabled = false;
       });
     });
     const form = container.querySelector('.rx-empty-form');
     if (form) {
-      form.addEventListener('submit', (e) => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const campo = form.querySelector('input');
-        const valor = campo.value;
-        campo.value = '';
-        adicionarPrioridade(valor, top3);
+        const botao = form.querySelector('[type=submit]');
+        if (botao.disabled) return;
+        botao.disabled = true;
+        if (await adicionarPrioridade(campo.value, top3)) campo.value = '';
+        botao.disabled = false;
       });
     }
   }

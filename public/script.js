@@ -2318,14 +2318,14 @@ async function carregarDashboardGeral() {
             const id = p.id;
             const novoStatus = !isConcluida;
             try {
-              await fetchAuth(`/api/rotina/prioridades/${id}`, {
+              await salvarRotina(`/api/rotina/prioridades/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ concluida: novoStatus })
               });
               carregarDashboardGeral();
             } catch (err) {
-              console.error('Erro ao alternar prioridade no painel:', err);
+              avisarFalhaRotina(err);
             }
           });
           top3ListEl.appendChild(row);

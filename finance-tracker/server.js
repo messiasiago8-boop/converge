@@ -1009,19 +1009,29 @@ app.post('/api/chat', autenticarToken, aiRateLimiter, async (req, res) => {
   try {
     const { message, despesas, entradas, limites } = req.body;
 
-    if (!message) {
+    if (typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ error: 'Mensagem vazia.' });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'Chave GEMINI_API_KEY não configurada no servidor.' });
+    if (!ai) {
+      return res.status(503).json({ error: 'O assistente de Finanças está indisponível no momento.' });
     }
 
-    const totalEntradas = entradas ? entradas.reduce((a, b) => a + b.valor, 0) : 0;
-    const totalDespesas = despesas ? despesas.reduce((a, b) => a + b.valor, 0) : 0;
-    const essenciais = despesas ? despesas.filter(d => d.categoria === '50').reduce((a, b) => a + b.valor, 0) : 0;
-    const desejos = despesas ? despesas.filter(d => d.categoria === '30').reduce((a, b) => a + b.valor, 0) : 0;
-    const reserva = despesas ? despesas.filter(d => d.categoria === '20').reduce((a, b) => a + b.valor, 0) : 0;
+    const receitas = Array.isArray(entradas) ? entradas : [];
+    const gastos = Array.isArray(despesas) ? despesas.filter(gasto => gasto && Number.isFinite(Number(gasto.valor))) : [];
+    const somar = itens => itens.reduce((total, item) => {
+      const valor = Number(item?.valor);
+      return Number.isFinite(valor) ? total + valor : total;
+    }, 0);
+    const totalEntradas = somar(receitas);
+    const totalDespesas = somar(gastos);
+    const essenciais = somar(gastos.filter(d => String(d.categoria) === '50'));
+    const desejos = somar(gastos.filter(d => String(d.categoria) === '30'));
+    const reserva = somar(gastos.filter(d => String(d.categoria) === '20'));
+    const limite = categoria => {
+      const valor = Number(limites?.[categoria] ?? NaN);
+      return Number.isFinite(valor) ? valor : totalEntradas * Number(categoria) / 100;
+    };
 
     const prompt = `
 Você é o Assistente Virtual e Consultor Financeiro do sistema Finanças Inteligente.
@@ -1030,12 +1040,12 @@ Você conversa diretamente com o usuário ${req.usuarioNome} em um terminal corp
 DADOS FINANCEIROS ATUAIS DO USUÁRIO:
 - Renda Líquida Total: R$ ${totalEntradas.toFixed(2)}
 - Despesas Totais: R$ ${totalDespesas.toFixed(2)} (Sobra Mensal: R$ ${(totalEntradas - totalDespesas).toFixed(2)})
-- Gastos Essenciais: R$ ${essenciais.toFixed(2)} (Meta 50%: R$ ${(limites ? limites['50'] : totalEntradas * 0.5).toFixed(2)})
-- Gastos com Desejos: R$ ${desejos.toFixed(2)} (Meta 30%: R$ ${(limites ? limites['30'] : totalEntradas * 0.3).toFixed(2)})
-- Aportes Futuro/Reserva: R$ ${reserva.toFixed(2)} (Meta 20%: R$ ${(limites ? limites['20'] : totalEntradas * 0.2).toFixed(2)})
+- Gastos Essenciais: R$ ${essenciais.toFixed(2)} (Meta 50%: R$ ${limite('50').toFixed(2)})
+- Gastos com Desejos: R$ ${desejos.toFixed(2)} (Meta 30%: R$ ${limite('30').toFixed(2)})
+- Aportes Futuro/Reserva: R$ ${reserva.toFixed(2)} (Meta 20%: R$ ${limite('20').toFixed(2)})
 
 EXTRATO COMPLETO DE DESPESAS CADASTRADAS:
-${JSON.stringify(despesas || [], null, 2)}
+${JSON.stringify(gastos, null, 2)}
 
 PERGUNTA DO USUÁRIO:
 "${message}"

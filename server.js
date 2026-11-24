@@ -168,7 +168,7 @@ app.get('/api/health', async (req, res) => {
   return res.status(503).json({ status: 'unavailable' });
 });
 
-['/api/auth', '/api/dados', '/api/potes', '/api/entradas', '/api/despesas', '/api/limites', '/api/projetos', '/api/analyze', '/api/simulate', '/api/invest-advice', '/api/investimentos'].forEach(route => {
+['/api/auth', '/api/dados', '/api/potes', '/api/entradas', '/api/despesas', '/api/limites', '/api/projetos', '/api/analyze', '/api/simulate', '/api/chat', '/api/invest-advice', '/api/investimentos'].forEach(route => {
   app.all(route + '*', async (req, res) => {
     try {
       const targetUrl = `http://127.0.0.1:${FINANCE_API_PORT}${req.originalUrl}`;
@@ -377,7 +377,7 @@ let portalPostgres = null;
 
 async function obterBancoUsuario(usuarioId) {
   const dados = portalPostgres ? await portalPostgres.carregar(usuarioId) : obterBancoLocal(usuarioId);
-  for (const campo of ['topicos', 'videos', 'agendamentos', 'notas', 'prioridades_dia', 'habitos', 'compromissos', 'metas', 'push_subscriptions']) {
+  for (const campo of ['topicos', 'videos', 'agendamentos', 'notas', 'prioridades_dia', 'historico_tarefas', 'habitos', 'compromissos', 'metas', 'push_subscriptions']) {
     if (!Array.isArray(dados[campo])) dados[campo] = [];
   }
   if (!dados.push_notificados || typeof dados.push_notificados !== 'object') dados.push_notificados = {};
@@ -812,24 +812,28 @@ app.get('/api/rotina/prioridades', rotaPortal(async (req, res) => {
   res.json({ success: true, data: dbUser.prioridades_dia || [] });
 }));
 
+function adicionarPrioridade(dados, texto, top3 = false) {
+  const maioresIds = [dados.prioridades_dia, dados.historico_tarefas || []].map(lista =>
+    lista.reduce((maior, item) => Math.max(maior, item.id), 0));
+  const tarefa = {
+    id: Math.max(...maioresIds) + 1,
+    texto,
+    concluida: false,
+    top3,
+    criado_em: new Date().toISOString()
+  };
+  dados.prioridades_dia.push(tarefa);
+  return tarefa;
+}
+
 app.post('/api/rotina/prioridades', rotaPortal(async (req, res) => {
   const { texto, top3 } = req.body;
-  if (!texto || !texto.trim()) {
+  if (typeof texto !== 'string' || !texto.trim()) {
     return res.status(400).json({ success: false, message: 'Texto da tarefa é obrigatório.' });
   }
 
   const dbUser = await obterBancoUsuario(req.usuarioId);
-  if (!Array.isArray(dbUser.prioridades_dia)) dbUser.prioridades_dia = [];
-
-  const novaTarefa = {
-    id: dbUser.prioridades_dia.length > 0 ? Math.max(...dbUser.prioridades_dia.map(t => t.id)) + 1 : 1,
-    texto: texto.trim(),
-    concluida: false,
-    top3: !!top3,
-    criado_em: new Date().toISOString()
-  };
-
-  dbUser.prioridades_dia.push(novaTarefa);
+  const novaTarefa = adicionarPrioridade(dbUser, texto.trim(), !!top3);
   await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novaTarefa });
 }));
@@ -850,7 +854,7 @@ app.patch('/api/rotina/prioridades/:id', rotaPortal(async (req, res) => {
       tarefa.concluida_em = new Date().toISOString();
       // Registra no histórico de tarefas se ainda não estiver
       if (!Array.isArray(dbUser.historico_tarefas)) dbUser.historico_tarefas = [];
-      const jaExiste = dbUser.historico_tarefas.some(h => h.id === tarefa.id);
+      const jaExiste = dbUser.historico_tarefas.some(h => h.id === tarefa.id && h.criado_em === tarefa.criado_em);
       if (!jaExiste) {
         dbUser.historico_tarefas.unshift({
           id: tarefa.id,
@@ -888,11 +892,14 @@ app.delete('/api/rotina/prioridades/:id', rotaPortal(async (req, res) => {
 
   // Arquiva no histórico como 'excluida' para manter a rastreabilidade
   if (!Array.isArray(dbUser.historico_tarefas)) dbUser.historico_tarefas = [];
+  dbUser.historico_tarefas = dbUser.historico_tarefas.filter(h =>
+    h.id !== tarefaRemovida.id || h.criado_em !== tarefaRemovida.criado_em);
   dbUser.historico_tarefas.unshift({
     id: tarefaRemovida.id,
     texto: tarefaRemovida.texto,
     top3: !!tarefaRemovida.top3,
     criado_em: tarefaRemovida.criado_em,
+    concluida_em: tarefaRemovida.concluida_em,
     excluida_em: new Date().toISOString(),
     status: tarefaRemovida.concluida ? 'concluida' : 'excluida'
   });
@@ -908,12 +915,39 @@ app.get('/api/rotina/historico-tarefas', rotaPortal(async (req, res) => {
   res.json({ success: true, data: dbUser.historico_tarefas });
 }));
 
+app.post('/api/rotina/historico-tarefas/:id/restaurar', rotaPortal(async (req, res) => {
+  const id = Number(req.params.id);
+  const criadoEm = req.body?.criado_em;
+  const dados = await obterBancoUsuario(req.usuarioId);
+  const historico = dados.historico_tarefas || [];
+  const item = historico.find(tarefa => tarefa.id === id && (tarefa.criado_em || null) === criadoEm);
+  if (!item) return res.status(404).json({ success: false, message: 'Esta tarefa já não está no histórico.' });
+
+  let tarefa = dados.prioridades_dia.find(prioridade =>
+    prioridade.id === item.id && (prioridade.criado_em || null) === criadoEm);
+  if (tarefa) {
+    tarefa.concluida = false;
+    tarefa.top3 = false;
+    delete tarefa.concluida_em;
+    delete tarefa.adiada_ate;
+  } else {
+    tarefa = adicionarPrioridade(dados, item.texto);
+  }
+
+  dados.historico_tarefas = historico.filter(registro =>
+    registro.id !== item.id || (registro.criado_em || null) !== criadoEm);
+  await salvarBancoUsuario(dados, req.usuarioId);
+  res.json({ success: true, data: tarefa });
+}));
+
 // DELETE /api/rotina/historico-tarefas/:id - Limpa item individual do histórico
 app.delete('/api/rotina/historico-tarefas/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
+  const criadoEm = req.query.criado_em;
   const dbUser = await obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.historico_tarefas)) dbUser.historico_tarefas = [];
-  const idx = dbUser.historico_tarefas.findIndex(h => h.id === idNum);
+  const idx = dbUser.historico_tarefas.findIndex(h => h.id === idNum &&
+    (criadoEm === undefined || (h.criado_em || '') === criadoEm));
   if (idx !== -1) {
     dbUser.historico_tarefas.splice(idx, 1);
     await salvarBancoUsuario(dbUser, req.usuarioId);
@@ -937,7 +971,7 @@ app.get('/api/rotina/habitos', rotaPortal(async (req, res) => {
 
 app.post('/api/rotina/habitos', rotaPortal(async (req, res) => {
   const { nome, icone } = req.body;
-  if (!nome || !nome.trim()) {
+  if (typeof nome !== 'string' || !nome.trim()) {
     return res.status(400).json({ success: false, message: 'Nome do hábito é obrigatório.' });
   }
 
@@ -961,6 +995,9 @@ app.post('/api/rotina/habitos', rotaPortal(async (req, res) => {
 app.post('/api/rotina/habitos/:id/checkin', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
   const { data } = req.body; // 'YYYY-MM-DD' opcional, padrão hoje
+  if (data && !dataAgendaValida(data)) {
+    return res.status(400).json({ success: false, message: 'Informe uma data válida para o hábito.' });
+  }
   const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const habito = (dbUser.habitos || []).find(h => h.id === idNum);
@@ -1636,14 +1673,16 @@ async function iniciarPortal() {
   console.log('[Database] Armazenamento do portal:', portalPostgres ? 'PostgreSQL' : DB_FILE);
   console.log('[Finanças Integrado] Aplicação de Finanças disponível em /financas-app');
 
-  // Verificador interno automático a cada 1 minuto enquanto o servidor estiver acordado
-  setInterval(() => {
+  // Verifica ao acordar e a cada minuto enquanto o serviço estiver ativo.
+  function verificarAlertas() {
     if (pushService && pushService.isEnabled()) {
       pushService.checkAndDispatchDueNotifications().catch(err => {
         console.warn('[WebPush Loop]', err.message);
       });
     }
-  }, 60 * 1000);
+  }
+  verificarAlertas();
+  setInterval(verificarAlertas, 60 * 1000);
   });
 }
 iniciarPortal().catch(erro => {

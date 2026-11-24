@@ -26,6 +26,22 @@ async function fetchRotinaAuth(url, options = {}) {
   return fetch(url, { ...options, headers });
 }
 
+async function salvarRotina(url, options) {
+  const resposta = await fetchRotinaAuth(url, options);
+  const dados = await resposta.json().catch(() => null);
+  if (resposta.status === 401 || resposta.status === 403) {
+    throw new Error('Sua sessão expirou. Entre novamente para fazer a alteração.');
+  }
+  if (!resposta.ok || !dados?.success) {
+    throw new Error(dados?.message || dados?.error || 'Não foi possível confirmar a alteração. Atualize a tela e confira antes de tentar novamente.');
+  }
+  return dados;
+}
+
+function avisarFalhaRotina(erro) {
+  alert(erro instanceof TypeError ? 'Sem conexão com o serviço. Confira a lista antes de tentar novamente.' : erro.message);
+}
+
 // ========================================================================= //
 // 1. CARREGAMENTO E ATUALIZAÇÃO DE DADOS
 // ========================================================================= //
@@ -248,49 +264,48 @@ async function adiarTarefa(item) {
   const adiada = item.adiada_ate && item.adiada_ate > dataLocalRotina(hoje);
   const amanha = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
   try {
-    const resposta = await fetchRotinaAuth(`/api/rotina/prioridades/${item.id}`, {
+    await salvarRotina(`/api/rotina/prioridades/${item.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ adiar_ate: adiada ? null : dataLocalRotina(amanha) })
     });
-    if (!resposta.ok) throw new Error('Falha ao reagendar.');
     await carregarPrioridades();
-  } catch {
-    alert('Não foi possível reagendar a tarefa.');
+  } catch (erro) {
+    avisarFalhaRotina(erro);
   }
 }
 
 async function alternarStatusPrioridade(id, novoStatus) {
   try {
-    await fetchRotinaAuth(`/api/rotina/prioridades/${id}`, {
+    await salvarRotina(`/api/rotina/prioridades/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ concluida: novoStatus })
     });
     await carregarPrioridades();
   } catch (e) {
-    console.error(e);
+    avisarFalhaRotina(e);
   }
 }
 
 async function alternarTop3Prioridade(id, novoTop3) {
   try {
-    await fetchRotinaAuth(`/api/rotina/prioridades/${id}`, {
+    await salvarRotina(`/api/rotina/prioridades/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ top3: novoTop3 })
     });
     await carregarPrioridades();
   } catch (e) {
-    console.error(e);
+    avisarFalhaRotina(e);
   }
 }
 
 async function excluirPrioridade(id) {
   try {
-    await fetchRotinaAuth(`/api/rotina/prioridades/${id}`, { method: 'DELETE' });
+    await salvarRotina(`/api/rotina/prioridades/${id}`, { method: 'DELETE' });
     await carregarPrioridades();
   } catch (e) {
-    console.error('Erro ao excluir prioridade:', e);
+    avisarFalhaRotina(e);
   }
 }
 
@@ -358,28 +373,30 @@ async function carregarHistoricoTarefas() {
       `;
 
       // Restaurar tarefa
-      el.querySelector('.btn-restaurar-tarefa').addEventListener('click', async () => {
+      el.querySelector('.btn-restaurar-tarefa').addEventListener('click', async ({ currentTarget: botao }) => {
+        botao.disabled = true;
         try {
-          await fetchRotinaAuth('/api/rotina/prioridades', {
+          await salvarRotina(`/api/rotina/historico-tarefas/${item.id}/restaurar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ texto: item.texto, top3: false })
+            body: JSON.stringify({ criado_em: item.criado_em || null })
           });
-          await fetchRotinaAuth(`/api/rotina/historico-tarefas/${item.id}`, { method: 'DELETE' });
-          await carregarPrioridades();
-          await carregarHistoricoTarefas();
+          await Promise.all([carregarPrioridades(), carregarHistoricoTarefas()]);
         } catch (e) {
-          console.error(e);
+          avisarFalhaRotina(e);
+        } finally {
+          botao.disabled = false;
         }
       });
 
       // Excluir permanentemente do histórico
       el.querySelector('.btn-del-item-historico').addEventListener('click', async () => {
         try {
-          await fetchRotinaAuth(`/api/rotina/historico-tarefas/${item.id}`, { method: 'DELETE' });
+          const query = new URLSearchParams({ criado_em: item.criado_em || '' });
+          await salvarRotina(`/api/rotina/historico-tarefas/${item.id}?${query}`, { method: 'DELETE' });
           await carregarHistoricoTarefas();
         } catch (e) {
-          console.error(e);
+          avisarFalhaRotina(e);
         }
       });
 
@@ -512,23 +529,23 @@ function renderizarHabitos() {
 
 async function alternarCheckinHabito(id, dataIso) {
   try {
-    await fetchRotinaAuth(`/api/rotina/habitos/${id}/checkin`, {
+    await salvarRotina(`/api/rotina/habitos/${id}/checkin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: dataIso })
     });
     await carregarHabitos();
   } catch (e) {
-    console.error(e);
+    avisarFalhaRotina(e);
   }
 }
 
 async function excluirHabito(id) {
   try {
-    await fetchRotinaAuth(`/api/rotina/habitos/${id}`, { method: 'DELETE' });
+    await salvarRotina(`/api/rotina/habitos/${id}`, { method: 'DELETE' });
     await carregarHabitos();
   } catch (e) {
-    console.error(e);
+    avisarFalhaRotina(e);
   }
 }
 
@@ -801,10 +818,10 @@ function renderizarAgendaMensal() {
 
 async function excluirCompromisso(id) {
   try {
-    await fetchRotinaAuth(`/api/agenda/compromissos/${id}`, { method: 'DELETE' });
+    await salvarRotina(`/api/agenda/compromissos/${id}`, { method: 'DELETE' });
     await carregarCompromissos();
   } catch (e) {
-    console.error(e);
+    avisarFalhaRotina(e);
   }
 }
 
@@ -1203,45 +1220,48 @@ async function alternarChecklistMeta(metaId, stepIdx, status) {
   const meta = rotinaState.metas.find(m => m.id === parseInt(metaId, 10));
   if (!meta || !Array.isArray(meta.checklist)) return;
 
-  meta.checklist[stepIdx].concluido = status;
+  const checklist = meta.checklist.map((passo, idx) => idx === stepIdx ? { ...passo, concluido: status } : passo);
   try {
-    await fetchRotinaAuth(`/api/metas/${metaId}`, {
+    await salvarRotina(`/api/metas/${metaId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ checklist: meta.checklist })
+      body: JSON.stringify({ checklist })
     });
     await carregarMetas();
     if (typeof carregarDashboardGeral === 'function') carregarDashboardGeral();
   } catch (e) {
-    console.error(e);
+    renderizarMetas();
+    avisarFalhaRotina(e);
   }
 }
 
 async function realizarAporteMeta(metaId, valorAdicional) {
   const meta = rotinaState.metas.find(m => m.id === parseInt(metaId, 10));
-  if (!meta) return;
+  if (!meta) return false;
 
   const novoValor = Number(meta.valor_atual || 0) + Number(valorAdicional || 0);
   try {
-    await fetchRotinaAuth(`/api/metas/${metaId}`, {
+    await salvarRotina(`/api/metas/${metaId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ valor_atual: novoValor })
     });
     await carregarMetas();
     if (typeof carregarDashboardGeral === 'function') carregarDashboardGeral();
+    return true;
   } catch (e) {
-    console.error('Erro ao realizar aporte na meta:', e);
+    avisarFalhaRotina(e);
+    return false;
   }
 }
 
 async function excluirMeta(id) {
   try {
-    await fetchRotinaAuth(`/api/metas/${id}`, { method: 'DELETE' });
+    await salvarRotina(`/api/metas/${id}`, { method: 'DELETE' });
     await carregarMetas();
     if (typeof carregarDashboardGeral === 'function') carregarDashboardGeral();
   } catch (e) {
-    console.error(e);
+    avisarFalhaRotina(e);
   }
 }
 
@@ -1332,10 +1352,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btnLimparHistorico.addEventListener('click', async () => {
       if (confirm('Tem certeza que deseja limpar todo o histórico de tarefas? Esta ação não pode ser desfeita.')) {
         try {
-          await fetchRotinaAuth('/api/rotina/historico-tarefas', { method: 'DELETE' });
+          await salvarRotina('/api/rotina/historico-tarefas', { method: 'DELETE' });
           await carregarHistoricoTarefas();
         } catch (e) {
-          console.error(e);
+          avisarFalhaRotina(e);
         }
       }
     });
@@ -1378,9 +1398,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById('input-quick-task-text');
       const texto = input.value.trim();
       if (!texto) return;
+      const botao = formQuickTask.querySelector('[type=submit]');
+      if (botao.disabled) return;
+      botao.disabled = true;
 
       try {
-        await fetchRotinaAuth('/api/rotina/prioridades', {
+        await salvarRotina('/api/rotina/prioridades', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ texto, top3: false })
@@ -1388,7 +1411,9 @@ document.addEventListener('DOMContentLoaded', () => {
         input.value = '';
         await carregarPrioridades();
       } catch (err) {
-        console.error(err);
+        avisarFalhaRotina(err);
+      } finally {
+        botao.disabled = false;
       }
     });
   }
@@ -1411,9 +1436,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const nome = document.getElementById('input-habito-nome').value.trim();
       const icone = document.getElementById('input-habito-icone').value.trim() || '⚡';
       if (!nome) return;
+      const botao = formNovoHabito.querySelector('[type=submit]');
+      if (botao.disabled) return;
+      botao.disabled = true;
 
       try {
-        await fetchRotinaAuth('/api/rotina/habitos', {
+        await salvarRotina('/api/rotina/habitos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nome, icone })
@@ -1423,7 +1451,9 @@ document.addEventListener('DOMContentLoaded', () => {
         modalHabito.classList.remove('flex');
         await carregarHabitos();
       } catch (err) {
-        console.error(err);
+        avisarFalhaRotina(err);
+      } finally {
+        botao.disabled = false;
       }
     });
   }
@@ -1461,16 +1491,11 @@ document.addEventListener('DOMContentLoaded', () => {
       status.textContent = '';
 
       try {
-        const resposta = await fetchRotinaAuth('/api/agenda/compromissos', {
+        const json = await salvarRotina('/api/agenda/compromissos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ titulo, data, horario, categoria })
         });
-        const json = await resposta.json().catch(() => null);
-        if (resposta.status === 401 || resposta.status === 403) throw new Error('Sua sessão expirou. Entre novamente para salvar.');
-        if (!resposta.ok || !json?.success || !json.data) {
-          throw new Error(json?.message || json?.error || 'Não foi possível confirmar o salvamento. Confira a agenda antes de tentar novamente.');
-        }
         rotinaState.compromissos.push(json.data);
         dataAgenda.value = json.data.data;
         const filtro = { pessoal: 'pessoal', financas: 'financas', estudos: 'estudos' }[categoria];
@@ -1605,13 +1630,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }));
 
       try {
-        const resposta = await fetchRotinaAuth('/api/metas', {
+        await salvarRotina('/api/metas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ titulo, tipo, valor_atual, valor_alvo, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
         });
-        const dados = await resposta.json();
-        if (!resposta.ok) throw new Error(dados.message || 'Não foi possível salvar a meta.');
         document.getElementById('input-meta-titulo').value = '';
         modalMeta.classList.add('hidden');
         modalMeta.classList.remove('flex');
@@ -1641,9 +1664,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const metaId = document.getElementById('input-aporte-meta-id')?.value;
       const valor = parseFloat(document.getElementById('input-aporte-valor')?.value || '0');
-      if (metaId && valor > 0 && typeof realizarAporteMeta === 'function') {
-        await realizarAporteMeta(metaId, valor);
-      }
+      if (!metaId || valor <= 0 || !await realizarAporteMeta(metaId, valor)) return;
       if (modalAporteMeta) {
         modalAporteMeta.classList.add('hidden');
         modalAporteMeta.classList.remove('flex');
