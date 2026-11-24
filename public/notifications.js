@@ -1,13 +1,48 @@
 /**
- * notifications.js - Motor Inteligente de Notificações Locais & Push do CONVERGE
- * Monitora compromissos da Agenda, alertas prévios de 10 min e horário exato.
+ * notifications.js - Motor Inteligente de Notificações Locais & Web Push Real (iOS & Android) do CONVERGE
+ * Monitora compromissos da Agenda em primeiro plano e registra Web Push VAPID para alertas com o site fechado.
  */
 
 const ConvergeNotifications = {
-  notificados: new Set(), // IDs ou chaves de eventos já notificados no ciclo para evitar repetição
+  notificados: new Set(),
   intervalId: null,
+  pushSubscribed: false,
 
-  // Inicializa o Service Worker e o monitor de lembretes
+  isIOS() {
+    const ua = navigator.userAgent || '';
+    const isAppleMobile = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return isAppleMobile;
+  },
+
+  isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  },
+
+  getDeviceType() {
+    if (this.isIOS()) return 'ios';
+    if (/Android/i.test(navigator.userAgent || '')) return 'android';
+    return 'desktop';
+  },
+
+  urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  },
+
+  getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  },
+
+  // Inicializa o Service Worker, sincroniza assinatura Push existente e inicia o monitor
   async init() {
     if ('serviceWorker' in navigator) {
       try {
@@ -17,36 +52,183 @@ const ConvergeNotifications = {
       }
     }
 
+    if ('Notification' in window && Notification.permission === 'granted') {
+      await this.registrarWebPushSilencioso();
+    }
+
     this.iniciarMonitor();
     this.atualizarStatusUI();
   },
 
-  // Solicita permissão nativa ao usuário
+  // Registra/sincroniza inscrição Web Push com o backend sem interromper o usuário
+  async registrarWebPushSilencioso() {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+      if (!localStorage.getItem('token')) return false;
+
+      const keyResp = await fetch('/api/push/public-key');
+      if (!keyResp.ok) return false;
+      const keyData = await keyResp.json();
+      if (!keyData.enabled || !keyData.publicKey) return false;
+
+      const reg = await navigator.serviceWorker.ready;
+      const expectedKey = this.urlBase64ToUint8Array(keyData.publicKey);
+      let subscription = await reg.pushManager.getSubscription();
+
+      // Auto-recuperação: se a chave VAPID do servidor mudou, renova a assinatura
+      if (subscription && subscription.options && subscription.options.applicationServerKey) {
+        const existingBytes = new Uint8Array(subscription.options.applicationServerKey);
+        const sameKey = existingBytes.length === expectedKey.length && existingBytes.every((v, i) => v === expectedKey[i]);
+        if (!sameKey) {
+          await subscription.unsubscribe();
+          subscription = null;
+        }
+      }
+
+      if (!subscription) {
+        subscription = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: expectedKey
+        });
+      }
+
+      const timezone = (() => {
+        try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo'; }
+        catch (e) { return 'America/Sao_Paulo'; }
+      })();
+
+      const saveResp = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          subscription: subscription.toJSON(),
+          timezone,
+          device: this.getDeviceType()
+        })
+      });
+
+      if (saveResp.ok) {
+        this.pushSubscribed = true;
+        return true;
+      }
+    } catch (err) {
+      console.warn('[WebPush] Aviso ao sincronizar inscrição Push:', err.message || err);
+    }
+    return false;
+  },
+
+  // Exibe modal amigável para orientar usuários de iPhone fora do modo App instalado
+  mostrarGuiaIOS() {
+    let modal = document.getElementById('modal-guia-ios-push');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modal-guia-ios-push';
+      modal.className = 'fixed inset-0 z-[9999] bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-4';
+      modal.innerHTML = `
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-sm w-full p-5 space-y-4 text-slate-800">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-lg">📱</div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Ativar Alertas no iPhone</h3>
+                <p class="text-[11px] text-slate-500">Receba notificações mesmo com o site fechado</p>
+              </div>
+            </div>
+            <button type="button" id="btn-fechar-guia-ios" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer">✕</button>
+          </div>
+          <ol class="text-xs text-slate-700 space-y-2.5 bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 list-decimal list-inside">
+            <li>No <strong>Safari</strong>, toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima na barra inferior).</li>
+            <li>Role e toque em <strong>Adicionar à Tela de Início</strong>.</li>
+            <li>Abra o <strong>CONVERGE</strong> pelo ícone criado na tela inicial e toque em <strong>Ativar Alertas</strong>.</li>
+          </ol>
+          <button type="button" id="btn-ok-guia-ios" class="w-full py-2.5 rounded-xl text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 transition cursor-pointer">
+            Entendi
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      const fechar = () => modal.classList.add('hidden');
+      modal.querySelector('#btn-fechar-guia-ios').addEventListener('click', fechar);
+      modal.querySelector('#btn-ok-guia-ios').addEventListener('click', fechar);
+      modal.addEventListener('click', (e) => { if (e.target === modal) fechar(); });
+    }
+    modal.classList.remove('hidden');
+  },
+
+  // Solicita permissão nativa + registra Web Push real (ou envia teste se já ativo)
   async solicitarPermissao() {
-    if (!('Notification' in window)) {
-      alert('Seu navegador não suporta notificações de área de trabalho.');
+    // Regra da Apple: no iPhone, Push só existe quando aberto pela Tela de Início
+    if (this.isIOS() && !this.isStandalone()) {
+      this.mostrarGuiaIOS();
       return false;
+    }
+
+    if (!('Notification' in window)) {
+      alert('Seu navegador não suporta notificações. Use Chrome, Edge ou Safari (iOS 16.4+ na Tela de Início).');
+      return false;
+    }
+
+    // Se já tem permissão concedida, garante assinatura Push e dispara um teste real do servidor!
+    if (Notification.permission === 'granted') {
+      const okSub = await this.registrarWebPushSilencioso();
+      this.atualizarStatusUI();
+      if (okSub) {
+        const enviouPush = await this.enviarPushTeste();
+        if (enviouPush) return true;
+      }
+      this.dispararNotificacao({
+        titulo: '🔔 Teste de Alerta CONVERGE',
+        corpo: 'Suas notificações estão ativas e funcionando perfeitamente!',
+        tag: 'teste-local'
+      });
+      return true;
     }
 
     const permissao = await Notification.requestPermission();
     this.atualizarStatusUI();
 
     if (permissao === 'granted') {
-      this.dispararNotificacao({
-        titulo: '🔔 Notificações Ativadas!',
-        corpo: 'O CONVERGE irá avisar você na hora de cada compromisso e tarefa da sua rotina.',
-        tag: 'boas-vindas'
-      });
+      const okSub = await this.registrarWebPushSilencioso();
+      this.atualizarStatusUI();
+
+      if (okSub) {
+        await this.enviarPushTeste();
+      } else {
+        this.dispararNotificacao({
+          titulo: '🔔 Notificações Ativadas!',
+          corpo: 'O CONVERGE irá avisar você na hora de cada compromisso e tarefa da sua rotina.',
+          tag: 'boas-vindas'
+        });
+      }
       return true;
+    }
+
+    if (permissao === 'denied') {
+      alert('As notificações foram bloqueadas nas configurações do navegador. Libere as notificações para o CONVERGE nas configurações do site.');
     }
     return false;
   },
 
-  // Dispara uma notificação nativa com som suave
-  async dispararNotificacao({ titulo, corpo, tag, icone = '/logo-converge.jpg' }) {
+  // Dispara um Push real vindo do servidor para testar na tela bloqueada / celular
+  async enviarPushTeste() {
+    try {
+      const resp = await fetch('/api/push/test', {
+        method: 'POST',
+        headers: this.getAuthHeaders()
+      });
+      if (!resp.ok) return false;
+      const data = await resp.json();
+      return Boolean(data.success && data.sent > 0);
+    } catch (err) {
+      console.warn('[WebPush] Erro ao disparar push de teste:', err);
+      return false;
+    }
+  },
+
+  // Dispara uma notificação nativa local com som suave (quando o app está aberto)
+  async dispararNotificacao({ titulo, corpo, tag, icone = '/icon-192.png' }) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    // Toca som de alerta suave via Web Audio API (sem dependência de arquivo de áudio externo)
     this.tocarSomAlerta();
 
     if ('serviceWorker' in navigator) {
@@ -64,7 +246,6 @@ const ConvergeNotifications = {
       }
     }
 
-    // Fallback nativo
     new Notification(titulo, {
       body: corpo,
       icon: icone,
@@ -72,7 +253,6 @@ const ConvergeNotifications = {
     });
   },
 
-  // Sintetizador de áudio nativo suave (bip elegante de notificação)
   tocarSomAlerta() {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -82,7 +262,6 @@ const ConvergeNotifications = {
       const gain = ctx.createGain();
 
       osc.type = 'sine';
-      // Melodia ascendente suave (Dó5 -> Sol5)
       osc.frequency.setValueAtTime(523.25, ctx.currentTime);
       osc.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.15);
 
@@ -94,16 +273,11 @@ const ConvergeNotifications = {
 
       osc.start();
       osc.stop(ctx.currentTime + 0.35);
-    } catch (e) {
-      // Ignora erro de autoplay
-    }
+    } catch (e) {}
   },
 
-  // Monitora a cada 15 segundos os compromissos de hoje
   iniciarMonitor() {
     if (this.intervalId) clearInterval(this.intervalId);
-
-    // Executa imediatamente e depois a cada 15s
     this.verificarCompromissos();
     this.intervalId = setInterval(() => {
       this.verificarCompromissos();
@@ -111,20 +285,18 @@ const ConvergeNotifications = {
   },
 
   verificarCompromissos() {
-    if (Notification.permission !== 'granted') return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
     if (typeof rotinaState === 'undefined') return;
 
     const agora = new Date();
     const horaAtual = agora.getHours();
     const minutoAtual = agora.getMinutes();
     const minutoAtualTotal = horaAtual * 60 + minutoAtual;
-    const hojeIso = agora.toISOString().slice(0, 10);
+    const hojeIso = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
 
-    // 1. Monitorar compromissos da rotinaState.compromissos
     const listaCompromissos = (rotinaState.compromissos || []).concat(rotinaState.agendaHoje || []);
 
     listaCompromissos.forEach((comp) => {
-      // Se tiver data e não for hoje, ignora
       if (comp.data && comp.data !== hojeIso) return;
 
       const horarioStr = comp.horario;
@@ -136,10 +308,9 @@ const ConvergeNotifications = {
       const minutoCompTotal = h * 60 + m;
       const diferencaMin = minutoCompTotal - minutoAtualTotal;
 
-      const chaveAlertaExato = `exato_${comp.id || comp.titulo}_${hojeIso}_${h}:${m}`;
-      const chaveAlertaPrevio = `previo_${comp.id || comp.titulo}_${hojeIso}_${h}:${m}`;
+      const chaveAlertaExato = `exato_${comp.id || comp.titulo}_${hojeIso}_${horarioStr}`;
+      const chaveAlertaPrevio = `previo_${comp.id || comp.titulo}_${hojeIso}_${horarioStr}`;
 
-      // A) Alerta no horário exato (diferença de 0 minutos)
       if (diferencaMin === 0 && !this.notificados.has(chaveAlertaExato)) {
         this.notificados.add(chaveAlertaExato);
         this.dispararNotificacao({
@@ -149,7 +320,6 @@ const ConvergeNotifications = {
         });
       }
 
-      // B) Alerta prévio (10 minutos antes)
       if (diferencaMin === 10 && !this.notificados.has(chaveAlertaPrevio)) {
         this.notificados.add(chaveAlertaPrevio);
         this.dispararNotificacao({
@@ -161,28 +331,30 @@ const ConvergeNotifications = {
     });
   },
 
-  // Atualiza visual do botão de sino no cabeçalho
   atualizarStatusUI() {
     const btn = document.getElementById('btn-toggle-notificacoes');
     if (!btn) return;
 
-    if (!('Notification' in window)) {
+    // No iOS Safari fora do modo instalado, mantém botão visível para mostrar o guia de instalação
+    if (!('Notification' in window) && !this.isIOS()) {
       btn.style.display = 'none';
       return;
     }
 
-    if (Notification.permission === 'granted') {
-      btn.title = 'Notificações Ativas (Clique para testar um lembrete)';
+    if ('Notification' in window && Notification.permission === 'granted') {
+      btn.title = this.pushSubscribed
+        ? 'Push Real Ativo (iOS/Android) — Clique para enviar um alerta de teste'
+        : 'Notificações Ativas — Clique para testar um lembrete';
       btn.classList.add('text-emerald-700', 'bg-emerald-50', 'border-emerald-200');
       btn.classList.remove('text-slate-500', 'bg-white', 'border-slate-200');
       btn.innerHTML = `
         <svg class="w-3.5 h-3.5 text-emerald-700" fill="currentColor" viewBox="0 0 20 20">
           <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
         </svg>
-        <span class="text-[11px] font-semibold text-emerald-800">Alertas Ativos</span>
+        <span class="text-[11px] font-semibold text-emerald-800">${this.pushSubscribed ? 'Push Ativo (Testar)' : 'Alertas Ativos'}</span>
       `;
     } else {
-      btn.title = 'Ativar notificações de compromissos e horários';
+      btn.title = 'Ativar notificações no celular (iOS & Android) mesmo com o site fechado';
       btn.classList.remove('text-emerald-700', 'bg-emerald-50', 'border-emerald-200');
       btn.classList.add('text-slate-600', 'bg-white', 'border-slate-200');
       btn.innerHTML = `
@@ -197,7 +369,6 @@ const ConvergeNotifications = {
 
 window.ConvergeNotifications = ConvergeNotifications;
 
-// Inicia automaticamente quando a página carrega
 document.addEventListener('DOMContentLoaded', () => {
   ConvergeNotifications.init();
 });

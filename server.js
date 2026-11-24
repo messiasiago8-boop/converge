@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { initPushService } = require('./push-service');
 const { randomUUID } = require('node:crypto');
 let yts = null;
 try {
@@ -202,7 +203,79 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+// ================= ROTAS PÚBLICAS DE WEB PUSH (CHAVE VAPID & CRON CHECK) ================= //
+let pushService = null;
+
+app.get('/api/push/public-key', (req, res) => {
+  if (!pushService || !pushService.isEnabled()) {
+    return res.json({ success: true, enabled: false, publicKey: null });
+  }
+  res.json({ success: true, enabled: true, publicKey: pushService.getPublicKey() });
+});
+
+app.get('/api/push/check', async (req, res) => {
+  try {
+    if (!pushService || !pushService.isEnabled()) {
+      return res.json({ success: true, enabled: false, checkedUsers: 0, sent: 0 });
+    }
+    const result = await pushService.checkAndDispatchDueNotifications();
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[WebPush Check Error]', err.message);
+    res.status(500).json({ success: false, error: 'Erro ao verificar notificações pendentes.' });
+  }
+});
+
 app.use('/api', autenticarTokenPortal);
+
+// ================= ROTAS AUTENTICADAS DE WEB PUSH ================= //
+app.get('/api/push/status', (req, res) => {
+  if (!pushService) {
+    return res.json({ success: true, enabled: false, subscribedCount: 0 });
+  }
+  res.json({ success: true, ...pushService.getStatusForUser(req.usuarioId) });
+});
+
+app.post('/api/push/subscribe', (req, res) => {
+  try {
+    if (!pushService || !pushService.isEnabled()) {
+      return res.status(503).json({ success: false, error: 'Web Push indisponível no servidor.' });
+    }
+    const { subscription, timezone, device } = req.body || {};
+    const result = pushService.subscribeUser(req.usuarioId, subscription, { timezone, device });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/push/unsubscribe', (req, res) => {
+  try {
+    if (!pushService) return res.json({ success: true, subscribedCount: 0 });
+    const { endpoint } = req.body || {};
+    const result = pushService.unsubscribeUser(req.usuarioId, endpoint);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/push/test', async (req, res) => {
+  try {
+    if (!pushService || !pushService.isEnabled()) {
+      return res.status(503).json({ success: false, error: 'Web Push indisponível no servidor.' });
+    }
+    const result = await pushService.sendPushToUser(req.usuarioId, {
+      title: '🔔 CONVERGE Conectado!',
+      body: 'Notificações Push ativas no seu celular (iOS/Android) mesmo com o site fechado.',
+      tag: 'converge-push-test',
+      url: '/'
+    });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // ================= BANCO DE DADOS PERSISTENTE EM ARQUIVO JSON ================= //
 const DATA_DIR = process.env.CONVERGE_DATA_DIR
@@ -297,6 +370,8 @@ function obterBancoUsuario(usuarioId) {
     if (!Array.isArray(dados.habitos)) dados.habitos = [];
     if (!Array.isArray(dados.compromissos)) dados.compromissos = [];
     if (!Array.isArray(dados.metas)) dados.metas = [];
+    if (!Array.isArray(dados.push_subscriptions)) dados.push_subscriptions = [];
+    if (!dados.push_notificados || typeof dados.push_notificados !== 'object') dados.push_notificados = {};
     return dados;
   } catch (err) {
     console.error(`[Database Error] Falha ao ler banco do usuario ${uid}:`, err);
@@ -1471,8 +1546,23 @@ async function processarComandoInteligente(prompt, dbUser) {
   return { mensagem, acoesExecutadas };
 }
 
+pushService = initPushService({
+  dataDir: DATA_DIR,
+  obterBancoUsuario,
+  salvarBancoUsuario
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log('[Portal Nexus Corporativo] Servidor ativo na porta ' + PORT);
   console.log('[Database] Banco de dados persistente conectado: ' + DB_FILE);
   console.log('[Finanças Integrado] Aplicação de Finanças disponível em /financas-app');
+
+  // Verificador interno automático a cada 1 minuto enquanto o servidor estiver acordado
+  setInterval(() => {
+    if (pushService && pushService.isEnabled()) {
+      pushService.checkAndDispatchDueNotifications().catch(err => {
+        console.warn('[WebPush Loop]', err.message);
+      });
+    }
+  }, 60 * 1000);
 });
