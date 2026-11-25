@@ -39,12 +39,19 @@
   }, { passive: true });
 
   /* ---------- 2. Reveal escalonado em grades dinâmicas ---------- */
-  const REVEAL_PARENTS = ['videos-grid-container', 'schedule-days-grid', 'gridCartoesProjetos', 'gridCardsInvestimentos'];
+  const REVEAL_PARENTS = [
+    'videos-grid-container',
+    'schedule-days-grid',
+    'gridCartoesProjetos',
+    'gridCardsInvestimentos',
+    'nx-finance-kpis'
+  ];
   function revealChildren(parent) {
-    if (reduce) return;
+    if (reduce || !parent) return;
     Array.from(parent.children).forEach((child, i) => {
-      if (child.classList.contains('nx-reveal')) return;
+      child.classList.remove('nx-reveal');
       child.style.setProperty('--i', Math.min(i, 12));
+      void child.offsetWidth;
       child.classList.add('nx-reveal');
       child.addEventListener('animationend', () => child.classList.remove('nx-reveal'), { once: true });
     });
@@ -72,11 +79,36 @@
           el.classList.remove('nx-tabin');
           void el.offsetWidth;
           el.classList.add('nx-tabin');
-          setTimeout(() => el.classList.remove('nx-tabin'), 700);
+          REVEAL_PARENTS.forEach((id) => {
+            const g = document.getElementById(id);
+            if (g && el.contains(g) && g.children.length) revealChildren(g);
+          });
+          setTimeout(() => el.classList.remove('nx-tabin'), 550);
         }
       }).observe(el, { attributes: true, attributeFilter: ['class'] });
     });
   }
+
+  /* ---------- Count-up monetário 60fps para Finanças ---------- */
+  window.nxAnimateCurrency = function (el, toVal, dur = 680) {
+    if (!el) return;
+    const target = Number(toVal) || 0;
+    const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const prev = el.dataset.nxCurVal !== undefined ? Number(el.dataset.nxCurVal) : 0;
+    el.dataset.nxCurVal = String(target);
+    if (reduce || Math.abs(prev - target) < 0.01) {
+      el.textContent = fmt(target);
+      return;
+    }
+    const t0 = performance.now();
+    (function step(now) {
+      const k = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      el.textContent = fmt(prev + (target - prev) * eased);
+      if (k < 1) requestAnimationFrame(step);
+      else el.textContent = fmt(target);
+    })(t0);
+  };
 
   /* ---------- 4. Hero do Portal ---------- */
   const fmtTime = (s) => {

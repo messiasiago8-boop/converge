@@ -288,10 +288,10 @@
         </div>
 
         <!-- Totalizadores com Indicador de Consumo e Barra de Progresso -->
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        <section id="nx-finance-kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           
           <!-- Card: Receita Bruta Total -->
-          <div class="bg-white border border-blue-500/40 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between relative group">
+          <div class="nx-card-alive bg-white border border-blue-500/40 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between relative group">
             <div class="flex items-center justify-between text-slate-700 mb-1">
               <span class="text-xs font-black uppercase tracking-wider text-blue-700">Receita Bruta Total</span>
               <div class="flex items-center gap-1.5">
@@ -326,7 +326,7 @@
           </div>
 
           <!-- Card: Essenciais -->
-          <div class="bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
+          <div class="nx-card-alive bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between text-slate-700 mb-1">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-800" id="labelCardEssenciais">Essenciais (50%)</span>
@@ -374,7 +374,7 @@
           </div>
 
           <!-- Card: Desejos -->
-          <div class="bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
+          <div class="nx-card-alive bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between text-slate-700 mb-1">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-800" id="labelCardDesejos">Desejos (30%)</span>
@@ -422,7 +422,7 @@
           </div>
 
           <!-- Card: Reserva -->
-          <div class="bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
+          <div class="nx-card-alive bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between text-slate-700 mb-1">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-800" id="labelCardReserva">Aporte / Reserva (20%)</span>
@@ -470,7 +470,7 @@
           </div>
 
           <!-- Card: Total Geral Despesas -->
-          <div class="bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
+          <div class="nx-card-alive bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between text-slate-700 mb-1">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-800">Despesas Totais</span>
@@ -517,7 +517,7 @@
                 </div>
               </div>
               <div class="space-y-3 w-full md:w-auto text-xs">
-                <div class="p-3 rounded-lg border border-slate-200/80 bg-slate-50/70 hover:bg-slate-50 transition flex items-center justify-between gap-6 shadow-2xs">
+                <div class="nx-legend-row p-3 rounded-lg border border-slate-200/80 bg-slate-50/70 transition flex items-center justify-between gap-6 shadow-2xs cursor-pointer" onmouseenter="window.destacarFatiaBudget && window.destacarFatiaBudget(0)" onmouseleave="window.destacarFatiaBudget && window.destacarFatiaBudget(-1)">
                   <div class="flex items-center gap-3">
                     <span class="w-3.5 h-3.5 rounded-full bg-blue-600 inline-block shadow-xs"></span>
                     <div>
@@ -531,7 +531,7 @@
                   </div>
                 </div>
 
-                <div class="p-3 rounded-lg border border-slate-200/80 bg-slate-50/70 hover:bg-slate-50 transition flex items-center justify-between gap-6 shadow-2xs">
+                <div class="nx-legend-row p-3 rounded-lg border border-slate-200/80 bg-slate-50/70 transition flex items-center justify-between gap-6 shadow-2xs cursor-pointer" onmouseenter="window.destacarFatiaBudget && window.destacarFatiaBudget(1)" onmouseleave="window.destacarFatiaBudget && window.destacarFatiaBudget(-1)">
                   <div class="flex items-center gap-3">
                     <span class="w-3.5 h-3.5 rounded-full bg-amber-500 inline-block shadow-xs"></span>
                     <div>
@@ -545,7 +545,7 @@
                   </div>
                 </div>
 
-                <div class="p-3 rounded-lg border border-slate-200/80 bg-slate-50/70 hover:bg-slate-50 transition flex items-center justify-between gap-6 shadow-2xs">
+                <div class="nx-legend-row p-3 rounded-lg border border-slate-200/80 bg-slate-50/70 transition flex items-center justify-between gap-6 shadow-2xs cursor-pointer" onmouseenter="window.destacarFatiaBudget && window.destacarFatiaBudget(2)" onmouseleave="window.destacarFatiaBudget && window.destacarFatiaBudget(-1)">
                   <div class="flex items-center gap-3">
                     <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block shadow-xs"></span>
                     <div>
@@ -2220,6 +2220,10 @@
       if (aba === 'dashboard') {
         document.getElementById('topbarTitulo').textContent = "Orçamento Mensal Consolidado";
         document.getElementById('topbarSubtitulo').innerHTML = `Visualizando competência: <strong class="text-blue-700 font-bold">${nomeExtenso}</strong>`;
+        if (typeof chartBudget !== 'undefined' && chartBudget) {
+          chartBudget.reset();
+          chartBudget.update();
+        }
       } else if (aba === 'planilha') {
         document.getElementById('topbarTitulo').textContent = "Planilha de Gestão de Gastos";
         document.getElementById('topbarSubtitulo').innerHTML = `Lançamentos detalhados de despesas para <strong class="text-blue-700 font-bold">${nomeExtenso}</strong>`;
@@ -2463,7 +2467,7 @@
 
       if (limite <= 0) {
         elBarra.style.width = '0%';
-        elBarra.className = 'h-full bg-slate-300 transition-all duration-300';
+        elBarra.className = 'h-full nx-bar-fill bg-slate-300';
         elBadge.textContent = 'Sem Limite';
         elBadge.className = 'font-bold text-slate-400';
         return;
@@ -2473,18 +2477,36 @@
       elBarra.style.width = `${Math.min(percentual, 100)}%`;
 
       if (percentual >= 100) {
-        elBarra.className = 'h-full bg-rose-600 transition-all duration-300';
+        elBarra.className = 'h-full nx-bar-fill bg-rose-600';
         elBadge.textContent = '100% No Limite';
         elBadge.className = 'font-bold text-rose-600';
       } else if (percentual >= 80) {
-        elBarra.className = 'h-full bg-amber-500 transition-all duration-300';
+        elBarra.className = 'h-full nx-bar-fill bg-amber-500';
         elBadge.textContent = `${percentual.toFixed(0)}% Atenção`;
         elBadge.className = 'font-bold text-amber-600';
       } else {
-        elBarra.className = 'h-full bg-emerald-500 transition-all duration-300';
+        elBarra.className = 'h-full nx-bar-fill bg-emerald-500';
         elBadge.textContent = `${percentual.toFixed(0)}% Folgado`;
         elBadge.className = 'font-bold text-emerald-600';
       }
+    }
+
+    window.destacarFatiaBudget = function(idx) {
+      if (!chartBudget) return;
+      if (idx >= 0) {
+        chartBudget.setActiveElements([{ datasetIndex: 0, index: idx }]);
+        chartBudget.tooltip.setActiveElements([{ datasetIndex: 0, index: idx }], { x: 0, y: 0 });
+      } else {
+        chartBudget.setActiveElements([]);
+        chartBudget.tooltip.setActiveElements([], { x: 0, y: 0 });
+      }
+      chartBudget.update('none');
+    };
+
+    function setMoedaAnimada(el, val) {
+      if (!el) return;
+      if (typeof window.nxAnimateCurrency === 'function') window.nxAnimateCurrency(el, val);
+      else el.textContent = formatMoeda(val);
     }
 
     // Atualização Geral
@@ -2512,7 +2534,7 @@
       const sobraMensal = totalEntradas - totalDespesas;
       const reservaEmergenciaIdeal = totalEssenciais * 6;
 
-      document.getElementById('cardTotalEntradas').textContent = formatMoeda(totalEntradas);
+      setMoedaAnimada(document.getElementById('cardTotalEntradas'), totalEntradas);
 
       if (modeloAtivo === 'livre') {
         // No modo livre: os cards mostram os limites manuais definidos pelo usuário
@@ -2520,13 +2542,13 @@
         const lim30 = Number(mes.limites["30"]) || 0;
         const lim20 = Number(mes.limites["20"]) || 0;
 
-        document.getElementById('cardTotalEssenciais').textContent = formatMoeda(lim50);
-        document.getElementById('cardTotalDesejos').textContent = formatMoeda(lim30);
-        document.getElementById('cardTotalReserva').textContent = formatMoeda(lim20);
+        setMoedaAnimada(document.getElementById('cardTotalEssenciais'), lim50);
+        setMoedaAnimada(document.getElementById('cardTotalDesejos'), lim30);
+        setMoedaAnimada(document.getElementById('cardTotalReserva'), lim20);
 
         // O total das despesas no modo livre é exatamente a SOMA DOS 3 CARDS
         const totalAlocadoLivre = lim50 + lim30 + lim20;
-        document.getElementById('cardTotalDespesas').textContent = formatMoeda(totalAlocadoLivre);
+        setMoedaAnimada(document.getElementById('cardTotalDespesas'), totalAlocadoLivre);
         const baseRendaLivre = totalEntradas > 0 ? totalEntradas : 1;
         document.getElementById('pctTotalDespesas').textContent = `${((totalAlocadoLivre / baseRendaLivre) * 100).toFixed(0)}% da Renda`;
 
@@ -2572,9 +2594,9 @@
           if (el) el.classList.add('hidden');
         });
 
-        document.getElementById('cardTotalEssenciais').textContent = formatMoeda(totalEssenciais);
-        document.getElementById('cardTotalDesejos').textContent = formatMoeda(totalDesejos);
-        document.getElementById('cardTotalReserva').textContent = formatMoeda(totalReserva);
+        setMoedaAnimada(document.getElementById('cardTotalEssenciais'), totalEssenciais);
+        setMoedaAnimada(document.getElementById('cardTotalDesejos'), totalDesejos);
+        setMoedaAnimada(document.getElementById('cardTotalReserva'), totalReserva);
 
         const idsMostrar = [
           'wrapperConsumoEssenciais', 'wrapperProgressoEssenciais',
@@ -2619,7 +2641,7 @@
         const baseRenda = totalEntradas > 0 ? totalEntradas : 1;
 
         const cardDesp = document.getElementById('cardTotalDespesas');
-        if (cardDesp) cardDesp.textContent = formatMoeda(somaExataDosTres);
+        if (cardDesp) setMoedaAnimada(cardDesp, somaExataDosTres);
 
         const pctDesp = document.getElementById('pctTotalDespesas');
         if (pctDesp) pctDesp.textContent = `${((somaExataDosTres / baseRenda) * 100).toFixed(0)}% da Renda`;
@@ -2632,7 +2654,7 @@
         if (blocoSaldoLivreDesp && valSaldoLivreDesp) {
           if (modeloAtivo === 'livre') {
             blocoSaldoLivreDesp.classList.remove('hidden');
-            valSaldoLivreDesp.textContent = formatMoeda(sobraReal);
+            setMoedaAnimada(valSaldoLivreDesp, sobraReal);
             valSaldoLivreDesp.className = sobraReal < 0 ? "block text-lg font-black text-rose-700 font-mono mt-0.5" : "block text-lg font-black text-emerald-800 font-mono mt-0.5";
           } else {
             blocoSaldoLivreDesp.classList.add('hidden');
@@ -2652,7 +2674,7 @@
 
         const sobraEl = document.getElementById('projSobraMensal');
         if (sobraEl) {
-          sobraEl.textContent = formatMoeda(sobraReal);
+          setMoedaAnimada(sobraEl, sobraReal);
           sobraEl.className = sobraReal < 0 ? "text-2xl font-bold text-rose-700 mt-1" : "text-2xl font-bold text-emerald-700 mt-1";
         }
 
@@ -2660,7 +2682,7 @@
       }
 
       sincronizarSomaDosTresCards();
-      document.getElementById('projReservaIdeal').textContent = formatMoeda(reservaEmergenciaIdeal);
+      setMoedaAnimada(document.getElementById('projReservaIdeal'), reservaEmergenciaIdeal);
 
       document.getElementById('graficoInfoRenda').textContent = `Renda Base: ${formatMoeda(totalEntradas)}`;
       document.getElementById('legendaRealEssenciais').textContent = formatMoeda(totalEssenciais);
@@ -2677,7 +2699,7 @@
       const centroValorEl = document.getElementById('centroGraficoValor');
       const centroSubEl = document.getElementById('centroGraficoSub');
       if (centroValorEl) {
-        centroValorEl.textContent = formatMoeda(totalEntradas);
+        setMoedaAnimada(centroValorEl, totalEntradas);
       }
       if (centroSubEl) {
         if (modeloAtivo === 'livre') {
@@ -3679,6 +3701,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: { duration: 900, easing: 'easeOutQuart' },
           plugins: {
             legend: { display: false },
             tooltip: {
@@ -3723,6 +3746,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: { duration: 900, easing: 'easeOutQuart' },
           plugins: {
             legend: { display: false },
             tooltip: {
@@ -4191,9 +4215,9 @@
         const elRend = document.getElementById('dashCardRendimentoTotal');
         const elPct = document.getElementById('dashCardRendimentoPercentual');
 
-        if (elPat) elPat.textContent = formatMoeda(data.resumo.patrimonioTotal);
-        if (elApl) elApl.textContent = formatMoeda(data.resumo.totalAplicado);
-        if (elRend) elRend.textContent = formatMoeda(data.resumo.rendimentoTotal);
+        if (elPat) setMoedaAnimada(elPat, data.resumo.patrimonioTotal);
+        if (elApl) setMoedaAnimada(elApl, data.resumo.totalAplicado);
+        if (elRend) setMoedaAnimada(elRend, data.resumo.rendimentoTotal);
         if (elPct) {
           const pct = data.resumo.totalAplicado > 0
             ? ((data.resumo.rendimentoTotal / data.resumo.totalAplicado) * 100).toFixed(2)
@@ -4333,6 +4357,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: { duration: 900, easing: 'easeOutQuart' },
           plugins: {
             legend: {
               display: true,
@@ -4515,6 +4540,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: { duration: 900, easing: 'easeOutQuart' },
           plugins: {
             legend: {
               display: true,

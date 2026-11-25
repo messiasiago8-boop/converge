@@ -452,3 +452,95 @@ body.nx-finance section.grid.lg\:grid-cols-5 #statusGlobalTexto { word-break: no
   .rotina-card .btn-check-prio { width: 2.5rem; }
   .rotina-card .rotina-tarefa-acoes button { padding-inline: .45rem; }
 }
+
+/* ===================================================================== */
+/* Camada UX "Vida & Fluidez" — todas as abas (Sálvia & Areia estrito)   */
+/* ===================================================================== */
+.nx-card-alive {
+  position: relative;
+  transition: transform .28s var(--nx-ease), box-shadow .32s var(--nx-ease), border-color .28s ease, background-color .28s ease !important;
+}
+.nx-card-alive:hover {
+  transform: translateY(-3px);
+  border-color: rgba(91, 144, 134, .42) !important;
+  box-shadow: 0 20px 40px -22px rgba(31, 42, 39, .26), 0 0 0 1px rgba(91, 144, 134, .10) !important;
+}
+
+.nx-status-pulse {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--nx-sage);
+  box-shadow: 0 0 0 0 rgba(91, 144, 134, .55);
+  animation: nxStatusPulse 2.4s ease-out infinite;
+}
+@keyframes nxStatusPulse {
+  0% { box-shadow: 0 0 0 0 rgba(91, 144, 134, .55); }
+  70% { box-shadow: 0 0 0 8px rgba(91, 144, 134, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(91, 144, 134, 0); }
+}
+
+/* Barras de progresso vivas (Estudos, Metas, Finanças) */
+.nx-bar-track {
+  position: relative;
+  overflow: hidden;
+}
+.nx-bar-fill {
+  position: relative;
+  overflow: hidden;
+  transition: width .85s cubic-bezier(.22, 1, .36, 1), background-color .35s ease !important;
+}
+.nx-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 253, 248, .35) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: nxBarShimmer 2.8s ease-in-out infinite;
+}
+@keyframes nxBarShimmer {
+  0% { transform: translateX(-100%); }
+  55%, 100% { transform: translateX(120%); }
+}
+
+/* Anel de progresso SVG em Metas e Hábitos */
+.nx-meta-ring circle.nx-meta-ring-fg {
+  transition: stroke-dashoffset 1s cubic-bezier(.22, 1, .36, 1), stroke .35s ease;
+}
+
+/* Micro-recompensa ao concluir tarefa, hábito, aula ou meta */
+.nx-celebrate-pulse {
+  animation: nxCelebratePulse .75s var(--nx-ease) forwards;
+}
+@keyframes nxCelebratePulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(91, 144, 134, .55); }
+  35% { transform: scale(1.018); box-shadow: 0 0 0 10px rgba(91, 144, 134, .18), 0 14px 28px -12px rgba(67, 114, 104, .35); border-color: rgba(91, 144, 134, .75); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(91, 144, 134, 0); }
+}
+.nx-check-pop {
+  animation: nxCheckPop .42s cubic-bezier(.34, 1.56, .64, 1) forwards;
+}
+@keyframes nxCheckPop {
+  0% { transform: scale(.72); }
+  55% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* Destaque do dia ativo no Cronograma de Estudos */
+.nx-schedule-today {
+  border-color: rgba(91, 144, 134, .55) !important;
+  box-shadow: 0 18px 36px -22px rgba(67, 114, 104, .38), 0 0 0 1px rgba(91, 144, 134, .18) !important;
+}
+.nx-schedule-today-head {
+  background: linear-gradient(135deg, rgba(91, 144, 134, .14) 0%, rgba(126, 138, 180, .10) 100%) !important;
+}
+
+/* Transição mais nítida de entrada de abas */
+.nx-tabin { animation: nxTabIn .45s var(--nx-ease) backwards; }
+@keyframes nxTabIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-bar-fill::after, .nx-status-pulse, .nx-celebrate-pulse, .nx-check-pop { animation: none !important; }
+  .nx-card-alive:hover { transform: none; }
+}

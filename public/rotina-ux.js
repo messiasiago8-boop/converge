@@ -213,7 +213,10 @@
       feitasAgora.forEach((id) => {
         if (!rx.prevDone.has(id)) {
           const el = document.querySelector(`[data-prio-id="${id}"]`);
-          if (el) el.classList.add('rx-pop');
+          if (el) {
+            el.classList.add('rx-pop');
+            if (typeof window.nxCelebrate === 'function') window.nxCelebrate(el);
+          }
         }
       });
       if (todasTop3 && !rx.prevAllTop3) confetti();

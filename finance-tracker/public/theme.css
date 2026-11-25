@@ -350,3 +350,52 @@ body.nx-finance section.grid.lg\:grid-cols-5 #statusGlobalTexto { word-break: no
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
+
+/* ===================================================================== */
+/* Camada UX "Vida & Fluidez" — Finanças (Sálvia & Areia estrito)        */
+/* ===================================================================== */
+.nx-card-alive {
+  position: relative;
+  transition: transform .28s var(--nx-ease), box-shadow .32s var(--nx-ease), border-color .28s ease, background-color .28s ease !important;
+}
+.nx-card-alive:hover {
+  transform: translateY(-3px);
+  border-color: rgba(91, 144, 134, .42) !important;
+  box-shadow: 0 20px 40px -22px rgba(31, 42, 39, .26), 0 0 0 1px rgba(91, 144, 134, .10) !important;
+}
+
+.nx-bar-fill {
+  position: relative;
+  overflow: hidden;
+  transition: width .85s cubic-bezier(.22, 1, .36, 1), background-color .35s ease !important;
+}
+.nx-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 253, 248, .35) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: nxBarShimmer 2.8s ease-in-out infinite;
+}
+@keyframes nxBarShimmer {
+  0% { transform: translateX(-100%); }
+  55%, 100% { transform: translateX(120%); }
+}
+
+.nx-legend-row {
+  transition: transform .22s var(--nx-ease), border-color .22s ease, background-color .22s ease, box-shadow .22s ease;
+}
+.nx-legend-row:hover {
+  transform: translateX(4px);
+  border-color: rgba(91, 144, 134, .45) !important;
+  background-color: rgba(255, 253, 248, .96) !important;
+  box-shadow: 0 10px 24px -14px rgba(31, 42, 39, .22);
+}
+
+.nx-tabin { animation: nxTabIn .45s var(--nx-ease) backwards; }
+@keyframes nxTabIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-bar-fill::after { animation: none !important; }
+  .nx-card-alive:hover, .nx-legend-row:hover { transform: none; }
+}

@@ -90,8 +90,13 @@ function atualizarCardsResumo(resumo) {
   const elRendimento = document.getElementById('cardRendimentoTotal');
   const elRendPct = document.getElementById('cardRendimentoPercentual');
 
-  if (elPatrimonio) elPatrimonio.textContent = formatarMoeda(resumo.patrimonioTotal);
-  if (elAplicado) elAplicado.textContent = formatarMoeda(resumo.totalAplicado);
+  const animarMoeda = (el, val) => {
+    if (!el) return;
+    if (typeof window.nxAnimateCurrency === 'function') window.nxAnimateCurrency(el, val);
+    else el.textContent = formatarMoeda(val);
+  };
+  animarMoeda(elPatrimonio, resumo.patrimonioTotal);
+  animarMoeda(elAplicado, resumo.totalAplicado);
   if (elRendimento) elRendimento.textContent = `+ ${formatarMoeda(resumo.rendimentoTotal)}`;
 
   if (elRendPct) {

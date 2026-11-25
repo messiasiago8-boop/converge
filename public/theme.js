@@ -39,12 +39,25 @@
   }, { passive: true });
 
   /* ---------- 2. Reveal escalonado em grades dinâmicas ---------- */
-  const REVEAL_PARENTS = ['videos-grid-container', 'schedule-days-grid', 'gridCartoesProjetos', 'gridCardsInvestimentos'];
+  const REVEAL_PARENTS = [
+    'nx-overview-pillars',
+    'overview-top3-list',
+    'overview-metas-list',
+    'videos-grid-container',
+    'schedule-days-grid',
+    'gridCartoesProjetos',
+    'gridCardsInvestimentos',
+    'grid-cards-metas',
+    'container-habitos-lista',
+    'container-agenda-hoje-timeline',
+    'cards-revisao'
+  ];
   function revealChildren(parent) {
-    if (reduce) return;
+    if (reduce || !parent) return;
     Array.from(parent.children).forEach((child, i) => {
-      if (child.classList.contains('nx-reveal')) return;
+      child.classList.remove('nx-reveal');
       child.style.setProperty('--i', Math.min(i, 12));
+      void child.offsetWidth;
       child.classList.add('nx-reveal');
       child.addEventListener('animationend', () => child.classList.remove('nx-reveal'), { once: true });
     });
@@ -58,7 +71,17 @@
   }
 
   /* ---------- 3. Transição ao trocar de aba / visão ---------- */
-  const TAB_IDS = /^(aba[A-Z]\w*|view-(grid|schedule|lesson|financas))$/;
+  const TAB_IDS = /^(aba[A-Z]\w*|view-(dashboard-geral|grid|schedule|lesson|financas|rotina|perfil|configuracoes|revisao|metas|tutorial-ios)|subview-rotina-(hoje|checklist|agenda))$/;
+  function replaySectionAnimations(el) {
+    if (reduce || !el) return;
+    // Re-dispara reveal em grades filhas visíveis quando a aba é aberta
+    REVEAL_PARENTS.forEach((id) => {
+      const grid = document.getElementById(id);
+      if (grid && el.contains(grid) && grid.children.length) {
+        revealChildren(grid);
+      }
+    });
+  }
   function watchTabs() {
     const hiddenState = new WeakMap();
     const els = Array.from(document.querySelectorAll('[id]')).filter((el) => TAB_IDS.test(el.id));
@@ -72,11 +95,60 @@
           el.classList.remove('nx-tabin');
           void el.offsetWidth;
           el.classList.add('nx-tabin');
-          setTimeout(() => el.classList.remove('nx-tabin'), 700);
+          replaySectionAnimations(el);
+          setTimeout(() => el.classList.remove('nx-tabin'), 550);
         }
       }).observe(el, { attributes: true, attributeFilter: ['class'] });
     });
   }
+
+  /* ---------- Helpers Globais de Animação & Micro-recompensa ---------- */
+  window.nxAnimateCurrency = function (el, toVal, dur = 680) {
+    if (!el) return;
+    const target = Number(toVal) || 0;
+    const fmt = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const prev = el.dataset.nxCurVal !== undefined ? Number(el.dataset.nxCurVal) : null;
+    el.dataset.nxCurVal = String(target);
+    if (reduce || prev === null || Math.abs(prev - target) < 0.01) {
+      el.textContent = fmt(target);
+      return;
+    }
+    const t0 = performance.now();
+    (function step(now) {
+      const k = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      el.textContent = fmt(prev + (target - prev) * eased);
+      if (k < 1) requestAnimationFrame(step);
+      else el.textContent = fmt(target);
+    })(t0);
+  };
+
+  window.nxAnimateNumber = function (el, toVal, suffix = '', dur = 650) {
+    if (!el) return;
+    const target = Number(toVal) || 0;
+    const prev = el.dataset.nxNumVal !== undefined ? Number(el.dataset.nxNumVal) : 0;
+    el.dataset.nxNumVal = String(target);
+    if (reduce || prev === target) {
+      el.textContent = `${Math.round(target)}${suffix}`;
+      return;
+    }
+    const t0 = performance.now();
+    (function step(now) {
+      const k = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      el.textContent = `${Math.round(prev + (target - prev) * eased)}${suffix}`;
+      if (k < 1) requestAnimationFrame(step);
+      else el.textContent = `${Math.round(target)}${suffix}`;
+    })(t0);
+  };
+
+  window.nxCelebrate = function (targetEl) {
+    if (reduce || !targetEl) return;
+    targetEl.classList.remove('nx-celebrate-pulse');
+    void targetEl.offsetWidth;
+    targetEl.classList.add('nx-celebrate-pulse');
+    setTimeout(() => targetEl.classList.remove('nx-celebrate-pulse'), 820);
+  };
 
   /* ---------- 4. Hero do Portal ---------- */
   const fmtTime = (s) => {
@@ -167,7 +239,11 @@
         const dispEl = document.getElementById('nx-s-finance');
         if (dispEl && dadosFin && dadosFin.resumo) {
           const valDisp = Number(dadosFin.resumo.saldoDisponivelTotal || 0);
-          dispEl.textContent = valDisp.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          if (typeof window.nxAnimateCurrency === 'function') {
+            window.nxAnimateCurrency(dispEl, valDisp);
+          } else {
+            dispEl.textContent = valDisp.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          }
         }
       }
     } catch (errFin) {

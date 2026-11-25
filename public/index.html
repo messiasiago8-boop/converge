@@ -600,10 +600,10 @@
         </div>
 
         <!-- Grid Principal 2x2 com os 4 Pilares do Life OS -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div id="nx-overview-pillars" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           <!-- CARD 1: ROTINA & AGENDA (Foco de Hoje) -->
-          <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col space-y-4 hover:border-emerald-300 transition">
+          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col space-y-4 hover:border-emerald-300 transition">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0">
@@ -612,7 +612,7 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-sm font-bold text-slate-900">Rotina & Agenda</h3>
+                  <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><span class="nx-status-pulse" title="Ativo"></span><span>Rotina & Agenda</span></h3>
                   <p class="text-[11px] text-slate-500">Prioridades, hábitos e compromissos de hoje.</p>
                 </div>
               </div>
@@ -647,7 +647,7 @@
           </div>
 
           <!-- CARD 2: FINANÇAS (Resumo do Mês) -->
-          <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col space-y-4 hover:border-emerald-300 transition">
+          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col space-y-4 hover:border-emerald-300 transition">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0">
@@ -656,7 +656,7 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-sm font-bold text-slate-900">Finanças Inteligentes</h3>
+                  <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><span class="nx-status-pulse" title="Sincronizado"></span><span>Finanças Inteligentes</span></h3>
                   <p class="text-[11px] text-slate-500">Gestão orçamentária e disponibilidade do mês.</p>
                 </div>
               </div>
@@ -688,7 +688,7 @@
           </div>
 
           <!-- CARD 3: EDUCAÇÃO (Continuar Estudando) -->
-          <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col space-y-4 hover:border-emerald-300 transition">
+          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col space-y-4 hover:border-emerald-300 transition">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0">
@@ -697,7 +697,7 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-sm font-bold text-slate-900">Educação & Treinamento</h3>
+                  <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><span class="nx-status-pulse" title="Em andamento"></span><span>Educação & Treinamento</span></h3>
                   <p class="text-[11px] text-slate-500">Sua jornada de aprendizado contínuo.</p>
                 </div>
               </div>
@@ -725,14 +725,14 @@
                 <span class="text-slate-600">Progresso do Catálogo</span>
                 <span id="overview-lms-pct" class="font-sans font-bold tabular-nums text-emerald-800">0%</span>
               </div>
-              <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-                <div id="overview-lms-bar" class="h-full rounded-full transition-all duration-500 bg-emerald-600" style="width: 0%;"></div>
+              <div class="nx-bar-track w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                <div id="overview-lms-bar" class="nx-bar-fill h-full rounded-full bg-emerald-600" style="width: 0%;"></div>
               </div>
             </div>
           </div>
 
           <!-- CARD 4: METAS (Objetivos em Andamento) -->
-          <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col space-y-4 hover:border-emerald-300 transition">
+          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col space-y-4 hover:border-emerald-300 transition">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0">
@@ -741,7 +741,7 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-sm font-bold text-slate-900">Metas & Objetivos</h3>
+                  <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><span class="nx-status-pulse" title="Monitorando"></span><span>Metas & Objetivos</span></h3>
                   <p class="text-[11px] text-slate-500">Seus alvos de médio e longo prazo.</p>
                 </div>
               </div>
@@ -1375,19 +1375,19 @@
         <!-- 1. BARRA DE RESUMO NO TOPO (3 MINI CARDS COMPACTOS) -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <!-- Mini Card 1: Progresso Geral -->
-          <div class="bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs flex flex-col justify-between space-y-2">
+          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs flex flex-col justify-between space-y-2">
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Progresso Geral</span>
               <span id="kpi-metas-progresso-pct" class="font-sans font-bold tabular-nums text-xs text-emerald-800">0%</span>
             </div>
-            <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-              <div id="kpi-metas-progresso-bar" class="h-full rounded-full bg-emerald-600 transition-all duration-500" style="width: 0%;"></div>
+            <div class="nx-bar-track w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+              <div id="kpi-metas-progresso-bar" class="nx-bar-fill h-full rounded-full bg-emerald-600" style="width: 0%;"></div>
             </div>
             <p class="text-[10px] text-slate-400">Média de conclusão de todas as metas</p>
           </div>
 
           <!-- Mini Card 2: Status Ativas vs Concluídas -->
-          <div class="bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs flex items-center justify-between">
+          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs flex items-center justify-between">
             <div>
               <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Status das Metas</span>
               <div class="flex items-center gap-2 mt-1">

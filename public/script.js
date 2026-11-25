@@ -118,10 +118,14 @@ function updateCompletedButtonUI(isCompleted) {
   if (isCompleted) {
     btn.className = 'flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-300 rounded-lg text-xs font-semibold shadow-xs hover:bg-emerald-100 transition';
     icon.textContent = '✓';
+    icon.classList.remove('nx-check-pop');
+    void icon.offsetWidth;
+    icon.classList.add('nx-check-pop');
     text.textContent = 'Concluído';
   } else {
     btn.className = 'flex items-center space-x-1.5 px-3 py-1.5 bg-white text-slate-700 border border-slate-200 rounded-lg text-xs font-medium shadow-xs hover:bg-slate-50 transition';
     icon.textContent = '○';
+    icon.classList.remove('nx-check-pop');
     text.textContent = 'Marcar Concluído';
   }
 }
@@ -940,13 +944,15 @@ function renderVideosGrid() {
   state.topics.forEach(topic => {
     const topicVideos = state.allVideos.filter(v => v.id_topico === topic.id);
     const qtd = topicVideos.length;
+    const concluidasTopico = topicVideos.filter(v => !!v.concluido).length;
+    const pctTopico = qtd > 0 ? Math.round((concluidasTopico / qtd) * 100) : 0;
 
     const section = document.createElement('div');
-    section.className = 'bg-[#fbfaf6] border border-[#1f2a27]/10 rounded-2xl p-6 shadow-xs space-y-4';
+    section.className = 'nx-card-alive bg-[#fbfaf6] border border-[#1f2a27]/10 rounded-2xl p-6 shadow-xs space-y-4';
 
     section.innerHTML = `
       <!-- Cabeçalho do Tópico -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b border-[#1f2a27]/10 gap-2">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b border-[#1f2a27]/10 gap-3">
         <div class="flex items-center space-x-3">
           <div class="w-8 h-8 rounded-xl bg-[#e3efe9] border border-[#a8cfc2]/70 text-[#23453e] flex items-center justify-center font-bold text-xs shadow-2xs">
             🎓
@@ -955,7 +961,12 @@ function renderVideosGrid() {
             <h3 class="text-base font-bold text-[#1f2a27] font-serif tracking-tight flex items-center gap-2">
               <span>${escapeHTML(topic.nome)}</span>
             </h3>
-            <p class="text-[11px] text-[#5d5c54]">Trilha estruturada com foco em resultados práticos.</p>
+            <div class="flex items-center gap-2.5 mt-1">
+              <div class="nx-bar-track w-28 sm:w-36 h-1.5 rounded-full bg-[#e4dfd3]/80 overflow-hidden">
+                <div class="nx-bar-fill h-full rounded-full bg-emerald-600" style="width: ${pctTopico}%;"></div>
+              </div>
+              <span class="text-[11px] font-semibold text-[#437268] tabular-nums">${concluidasTopico}/${qtd} concluídas (${pctTopico}%)</span>
+            </div>
           </div>
         </div>
 
@@ -1020,17 +1031,21 @@ function renderScheduleGrid() {
 
   container.innerHTML = '';
 
+  const diaHojeNome = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][new Date().getDay()];
+
   DIAS_SEMANA.forEach(dia => {
     const agendadosDoDia = state.agendamentos.filter(a => a.dia_semana === dia);
+    const ehHoje = dia === diaHojeNome;
     const dayCard = document.createElement('div');
-    dayCard.className = 'bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col overflow-hidden min-h-[300px]';
+    dayCard.className = `nx-card-alive bg-white rounded-xl border border-slate-200/90 shadow-xs flex flex-col overflow-hidden min-h-[300px] ${ehHoje ? 'nx-schedule-today' : ''}`;
 
     dayCard.innerHTML = `
       <!-- Cabeçalho do Dia -->
-      <div class="px-4 py-3 border-b border-slate-200/80 bg-slate-50/80 flex items-center justify-between">
+      <div class="px-4 py-3 border-b border-slate-200/80 bg-slate-50/80 flex items-center justify-between ${ehHoje ? 'nx-schedule-today-head' : ''}">
         <div class="flex items-center space-x-2">
-          <span class="w-2 h-2 rounded-full ${agendadosDoDia.length > 0 ? 'bg-brand-500' : 'bg-slate-300'}"></span>
+          ${ehHoje ? '<span class="nx-status-pulse" title="Dia de hoje"></span>' : `<span class="w-2 h-2 rounded-full ${agendadosDoDia.length > 0 ? 'bg-brand-500' : 'bg-slate-300'}"></span>`}
           <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">${dia}</h3>
+          ${ehHoje ? '<span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">Hoje</span>' : ''}
         </div>
         <span class="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
           ${agendadosDoDia.length} ${agendadosDoDia.length === 1 ? 'aula' : 'aulas'}
@@ -2203,6 +2218,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         : (state.activeVideo.segundo_atual || 0);
       salvarProgressoVideo(sec, novoStatus);
       updateCompletedButtonUI(novoStatus);
+      if (novoStatus && typeof window.nxCelebrate === 'function') {
+        window.nxCelebrate(btnToggleCompleted);
+      }
     });
   }
 
@@ -2403,19 +2421,25 @@ async function carregarDashboardGeral() {
 
       const formatarMoeda = (val) => Number(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+      const setMoedaAnimada = (el, val) => {
+        if (!el) return;
+        if (typeof window.nxAnimateCurrency === 'function') window.nxAnimateCurrency(el, val);
+        else el.textContent = formatarMoeda(val);
+      };
+
       if (jsonFin && jsonFin.indicadores) {
         const saldoLivre = jsonFin.indicadores.saldoLivreTotal ?? jsonFin.indicadores.saldoDisponivel ?? 0;
         const totalGasto = jsonFin.indicadores.gastosTotal ?? jsonFin.indicadores.totalGastos ?? 0;
-        if (disponivelEl) disponivelEl.textContent = formatarMoeda(saldoLivre);
-        if (gastoEl) gastoEl.textContent = formatarMoeda(totalGasto);
+        setMoedaAnimada(disponivelEl, saldoLivre);
+        setMoedaAnimada(gastoEl, totalGasto);
       } else if (jsonFin && typeof jsonFin.saldoDisponivel !== 'undefined') {
-        if (disponivelEl) disponivelEl.textContent = formatarMoeda(jsonFin.saldoDisponivel);
-        if (gastoEl) gastoEl.textContent = formatarMoeda(jsonFin.totalGastos || 0);
+        setMoedaAnimada(disponivelEl, jsonFin.saldoDisponivel);
+        setMoedaAnimada(gastoEl, jsonFin.totalGastos || 0);
       } else {
         const somar = itens => (itens || []).reduce((total, item) => total + (Number(item.valor) || 0), 0);
         const gasto = somar(jsonFin.despesas);
-        if (disponivelEl) disponivelEl.textContent = formatarMoeda(somar(jsonFin.entradas) - gasto);
-        if (gastoEl) gastoEl.textContent = formatarMoeda(gasto);
+        setMoedaAnimada(disponivelEl, somar(jsonFin.entradas) - gasto);
+        setMoedaAnimada(gastoEl, gasto);
       }
 
       // Vencimentos pendentes ou saúde financeira
@@ -2464,7 +2488,10 @@ async function carregarDashboardGeral() {
 
     const pctEl = document.getElementById('overview-lms-pct');
     const barEl = document.getElementById('overview-lms-bar');
-    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (pctEl) {
+      if (typeof window.nxAnimateNumber === 'function') window.nxAnimateNumber(pctEl, pct, '%');
+      else pctEl.textContent = `${pct}%`;
+    }
     if (barEl) barEl.style.width = `${pct}%`;
 
     const proximaAulaTitulo = document.getElementById('overview-lms-aula-titulo');

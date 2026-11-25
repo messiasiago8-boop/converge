@@ -497,21 +497,27 @@ function renderizarHabitos() {
 
   rotinaState.habitos.forEach(habito => {
     const el = document.createElement('div');
-    el.className = 'p-3.5 sm:p-4 rounded-xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-emerald-200 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs';
+    el.id = `habito-card-${habito.id}`;
+    el.className = 'nx-card-alive p-3.5 sm:p-4 rounded-xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-emerald-200 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs';
 
     const concluidos = Array.isArray(habito.dias_concluidos) ? habito.dias_concluidos : [];
     const concluidosSemana = diasSemana.filter(d => concluidos.includes(d.iso)).length;
+    const habRingCirc = 87.96; // 2 * Math.PI * 14
+    const habRingOffset = (habRingCirc * (1 - concluidosSemana / 7)).toFixed(2);
 
     el.innerHTML = `
       <div class="flex items-center gap-3 min-w-0 flex-1">
-        <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/70 flex items-center justify-center shrink-0">
-          <svg class="w-4 h-4 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        <div class="relative w-9 h-9 shrink-0 flex items-center justify-center">
+          <svg viewBox="0 0 34 34" class="w-9 h-9 -rotate-90 nx-meta-ring" aria-hidden="true">
+            <circle cx="17" cy="17" r="14" fill="none" stroke="rgba(31, 42, 39, 0.1)" stroke-width="3" />
+            <circle cx="17" cy="17" r="14" fill="none" stroke="#5b9086" stroke-width="3" stroke-linecap="round"
+              class="nx-meta-ring-fg" stroke-dasharray="${habRingCirc}" stroke-dashoffset="${habRingOffset}" />
           </svg>
+          <span class="absolute text-[9px] font-bold tabular-nums text-emerald-800">${concluidosSemana}/7</span>
         </div>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-semibold text-slate-900 truncate" title="${escapeHTML(habito.nome)}">${escapeHTML(habito.nome)}</p>
-          <p class="text-[11px] text-slate-500">${concluidosSemana}/7 dias esta semana</p>
+          <p class="text-[11px] text-slate-500">${concluidosSemana === 7 ? 'Semana perfeita concluída! ✨' : `${concluidosSemana} de 7 dias na semana`}</p>
         </div>
       </div>
       <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0">
@@ -553,7 +559,12 @@ function renderizarHabitos() {
       btn.addEventListener('click', async () => {
         const hId = btn.getAttribute('data-id');
         const iso = btn.getAttribute('data-iso');
+        const estavaMarcado = btn.textContent.trim() === '✓';
         await alternarCheckinHabito(hId, iso);
+        if (!estavaMarcado) {
+          const novoCard = document.getElementById(`habito-card-${hId}`);
+          if (novoCard && typeof window.nxCelebrate === 'function') window.nxCelebrate(novoCard);
+        }
       });
     });
 
@@ -970,7 +981,10 @@ function atualizarKpisResumoMetas() {
   const mediaPct = Math.round(somaProgresso / total);
 
   if (barEl) barEl.style.width = `${mediaPct}%`;
-  if (pctEl) pctEl.textContent = `${mediaPct}%`;
+  if (pctEl) {
+    if (typeof window.nxAnimateNumber === 'function') window.nxAnimateNumber(pctEl, mediaPct, '%');
+    else pctEl.textContent = `${mediaPct}%`;
+  }
   if (ativasEl) ativasEl.textContent = `${ativas} ${ativas === 1 ? 'Ativa' : 'Ativas'}`;
   if (concluidasEl) concluidasEl.textContent = `${concluidas} ${concluidas === 1 ? 'Concluída' : 'Concluídas'}`;
 
@@ -1079,11 +1093,14 @@ function renderizarMetas() {
     const isConcluida = (meta.progresso || 0) >= 100;
     const progresso = Math.min(100, Math.max(0, meta.progresso || 0));
 
-    card.className = `rounded-xl border p-5 shadow-xs flex flex-col justify-between space-y-4 transition ${
+    card.className = `nx-card-alive rounded-xl border p-5 shadow-xs flex flex-col justify-between space-y-4 transition ${
       isConcluida
         ? 'bg-gradient-to-br from-[#f0f9f5] to-white border-emerald-300 shadow-xs'
         : 'bg-white border-slate-200/90 hover:border-emerald-300'
     }`;
+
+    const ringCirc = 100.53; // 2 * Math.PI * 16
+    const ringOffset = (ringCirc * (1 - progresso / 100)).toFixed(2);
 
     let tipoLabel = 'Projeto & Pessoal';
     if (meta.tipo === 'financeira') tipoLabel = 'Financeiro';
@@ -1134,17 +1151,29 @@ function renderizarMetas() {
           </button>
         </div>
 
-        <h4 class="text-sm font-bold text-slate-900 mt-2.5 line-clamp-2">${escapeHTML(meta.titulo)}</h4>
-        ${meta.prazo ? `<p class="text-[11px] text-slate-400 mt-0.5">Data limite: ${meta.prazo}</p>` : ''}
+        <div class="flex items-start justify-between gap-3 mt-2.5">
+          <div class="min-w-0 flex-1">
+            <h4 class="text-sm font-bold text-slate-900 line-clamp-2">${escapeHTML(meta.titulo)}</h4>
+            ${meta.prazo ? `<p class="text-[11px] text-slate-400 mt-0.5">Data limite: ${meta.prazo}</p>` : ''}
+          </div>
+          <div class="relative w-11 h-11 shrink-0 flex items-center justify-center" title="${progresso}% concluído">
+            <svg viewBox="0 0 40 40" class="w-11 h-11 -rotate-90 nx-meta-ring" aria-hidden="true">
+              <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(31, 42, 39, 0.09)" stroke-width="3.5" />
+              <circle cx="20" cy="20" r="16" fill="none" stroke="${isConcluida ? '#437268' : '#5b9086'}" stroke-width="3.5" stroke-linecap="round"
+                class="nx-meta-ring-fg" stroke-dasharray="${ringCirc}" stroke-dashoffset="${ringOffset}" />
+            </svg>
+            <span class="absolute text-[10px] font-bold tabular-nums text-emerald-900">${progresso}%</span>
+          </div>
+        </div>
 
-        <!-- Barra de Progresso com Gradiente -->
-        <div class="mt-3.5 space-y-1.5">
+        <!-- Barra de Progresso Viva -->
+        <div class="mt-3 space-y-1.5">
           <div class="flex items-center justify-between text-xs font-semibold">
             <span class="text-slate-600">Progresso</span>
             <span class="font-sans font-bold tabular-nums text-emerald-800">${progresso}%</span>
           </div>
-          <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-            <div class="h-full rounded-full transition-all duration-500 bg-emerald-600" style="width: ${progresso}%;"></div>
+          <div class="nx-bar-track w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+            <div class="nx-bar-fill h-full rounded-full bg-emerald-600" style="width: ${progresso}%;"></div>
           </div>
         </div>
 
@@ -1271,6 +1300,10 @@ async function alternarChecklistMeta(metaId, stepIdx, status) {
     });
     await carregarMetas();
     if (typeof carregarDashboardGeral === 'function') carregarDashboardGeral();
+    if (status) {
+      const cardEl = document.getElementById('meta-portal-' + metaId);
+      if (cardEl && typeof window.nxCelebrate === 'function') window.nxCelebrate(cardEl);
+    }
   } catch (e) {
     renderizarMetas();
     avisarFalhaRotina(e);
@@ -1290,6 +1323,8 @@ async function realizarAporteMeta(metaId, valorAdicional) {
     });
     await carregarMetas();
     if (typeof carregarDashboardGeral === 'function') carregarDashboardGeral();
+    const cardEl = document.getElementById('meta-portal-' + metaId);
+    if (cardEl && typeof window.nxCelebrate === 'function') window.nxCelebrate(cardEl);
     return true;
   } catch (e) {
     avisarFalhaRotina(e);
