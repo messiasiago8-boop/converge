@@ -28,7 +28,7 @@
             <div class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 text-sm">⚡</div>
             <div>
               <h3 class="text-sm font-bold leading-tight">CONVERGE IA</h3>
-              <p class="text-[10px] text-emerald-200/80">Groq Llama 3.3 • Controla todos os módulos</p>
+              <p class="text-[10px] text-emerald-200/80">Groq • Controla Finanças, Rotina, Metas e Educação</p>
             </div>
           </div>
           <button type="button" id="btn-fechar-groq-ia" class="text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition cursor-pointer">✕</button>
@@ -38,11 +38,12 @@
         <div id="groq-ia-messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f7f4ec]">
           <div class="p-3.5 rounded-2xl rounded-tl-none bg-white border border-[#1f2a27]/10 text-xs text-slate-700 leading-relaxed shadow-2xs">
             <p class="font-bold text-[#1f2a27] mb-1">Olá! Sou a CONVERGE IA (via Groq) ⚡</p>
-            <p>Posso executar ações reais em <strong>Rotina, Agenda, Finanças, Educação e Metas</strong>.</p>
+            <p>Posso criar, editar, consultar e apagar itens em <strong>Finanças, Rotina, Agenda, Metas e Educação</strong>.</p>
             <div class="mt-3 flex flex-wrap gap-1.5">
               <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Resumo do meu dia</button>
+              <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Coloque meu salário de dezembro para R$ 1500</button>
               <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Adicione estudar hoje às 19:00</button>
-              <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Registre gasto de R$ 50 no mercado</button>
+              <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Crie uma meta de juntar R$ 5000</button>
             </div>
           </div>
         </div>
@@ -148,7 +149,11 @@
         if (afetados.includes('financas')) {
           const iframe = document.getElementById('iframe-financas');
           if (iframe && iframe.contentWindow && typeof iframe.contentWindow.carregarDadosDoBanco === 'function') {
-            iframe.contentWindow.carregarDadosDoBanco();
+            const mes = data.mesFinancasAfetado || iframe.contentDocument?.getElementById('filtroMes')?.value;
+            if (mes && iframe.contentDocument?.getElementById('filtroMes')) {
+              iframe.contentDocument.getElementById('filtroMes').value = mes;
+            }
+            iframe.contentWindow.carregarDadosDoBanco(mes);
           }
         }
         if (afetados.length > 0 && typeof carregarDashboardGeral === 'function') {
