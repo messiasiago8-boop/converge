@@ -59,6 +59,30 @@ const ConvergeNotifications = {
 
     this.iniciarMonitor();
     this.atualizarStatusUI();
+    await this.convidarNoPrimeiroAcesso();
+  },
+
+  async convidarNoPrimeiroAcesso() {
+    const modal = document.getElementById('convite-notificacoes');
+    const token = this.tokenSessao;
+    if (!token || !modal?.showModal) return;
+    const guiaIOS = this.isIOS() && !this.isStandalone();
+    try {
+      const resposta = await fetch('/api/push/convite', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + token }
+      });
+      if (!resposta.ok || !(await resposta.json()).exibir || localStorage.getItem('token') !== token) return;
+      if (!guiaIOS && (!('Notification' in window) || Notification.permission !== 'default')) return;
+      const ativar = document.getElementById('convite-ativar-push');
+      if (guiaIOS) ativar.textContent = 'Ver como ativar';
+      ativar.addEventListener('click', () => {
+        modal.close();
+        this.solicitarPermissao().catch(() => alert('Não foi possível ativar os alertas. Você pode tentar novamente em App & Alertas.'));
+      }, { once: true });
+      modal.showModal();
+    } catch (erro) {
+      console.warn('[Alertas] Convite indisponível:', erro.name);
+    }
   },
 
   // Registra/sincroniza inscrição Web Push com o backend sem interromper o usuário

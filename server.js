@@ -268,6 +268,20 @@ app.get('/api/meus-dados', rotaPortal(async (req, res) => {
 }));
 
 // ================= ROTAS AUTENTICADAS DE WEB PUSH ================= //
+app.post('/api/push/convite', rotaPortal(async (req, res) => {
+  for (let tentativa = 0; tentativa < 3; tentativa++) {
+    const dados = await obterBancoUsuario(req.usuarioId);
+    if (dados.convite_push_exibido) return res.json({ exibir: false });
+    dados.convite_push_exibido = true;
+    try {
+      await salvarBancoUsuario(dados, req.usuarioId);
+      return res.json({ exibir: true });
+    } catch (erro) {
+      if (erro.status !== 409 || tentativa === 2) throw erro;
+    }
+  }
+}));
+
 app.get('/api/push/status', rotaPortal(async (req, res) => {
   if (!pushService) {
     return res.json({ success: true, enabled: false, subscribedCount: 0 });
