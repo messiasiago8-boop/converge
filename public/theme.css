@@ -411,3 +411,44 @@ body.nx-finance section.grid.lg\:grid-cols-5 #statusGlobalTexto { word-break: no
   #kpi-streak-chip.rx-streak-ativo .rx-flame { animation: none; }
   .rx-lift:hover, .rx-lift-sm:hover, .rx-item:hover, .rx-kpi:hover { transform: none; }
 }
+
+/* Foco do dia e checklist */
+.rotina-card { align-self: start; padding: clamp(1rem, 2vw, 1.5rem); }
+.rotina-progresso { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; padding-top: .9rem; }
+.rotina-progresso span {
+  height: .35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--nx-sage) 13%, transparent);
+  transition: background-color .25s ease;
+}
+.rotina-progresso .reservada { background: color-mix(in srgb, var(--nx-sage) 40%, transparent); }
+.rotina-progresso .feita { background: var(--nx-sage); }
+#rotina-foco-composer .rx-empty { margin-top: .75rem; padding: .95rem; }
+.rotina-dias { display: flex; align-items: center; gap: .35rem; margin-top: .85rem; }
+.rotina-dia, .rotina-data input {
+  border: 1px solid color-mix(in srgb, var(--nx-sage) 34%, transparent);
+  border-radius: .75rem;
+  padding: .4rem .6rem;
+  min-height: 2.3rem;
+  color: var(--nx-ink);
+  background: var(--nx-paper);
+  font-size: .78rem;
+}
+.rotina-dia { cursor: pointer; }
+.rotina-dia:hover { background: color-mix(in srgb, var(--nx-sage) 13%, var(--nx-paper)); }
+.rotina-data { flex: 1; min-width: 0; }
+.rotina-data input { width: 100%; min-width: 0; }
+.rotina-feedback { margin-top: .4rem; font-size: .75rem; color: var(--nx-ink-soft); }
+.rotina-feedback:empty { display: none; }
+.rotina-card .rotina-tarefa { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .45rem .8rem; }
+.rotina-tarefa > div:first-child { overflow-wrap: anywhere; }
+.rotina-tarefa-acoes { flex-wrap: wrap; }
+.rotina-card .btn-check-prio { width: 1.5rem; height: 1.5rem; }
+.rotina-card #form-quick-task input { min-width: 0; }
+@media (max-width: 767px) {
+  .rotina-card .rotina-tarefa { grid-template-columns: minmax(0, 1fr); }
+  .rotina-card .rotina-tarefa-acoes { padding-inline-start: .4rem; }
+  .rotina-card :is(.rotina-dia, .rotina-data input, .btn-check-prio, .rotina-tarefa-acoes button, .rx-chip) { min-height: 2.5rem; }
+  .rotina-card .btn-check-prio { width: 2.5rem; }
+  .rotina-card .rotina-tarefa-acoes button { padding-inline: .45rem; }
+}

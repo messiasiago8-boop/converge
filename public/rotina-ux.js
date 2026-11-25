@@ -114,7 +114,6 @@
   // 2. ESTADOS VAZIOS COM CHIPS DE 1 CLIQUE
   // ------------------------------------------------------------------ //
   const SUGESTOES_TOP3 = ['Revisar e-mails', 'Treinar 30 min', 'Estudar 1 hora', 'Planejar a semana'];
-  const SUGESTOES_QUICK = ['Pagar uma conta', 'Responder mensagens', 'Organizar a mesa', 'Ligar para alguém'];
 
   async function adicionarPrioridade(texto, top3) {
     if (!texto || !texto.trim()) return false;
@@ -198,32 +197,13 @@
     if (typeof rotinaState === 'undefined') return;
     const prios = rotinaState.prioridades || [];
     const top3 = prios.filter((p) => p.top3);
-    const quick = prios.filter((p) => !p.top3);
-    const cTop = $('container-top3-prioridades');
-    const cQuick = $('container-quick-tasks');
-    if (!cTop || !cQuick) return;
-
-    // Estados vazios (substituem as caixas pontilhadas)
-    if (top3.length === 0) {
-      montarVazio(cTop, { titulo: 'Defina o foco de hoje', sugestoes: SUGESTOES_TOP3, top3: true, comInput: true });
-    }
-    if (quick.length === 0) {
-      montarVazio(cQuick, { titulo: 'Caixa de entrada vazia', sugestoes: SUGESTOES_QUICK, top3: false, comInput: false });
-    }
-
-    // Identifica cada linha renderizada (mesma ordem usada pelo render original)
-    Array.from(cTop.children).forEach((el, i) => {
-      if (top3[i] && !el.classList.contains('rx-empty')) {
-        el.dataset.prioId = top3[i].id;
-        el.classList.add('rx-item');
+    const composer = $('rotina-foco-composer');
+    if (composer) {
+      composer.hidden = top3.length >= 3;
+      if (!composer.firstElementChild) {
+        montarVazio(composer, { titulo: 'Adicionar prioridade', sugestoes: SUGESTOES_TOP3, top3: true, comInput: true });
       }
-    });
-    Array.from(cQuick.children).forEach((el, i) => {
-      if (quick[i] && !el.classList.contains('rx-empty')) {
-        el.dataset.prioId = quick[i].id;
-        el.classList.add('rx-item');
-      }
-    });
+    }
 
     // Animação de check + confetti ao completar o Top 3
     const feitasAgora = new Set(prios.filter(isDone).map((p) => p.id));

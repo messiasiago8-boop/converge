@@ -847,7 +847,7 @@ app.post('/api/rotina/prioridades', rotaPortal(async (req, res) => {
 
 app.patch('/api/rotina/prioridades/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const { concluida, top3, texto, adiar_ate } = req.body;
+  const { concluida, top3, texto, adiar_ate, data } = req.body;
   const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const tarefa = (dbUser.prioridades_dia || []).find(t => t.id === idNum);
@@ -876,7 +876,10 @@ app.patch('/api/rotina/prioridades/:id', rotaPortal(async (req, res) => {
   }
   if (typeof top3 === 'boolean') tarefa.top3 = top3;
   if (typeof texto === 'string' && texto.trim()) tarefa.texto = texto.trim();
-  if (adiar_ate === null) delete tarefa.adiada_ate;
+  if (adiar_ate === null && tarefa.adiada_ate) {
+    delete tarefa.adiada_ate;
+    if (dataAgendaValida(data)) tarefa.data = data;
+  }
   if (typeof adiar_ate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(adiar_ate) && !tarefa.concluida) {
     tarefa.adiada_ate = adiar_ate;
     tarefa.top3 = false;

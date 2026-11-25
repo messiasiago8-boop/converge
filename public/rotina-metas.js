@@ -138,18 +138,14 @@ function renderizarPrioridades() {
 
   const hojeIso = dataLocalRotina(new Date());
   const top3Items = rotinaState.prioridades.filter(p => p.top3);
-  // Checklist do Dia: mostra apenas tarefas programadas para HOJE, ordenadas por data e horário
+  const diaExibido = document.getElementById('checklist-dia')?.value || hojeIso;
   const quickItems = rotinaState.prioridades
     .filter(p => {
-      if (p.top3) return false;
-      if (p.adiada_ate && p.adiada_ate > hojeIso) return false;
-      const dataTarefa = p.data || (p.criado_em ? String(p.criado_em).slice(0, 10) : hojeIso);
-      return dataTarefa === hojeIso;
+      const criada = new Date(p.criado_em);
+      const dataCriacao = Number.isFinite(criada.getTime()) ? dataLocalRotina(criada) : hojeIso;
+      return !p.top3 && (p.adiada_ate || p.data || dataCriacao) === diaExibido;
     })
     .sort((a, b) => {
-      const da = a.data || hojeIso;
-      const db = b.data || hojeIso;
-      if (da !== db) return da.localeCompare(db);
       const ha = a.horario || '99:99';
       const hb = b.horario || '99:99';
       if (ha !== hb) return ha.localeCompare(hb);
@@ -159,12 +155,16 @@ function renderizarPrioridades() {
   const badgeChecklistHoje = document.getElementById('badge-checklist-hoje');
   if (badgeChecklistHoje) {
     const feitasQuick = quickItems.filter(p => p.concluida || p.concluido).length;
-    badgeChecklistHoje.textContent = `${feitasQuick}/${quickItems.length} hoje`;
+    badgeChecklistHoje.textContent = `${feitasQuick}/${quickItems.length} concluídas`;
   }
 
   if (badgeCount) {
     const feitas = top3Items.filter(p => p.concluida || p.concluido).length;
-    badgeCount.textContent = `${feitas}/${top3Items.length} concluídas`;
+    badgeCount.textContent = `${feitas}/3 concluídas`;
+    document.querySelectorAll("#progresso-top3 span").forEach((marca, i) => {
+      marca.classList.toggle("reservada", i < top3Items.length);
+      marca.classList.toggle("feita", i < feitas);
+    });
   }
 
   // Renderiza Top 3
@@ -172,7 +172,7 @@ function renderizarPrioridades() {
   if (top3Items.length === 0) {
     containerTop3.innerHTML = `
       <div class="px-6 py-8 text-center text-slate-400 text-xs border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
-        Nenhuma prioridade máxima definida hoje. Adicione abaixo e clique no botão Promover para definir seu Top 3.
+        Adicione uma prioridade ou traga uma tarefa do checklist para o foco.
       </div>
     `;
   } else {
@@ -183,26 +183,28 @@ function renderizarPrioridades() {
         isDone ? 'bg-emerald-50/70 border-emerald-200 text-slate-500' : 'bg-slate-50 hover:bg-white border-slate-200 text-slate-800 shadow-2xs hover:border-emerald-300'
       }`;
 
+      el.dataset.prioId = item.id;
+      el.classList.add("rotina-tarefa", "rx-item");
       el.innerHTML = `
         <div class="flex items-center gap-3 min-w-0 flex-1">
-          <button type="button" class="btn-check-prio w-5 h-5 rounded-md border flex items-center justify-center text-xs transition cursor-pointer shrink-0 ${
+          <button type="button" aria-label="Concluir tarefa" aria-pressed="${!!isDone}" class="btn-check-prio w-5 h-5 rounded-md border flex items-center justify-center text-xs transition cursor-pointer shrink-0 ${
             isDone ? 'bg-emerald-600 border-emerald-600 text-white font-bold' : 'border-slate-300 bg-white hover:border-emerald-500'
           }">
             ${isDone ? '✓' : ''}
           </button>
-          <div class="truncate flex-1">
+          <div class="flex-1 min-w-0">
             <span class="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 mr-1.5 font-sans tabular-nums">
               #${index + 1}
             </span>
             <span class="text-xs font-semibold ${isDone ? 'line-through opacity-75' : 'text-slate-900'}">${escapeHTML(item.texto)}</span>
           </div>
         </div>
-        <div class="flex items-center gap-1 shrink-0">
+        <div class="rotina-tarefa-acoes flex items-center gap-1">
           <button type="button" class="btn-demover-top3 px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 border border-slate-200 transition cursor-pointer" title="Remover do Top 3">
             Desmarcar
           </button>
           ${!isDone ? '<button type="button" class="btn-adiar-tarefa text-[10px] font-semibold text-slate-700 underline">Mover para amanhã</button>' : ''}
-          <button type="button" class="btn-delete-prio p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Apagar Tarefa">
+          <button type="button" class="btn-delete-prio p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" aria-label="Arquivar tarefa" title="Arquivar tarefa">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
@@ -229,7 +231,7 @@ function renderizarPrioridades() {
   containerQuick.innerHTML = '';
   if (quickItems.length === 0) {
     containerQuick.innerHTML = `
-      <p class="text-[11px] text-slate-400 py-4 text-center">Nenhuma pendência na caixa de entrada.</p>
+      <p class="text-[11px] text-slate-400 py-4 text-center">Nenhuma tarefa para este dia. Adicione uma acima.</p>
     `;
   } else {
     quickItems.forEach(item => {
@@ -237,21 +239,23 @@ function renderizarPrioridades() {
       const el = document.createElement('div');
       el.className = 'py-2 px-2.5 rounded-lg bg-slate-50 hover:bg-white border border-slate-200/80 transition flex items-center justify-between gap-2';
 
+      el.dataset.prioId = item.id;
+      el.classList.add("rotina-tarefa", "rx-item");
       el.innerHTML = `
         <div class="flex items-center gap-2 min-w-0 flex-1">
-          <button type="button" class="btn-check-prio w-4 h-4 rounded border flex items-center justify-center text-[10px] transition cursor-pointer shrink-0 ${
+          <button type="button" aria-label="Concluir tarefa" aria-pressed="${!!isDone}" class="btn-check-prio w-4 h-4 rounded border flex items-center justify-center text-[10px] transition cursor-pointer shrink-0 ${
             isDone ? 'bg-emerald-600 border-emerald-600 text-white font-bold' : 'border-slate-300 bg-white hover:border-emerald-500'
           }">
             ${isDone ? '✓' : ''}
           </button>
           ${item.horario ? `<span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200/70 shrink-0">${escapeHTML(item.horario)}</span>` : ''}
-          <span class="text-xs truncate ${isDone ? 'line-through text-slate-400' : 'text-slate-700'}">${escapeHTML(item.texto)}</span>
+          <span class="text-xs ${isDone ? 'line-through text-slate-400' : 'text-slate-700'}">${escapeHTML(item.texto)}</span>
         </div>
-        <div class="flex items-center gap-1 shrink-0">
-          ${item.adiada_ate && item.adiada_ate > dataLocalRotina(new Date()) ? '<span class="text-[10px] text-slate-500">Adiada</span>' : `
+        <div class="rotina-tarefa-acoes flex items-center gap-1">
+          ${diaExibido !== hojeIso ? '<span class="text-[10px] text-slate-500">Planejada</span>' : `
             <button type="button" class="btn-promover-top3 text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md" title="Promover ao Top 3">Promover Top 3</button>`}
-          ${!isDone ? `<button type="button" class="btn-adiar-tarefa text-[10px] font-semibold text-slate-700 underline">${item.adiada_ate && item.adiada_ate > dataLocalRotina(new Date()) ? 'Trazer para hoje' : 'Mover para amanhã'}</button>` : ''}
-          <button type="button" class="btn-delete-prio p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Apagar Tarefa">
+          ${!isDone && (diaExibido <= hojeIso || item.adiada_ate > hojeIso) ? `<button type="button" class="btn-adiar-tarefa text-[10px] font-semibold text-slate-700 underline">${item.adiada_ate && item.adiada_ate > dataLocalRotina(new Date()) ? 'Trazer para hoje' : 'Mover para amanhã'}</button>` : ''}
+          <button type="button" class="btn-delete-prio p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" aria-label="Arquivar tarefa" title="Arquivar tarefa">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
@@ -290,7 +294,9 @@ async function adiarTarefa(item) {
   try {
     await salvarRotina(`/api/rotina/prioridades/${item.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adiar_ate: adiada ? null : dataLocalRotina(amanha) })
+      body: JSON.stringify(adiada
+        ? { adiar_ate: null, data: dataLocalRotina(hoje) }
+        : { adiar_ate: dataLocalRotina(amanha) })
     });
     await carregarPrioridades();
   } catch (erro) {
@@ -1773,20 +1779,47 @@ document.addEventListener('DOMContentLoaded', () => {
   const formQuickTask = document.getElementById('form-quick-task');
   const inputQuickDate = document.getElementById('input-quick-task-date');
   const inputQuickTime = document.getElementById('input-quick-task-time');
-  if (inputQuickDate && !inputQuickDate.value) {
-    inputQuickDate.value = dataLocalRotina(new Date());
+  const seletorDia = document.getElementById('checklist-dia');
+  const feedback = document.getElementById('checklist-feedback');
+  const hoje = () => dataLocalRotina(new Date());
+  function selecionarDia(data) {
+    seletorDia.value = data;
+    inputQuickDate.value = data;
+    feedback.textContent = '';
+    renderizarPrioridades();
   }
   if (formQuickTask) {
+    selecionarDia(hoje());
+    seletorDia.addEventListener('change', () => selecionarDia(seletorDia.value || hoje()));
+    document.getElementById('checklist-dia-hoje').addEventListener('click', () => selecionarDia(hoje()));
+    for (const [id, dias] of [['checklist-dia-anterior', -1], ['checklist-dia-proximo', 1]]) {
+      document.getElementById(id).addEventListener('click', () => {
+        const data = new Date(`${seletorDia.value || hoje()}T12:00:00`);
+        data.setDate(data.getDate() + dias);
+        selecionarDia(dataLocalRotina(data));
+      });
+    }
+    const campoTexto = document.getElementById('input-quick-task-text');
+    campoTexto.addEventListener('invalid', e => {
+      e.preventDefault();
+      feedback.textContent = 'Digite o nome da tarefa.';
+      campoTexto.focus();
+    });
     formQuickTask.addEventListener('submit', async (e) => {
       e.preventDefault();
       const input = document.getElementById('input-quick-task-text');
       const texto = input.value.trim();
-      if (!texto) return;
+      if (!texto) {
+        feedback.textContent = 'Digite o nome da tarefa.';
+        input.focus();
+        return;
+      }
       const dataProg = (inputQuickDate && inputQuickDate.value) ? inputQuickDate.value : dataLocalRotina(new Date());
       const horarioProg = (inputQuickTime && inputQuickTime.value) ? inputQuickTime.value : null;
       const botao = formQuickTask.querySelector('[type=submit]');
       if (botao.disabled) return;
       botao.disabled = true;
+      feedback.textContent = 'Salvando…';
 
       try {
         await salvarRotina('/api/rotina/prioridades', {
@@ -1796,9 +1829,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         input.value = '';
         if (inputQuickTime) inputQuickTime.value = '';
+        selecionarDia(dataProg);
         await carregarPrioridades();
+        feedback.textContent = 'Tarefa adicionada.';
+        input.focus();
       } catch (err) {
-        avisarFalhaRotina(err);
+        feedback.textContent = err.message || 'Não foi possível adicionar a tarefa.';
       } finally {
         botao.disabled = false;
       }
