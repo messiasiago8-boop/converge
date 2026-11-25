@@ -446,19 +446,20 @@ async function carregarHistoricoTarefas() {
 function obterDiasSemanaAtual(referencia = new Date()) {
   const hoje = new Date();
   const diaSemanaIndex = referencia.getDay(); // 0 Dom, 1 Seg...
-  const diffSegunda = diaSemanaIndex === 0 ? -6 : 1 - diaSemanaIndex;
+  const inicio = window.PerfilPortal?.primeiroDia() ?? 1;
+  const diffSegunda = -((diaSemanaIndex - inicio + 7) % 7);
   
   const segunda = new Date(referencia);
   segunda.setDate(referencia.getDate() + diffSegunda);
 
   const dias = [];
-  const nomesCurtos = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  const nomesCurtos = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   for (let i = 0; i < 7; i++) {
     const d = new Date(segunda);
     d.setDate(segunda.getDate() + i);
     dias.push({
-      nome: nomesCurtos[i],
+      nome: nomesCurtos[d.getDay()],
       iso: dataLocalRotina(d),
       isHoje: dataLocalRotina(d) === dataLocalRotina(hoje)
     });
@@ -778,7 +779,8 @@ function renderizarAgendaMensal() {
   const ultimoDia = new Date(ano, mes + 1, 0);
   const totalDias = ultimoDia.getDate();
   const primeiroDiaSemana = primeiroDia.getDay(); // 0 Dom, 1 Seg...
-  const offset = primeiroDiaSemana === 0 ? 6 : primeiroDiaSemana - 1; // Ajusta para Seg = 0
+  const inicio = window.PerfilPortal?.primeiroDia() ?? 1;
+  const offset = (primeiroDiaSemana - inicio + 7) % 7;
 
   const filtroPessoal = document.getElementById('chk-filtro-pessoal')?.checked ?? true;
   const filtroFinancas = document.getElementById('chk-filtro-financas')?.checked ?? true;
@@ -786,7 +788,7 @@ function renderizarAgendaMensal() {
 
   const headerGrid = document.createElement('div');
   headerGrid.className = 'grid grid-cols-7 gap-1 text-center font-bold text-[10px] text-slate-400 uppercase tracking-wider pb-1';
-  ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].forEach(n => {
+  obterDiasSemanaAtual().map(dia => dia.nome).forEach(n => {
     headerGrid.innerHTML += `<div>${n}</div>`;
   });
   container.appendChild(headerGrid);
@@ -1064,6 +1066,8 @@ function renderizarMetas() {
 
   metasFiltradas.forEach(meta => {
     const card = document.createElement('div');
+    card.id = 'meta-portal-' + meta.id;
+    card.tabIndex = -1;
     const isConcluida = (meta.progresso || 0) >= 100;
     const progresso = Math.min(100, Math.max(0, meta.progresso || 0));
 

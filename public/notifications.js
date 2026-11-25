@@ -88,6 +88,7 @@ const ConvergeNotifications = {
   // Registra/sincroniza inscrição Web Push com o backend sem interromper o usuário
   async registrarWebPushSilencioso() {
     try {
+      if (localStorage.getItem('converge-push-pausado') === '1') return false;
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
       const token = this.tokenSessao;
       const conta = localStorage.getItem('usuarioEmail');
@@ -200,6 +201,7 @@ const ConvergeNotifications = {
 
   // Solicita permissão nativa + registra Web Push real (ou envia teste se já ativo)
   async solicitarPermissao() {
+    localStorage.removeItem('converge-push-pausado');
     // Regra da Apple: no iPhone, Push só existe quando aberto pela Tela de Início
     if (this.isIOS() && !this.isStandalone()) {
       this.mostrarGuiaIOS();
@@ -253,11 +255,17 @@ const ConvergeNotifications = {
   },
 
   // Dispara um Push real vindo do servidor para testar na tela bloqueada / celular
-  async enviarPushTeste() {
+  async enviarPushTeste(endpoint) {
     try {
+      if (!endpoint) {
+        const registro = await navigator.serviceWorker?.getRegistration('/');
+        endpoint = (await registro?.pushManager?.getSubscription())?.endpoint;
+      }
+      if (!endpoint) return false;
       const resp = await fetch('/api/push/test', {
         method: 'POST',
-        headers: this.getAuthHeaders()
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ endpoint })
       });
       if (!resp.ok) return false;
       const data = await resp.json();
@@ -270,6 +278,7 @@ const ConvergeNotifications = {
 
   // Dispara uma notificação nativa local com som suave (quando o app está aberto)
   async dispararNotificacao({ titulo, corpo, tag, icone = '/icon-192.png' }) {
+    if (localStorage.getItem('converge-push-pausado') === '1') return;
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     if (!this.tokenSessao || this.tokenSessao !== localStorage.getItem('token')) return;
 

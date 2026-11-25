@@ -54,13 +54,22 @@ function autenticarTokenPortal(req, res, next) {
     return res.status(401).json({ success: false, error: 'Entre para acessar sua conta.' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, async (err, user) => {
     if (err || !Number.isSafeInteger(user?.id) || user.id < 1) {
       return res.status(401).json({ success: false, error: 'Sessão inválida ou expirada.' });
     }
     req.usuarioId = user.id;
     req.usuarioNome = user.nome;
     req.usuarioEmail = user.email;
+    if (portalPostgres) {
+      try {
+        if (!await portalPostgres.contaExiste(user.id)) {
+          return res.status(401).json({ success: false, error: 'Conta indisponível.' });
+        }
+      } catch {
+        return res.status(503).json({ success: false, error: 'Não foi possível consultar a conta.' });
+      }
+    }
     next();
   });
 }
@@ -260,12 +269,41 @@ app.get('/api/meus-dados', rotaPortal(async (req, res) => {
     const campos = ['topicos', 'videos', 'notas', 'agendamentos', 'prioridades_dia', 'historico_tarefas', 'habitos', 'compromissos', 'metas'];
     const estudosRotina = Object.fromEntries(campos.map(campo => [campo, portal[campo] || []]));
     estudosRotina.planos_semanais = Object.values(portal.planos_semanais || {});
+    estudosRotina.perfil = portal.perfil || {};
     res.attachment('converge-meus-dados.json');
     res.json({ versao: 1, exportado_em: new Date().toISOString(), portal: estudosRotina, financas });
   } catch (erro) {
     console.error('[Exportação da conta]', erro.message);
     res.status(503).json({ success: false, error: 'Não foi possível exportar seus dados. Tente novamente.' });
   }
+}));
+
+app.get('/api/perfil-portal', rotaPortal(async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const dados = await obterBancoUsuario(req.usuarioId);
+  res.json({ data: dados.perfil || {} });
+}));
+
+app.patch('/api/perfil-portal', rotaPortal(async (req, res) => {
+  const { foco, foto, meta, aba, semana, sugestaoDispensada } = req.body || {};
+  const dados = await obterBancoUsuario(req.usuarioId);
+  const perfil = { ...dados.perfil };
+  const fotoValida = typeof foto === 'string' && foto.length <= 80000 &&
+    /^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]+={0,2}$/.test(foto);
+  if ((foco !== undefined && (typeof foco !== 'string' || foco.length > 160)) ||
+      (foto !== undefined && foto !== null && !fotoValida) ||
+      (meta !== undefined && meta !== null && !dados.metas.some(item => item.id === meta)) ||
+      (aba !== undefined && !['inicio', 'checklist', 'agenda', 'metas', 'perfil'].includes(aba)) ||
+      (semana !== undefined && ![0, 1].includes(semana)) ||
+      (sugestaoDispensada !== undefined && !dataAgendaValida(sugestaoDispensada))) {
+    return res.status(400).json({ error: 'Confira os dados do perfil e tente novamente.' });
+  }
+  for (const [chave, valor] of Object.entries({ foco, foto, meta, aba, semana, sugestaoDispensada })) {
+    if (valor !== undefined) perfil[chave] = valor;
+  }
+  dados.perfil = perfil;
+  await salvarBancoUsuario(dados, req.usuarioId);
+  res.json({ data: perfil });
 }));
 
 // ================= ROTAS AUTENTICADAS DE WEB PUSH ================= //
@@ -348,7 +386,7 @@ app.post('/api/push/test', async (req, res) => {
       body: 'Notificações Push ativas no seu celular (iOS/Android) mesmo com o site fechado.',
       tag: 'converge-push-test',
       url: '/'
-    });
+    }, req.body?.endpoint);
     res.json({ success: true, ...result });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -1341,7 +1379,7 @@ app.get('/api/metas', rotaPortal(async (req, res) => {
 }));
 
 app.post('/api/metas', rotaPortal(async (req, res) => {
-  const { titulo, tipo, valor_alvo, valor_atual, prazo, checklist, projeto_id } = req.body;
+  const { titulo, tipo, valor_alvo, valor_atual, prazo, checklist, projeto_id, sugestao_semana } = req.body;
   if (!titulo || !titulo.trim()) {
     return res.status(400).json({ success: false, message: 'Título da meta é obrigatório.' });
   }
@@ -1358,11 +1396,16 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
   }
   const dbUser = await obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.metas)) dbUser.metas = [];
+  if (sugestao_semana !== undefined && (!dataAgendaValida(sugestao_semana) ||
+      dbUser.metas.some(item => item.sugestao_semana === sugestao_semana))) {
+    return res.status(409).json({ success: false, message: 'Já existe uma meta sugerida para este período ou a data é inválida.' });
+  }
 
   const novaMeta = {
     id: dbUser.metas.length > 0 ? Math.max(...dbUser.metas.map(m => m.id)) + 1 : 1,
     titulo: titulo.trim(),
     tipo: tipo || 'pessoal', // 'financeira' | 'estudos' | 'pessoal'
+    ...(sugestao_semana ? { sugestao_semana } : {}),
     ...(projetoId ? { projeto_id: projetoId } : {}),
     valor_alvo: Number(valor_alvo) || 100,
     valor_atual: Number(valor_atual) || 0,

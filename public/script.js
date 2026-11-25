@@ -1685,6 +1685,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const navBtnRevisao = document.getElementById('nav-btn-revisao');
   const viewRevisao = document.getElementById('view-revisao');
   const ocultarRevisao = () => {
+    for (const nome of ['perfil', 'configuracoes']) {
+      document.getElementById('view-' + nome).classList.add('hidden');
+      document.getElementById('nav-btn-' + nome).removeAttribute('aria-current');
+    }
     viewRevisao.classList.add('hidden');
     navBtnRevisao.classList.remove('bg-emerald-800', 'text-white');
     navBtnRevisao.removeAttribute('aria-current');
@@ -1970,7 +1974,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Carrega dados de Metas
-    if (typeof carregarMetas === 'function') carregarMetas();
+    return carregarMetas();
   };
 
   // ABA 5: TUTORIAL MOBILE (APP & ALERTAS iOS / ANDROID)
@@ -2013,6 +2017,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.navIrParaMetas = showMetasModule;
   window.navIrParaTutorialIos = showTutorialIosModule;
   window.navIrParaRevisao = () => {
+    ocultarRevisao();
     state.currentView = 'revisao';
     pausarVideoTutorial();
     atualizarSidebarDrilldown('inicio');
@@ -2034,6 +2039,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.carregarRevisaoSemanal();
   };
   navBtnRevisao.addEventListener('click', window.navIrParaRevisao);
+  for (const [nome, titulo] of [['perfil', 'Meu perfil'], ['configuracoes', 'Configurações']]) {
+    const botao = document.getElementById('nav-btn-' + nome);
+    botao.addEventListener('click', () => {
+      showInicioModule();
+      if (typeof toggleSidebarPortal === 'function') toggleSidebarPortal(false);
+      state.currentView = nome;
+      document.getElementById('view-dashboard-geral').classList.add('hidden');
+      document.getElementById('view-' + nome).classList.remove('hidden');
+      document.getElementById('breadcrumb-topic').textContent = titulo;
+      botao.setAttribute('aria-current', 'page');
+      window.PerfilPortal.abrir(nome);
+    });
+  }
   window.abrirAulaDaRevisao = video => {
     showLmsModule();
     openLessonView(video, 'revisao');
@@ -2233,6 +2251,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Inicialização padrão do Life OS: Abre diretamente no Painel Inicial (Início / Visão Geral)
   showInicioModule();
+  window.PerfilPortal.iniciar(() => state.currentView === 'inicio');
 });
 
 // ========================================================================= //

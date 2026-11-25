@@ -7,6 +7,10 @@ async function abrirPortalPostgres() {
   const revisoes = new WeakMap();
 
   return {
+    async contaExiste(usuarioId) {
+      const resultado = await pool.query('SELECT 1 FROM usuarios WHERE id = $1', [usuarioId]);
+      return resultado.rowCount > 0;
+    },
     async carregar(usuarioId) {
       const { rows } = await pool.query('SELECT dados, versao FROM portal_dados WHERE usuario_id = $1', [usuarioId]);
       const estado = rows[0]?.dados || {};

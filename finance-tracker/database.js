@@ -96,6 +96,20 @@ if (!dbInstance) {
           return;
         }
 
+        if (/^UPDATE usuarios SET nome = /i.test(q)) {
+          const [nome, email, senha, id, senhaAnterior, emailAnterior] = params;
+          const usuario = store.usuarios.find(item => item.id === id && item.senha === senhaAnterior && item.email === emailAnterior);
+          ctx.changes = Number(Boolean(usuario));
+          if (usuario) {
+            if (store.usuarios.some(item => item.id !== id && item.email === email)) {
+              throw Object.assign(new Error('E-mail já cadastrado.'), { code: 'SQLITE_CONSTRAINT' });
+            }
+            Object.assign(usuario, { nome, email, senha });
+            persist();
+          }
+          cb?.call(ctx, null);
+          return;
+        }
         if (/^INSERT INTO usuarios/i.test(q)) {
           if (store.usuarios.some(usuario => usuario.email === params[1])) {
             const error = new Error('E-mail já cadastrado.');
@@ -344,6 +358,10 @@ if (!dbInstance) {
       const q = (query || '').trim();
 
       try {
+        if (/FROM usuarios WHERE id = /i.test(q)) {
+          cb?.(null, store.usuarios.find(usuario => usuario.id === params[0]));
+          return;
+        }
         if (/FROM usuarios/i.test(q)) {
           const email = String(params[0]).toLowerCase();
           const u = store.usuarios.find(x => (x.email || '').toLowerCase() === email);

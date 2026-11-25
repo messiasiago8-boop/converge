@@ -453,20 +453,19 @@
 
       <div class="pt-2.5 border-t border-slate-800/60 space-y-2 px-1">
         <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-2 min-w-0">
-            <div id="sidebar-user-avatar" class="w-7 h-7 rounded-full bg-slate-800/90 flex items-center justify-center text-[11px] font-bold text-slate-200 ring-1 ring-slate-700 shrink-0">
+          <button type="button" id="nav-btn-perfil" aria-label="Meu perfil" class="flex items-center space-x-2 min-w-0 text-left">
+            <div id="sidebar-user-avatar" class="w-7 h-7 overflow-hidden rounded-full bg-slate-800/90 flex items-center justify-center text-[11px] font-bold text-slate-200 ring-1 ring-slate-700 shrink-0">
               EC
             </div>
             <div class="truncate">
               <p id="sidebar-user-name" class="text-xs font-semibold text-slate-200 truncate leading-tight">Estudante Corporativo</p>
               <p id="sidebar-user-email" class="text-[10px] text-slate-400 truncate">user@empresa.com</p>
             </div>
-          </div>
+          </button>
           <span class="w-2 h-2 rounded-full bg-emerald-400 ring-4 ring-emerald-500/20 shrink-0" title="Conexão ativa"></span>
         </div>
 
-        <button type="button" id="btn-exportar-meus-dados" class="w-full rounded-lg border border-slate-600 px-2 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-800 disabled:opacity-50">Exportar meus dados</button>
-        <p id="status-exportar-meus-dados" role="status" class="text-[11px] text-slate-200"></p>
+        <button type="button" id="nav-btn-configuracoes" class="w-full rounded-lg border border-slate-600 px-2 py-2 text-left text-xs font-semibold text-slate-200 hover:bg-slate-800">⚙️ Configurações</button>
         <button
           type="button"
           id="btn-sidebar-logout"
@@ -1233,6 +1232,90 @@
       </section>
 
       <!-- ================= VISÃO 6: NOVO PILAR - METAS ================= -->
+      <section id="view-perfil" class="hidden mx-auto max-w-5xl space-y-5 p-4 sm:p-6" aria-labelledby="titulo-perfil">
+        <header class="flex flex-wrap items-center gap-4">
+          <div id="perfil-avatar" class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xl font-semibold text-emerald-900"></div>
+          <div><h1 id="titulo-perfil" class="text-2xl font-bold">Meu perfil</h1><p id="perfil-identidade" class="text-sm text-slate-600 break-all"></p></div>
+        </header>
+        <p id="perfil-status" role="status" class="text-sm text-slate-700"></p>
+        <div class="grid gap-4 md:grid-cols-2">
+          <form id="perfil-form" class="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+            <h2 class="text-lg font-semibold">Personalize seu perfil</h2>
+            <label class="block text-sm">Foto de perfil<input id="perfil-foto" type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-sm"></label>
+            <button type="button" id="perfil-remover-foto" class="text-sm underline">Remover foto</button>
+            <label class="block text-sm">Meu foco atual<input id="perfil-foco" maxlength="160" class="mt-1 w-full border border-slate-300 p-2 text-sm" placeholder="Ex.: terminar o curso de Excel"></label>
+            <label class="block text-sm">Meta em destaque<select id="perfil-meta" class="mt-1 w-full border border-slate-300 p-2 text-sm"></select></label>
+            <button class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">Salvar perfil</button>
+          </form>
+          <div class="space-y-4">
+            <article class="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+              <h2 class="text-lg font-semibold">Meta em destaque</h2><p id="perfil-meta-titulo" class="text-sm"></p>
+              <progress id="perfil-meta-progresso" class="w-full accent-emerald-700" max="100" aria-label="Progresso da meta" hidden></progress>
+              <p id="perfil-meta-prazo" class="text-sm text-slate-600"></p>
+              <button type="button" id="perfil-continuar-meta" class="text-sm font-semibold text-emerald-800 underline" hidden>Continuar meta</button>
+            </article>
+            <article class="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+              <h2 class="text-lg font-semibold">Conquistas</h2><ul id="perfil-conquistas" class="space-y-1 text-sm"></ul>
+            </article>
+          </div>
+        </div>
+        <article class="rounded-xl border border-slate-200 bg-white p-4">
+          <h2 class="text-lg font-semibold">Minha semana</h2><p id="perfil-periodo" class="mb-3 text-xs text-slate-600"></p>
+          <div id="perfil-semana" class="grid gap-2 sm:grid-cols-3"></div>
+        </article>
+        <form id="perfil-sugestao" class="hidden rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+          <h2 class="text-lg font-semibold">Sugestão de meta</h2>
+          <label class="block text-sm">Título da meta<input id="perfil-sugestao-titulo" required maxlength="160" class="mt-1 w-full border border-slate-300 p-2 text-sm"></label>
+          <label class="block text-sm">Prazo<input id="perfil-sugestao-prazo" type="date" required class="mt-1 block border border-slate-300 p-2 text-sm"></label>
+          <button class="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Aceitar meta</button>
+          <button type="button" id="perfil-dispensar" class="px-3 py-2 text-sm underline">Dispensar</button>
+        </form>
+      </section>
+      <section id="view-configuracoes" class="hidden mx-auto max-w-5xl space-y-4 p-4 sm:p-6" aria-labelledby="titulo-configuracoes">
+        <h1 id="titulo-configuracoes" class="text-2xl font-bold">Configurações</h1>
+        <p id="config-status" role="status" class="text-sm text-slate-700"></p>
+        <div class="grid gap-4 md:grid-cols-2">
+          <form id="config-conta" class="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+            <h2 class="text-lg font-semibold">Conta</h2>
+            <label class="block text-sm">Nome<input name="nome" required maxlength="100" autocomplete="name" class="mt-1 w-full border border-slate-300 p-2"></label>
+            <label class="block text-sm">E-mail<input name="email" required type="email" autocomplete="email" class="mt-1 w-full border border-slate-300 p-2"></label>
+            <label class="block text-sm">Senha atual <span class="text-slate-600">(para alterar e-mail ou senha)</span><input name="senhaAtual" type="password" autocomplete="current-password" class="mt-1 w-full border border-slate-300 p-2"></label>
+            <label class="block text-sm">Nova senha<input name="novaSenha" minlength="6" maxlength="72" type="password" autocomplete="new-password" class="mt-1 w-full border border-slate-300 p-2"></label>
+            <button class="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Salvar conta</button>
+          </form>
+          <div class="space-y-4">
+            <form id="config-preferencias" class="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+              <h2 class="text-lg font-semibold">Preferências</h2>
+              <label class="block text-sm">Aba inicial<select name="aba" class="mt-1 block w-full border border-slate-300 p-2"><option value="inicio">Início</option><option value="checklist">Checklist</option><option value="agenda">Agenda</option><option value="metas">Metas</option><option value="perfil">Meu perfil</option></select></label>
+              <label class="block text-sm">Primeiro dia da semana <span class="text-slate-600">(Agenda, Hábitos e Perfil)</span><select name="semana" class="mt-1 block w-full border border-slate-300 p-2"><option value="1">Segunda-feira</option><option value="0">Domingo</option></select></label>
+              <button class="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white">Salvar preferências</button>
+            </form>
+            <article class="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+              <h2 class="text-lg font-semibold">Notificações neste aparelho</h2><p id="config-push-status" role="status" class="text-sm"></p>
+              <div class="flex flex-wrap gap-2 text-sm">
+                <button type="button" id="config-push-ativar" class="rounded-lg border border-slate-300 px-3 py-2">Ativar</button>
+                <button type="button" id="config-push-desativar" class="rounded-lg border border-slate-300 px-3 py-2">Desativar</button>
+                <button type="button" id="config-push-teste" class="rounded-lg border border-slate-300 px-3 py-2">Enviar teste</button>
+              </div>
+            </article>
+          </div>
+        </div>
+        <article class="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+          <h2 class="text-lg font-semibold">Privacidade e dados</h2>
+          <button type="button" id="btn-exportar-meus-dados" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">Exportar meus dados</button>
+          <p id="status-exportar-meus-dados" role="status" class="text-sm"></p>
+          <details id="config-exclusao" hidden>
+            <summary class="cursor-pointer text-sm font-semibold text-rose-800">Excluir conta</summary>
+            <form id="config-excluir" class="mt-2 max-w-sm space-y-2">
+              <p class="text-sm">Seus dados da conta serão apagados permanentemente.</p>
+              <label class="block text-sm">Senha atual<input name="senhaAtual" required type="password" autocomplete="current-password" class="mt-1 w-full border border-slate-300 p-2"></label>
+              <label class="block text-sm">Digite EXCLUIR<input name="confirmacao" required autocomplete="off" class="mt-1 w-full border border-slate-300 p-2"></label>
+              <button class="rounded-lg bg-rose-800 px-3 py-2 text-sm font-semibold text-white">Excluir minha conta</button>
+            </form>
+          </details>
+        </article>
+      </section>
+
       <section id="view-revisao" class="hidden mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8" aria-labelledby="titulo-revisao">
         <header class="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -2009,6 +2092,7 @@
   </dialog>
   <script src="/notifications.js"></script>
   <script src="/rotina-metas.js"></script>
+  <script src="/perfil-portal.js"></script>
   <script src="/revisao-semanal.js"></script>
   <script src="/rotina-ux.js"></script>
   <script src="/groq-ia.js"></script>

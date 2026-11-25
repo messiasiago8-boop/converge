@@ -165,13 +165,14 @@ async function initPushService({ dataDir, obterBancoUsuario, salvarBancoUsuario,
     };
   }
 
-  async function sendPushToUser(usuarioId, payload) {
+  async function sendPushToUser(usuarioId, payload, endpoint) {
     if (!isEnabled()) {
       return { sent: 0, failed: 0, removed: 0, error: 'Web Push desabilitado no servidor.' };
     }
 
     const dbUser = await obterBancoUsuario(usuarioId);
-    const subs = Array.isArray(dbUser.push_subscriptions) ? dbUser.push_subscriptions : [];
+    const subs = (Array.isArray(dbUser.push_subscriptions) ? dbUser.push_subscriptions : [])
+      .filter(inscricao => endpoint === undefined || inscricao.endpoint === endpoint);
     if (subs.length === 0) {
       return { sent: 0, failed: 0, removed: 0 };
     }

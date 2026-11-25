@@ -76,7 +76,12 @@ export const autenticarToken = (req, res, next) => {
     req.usuarioId = user.id;
     req.usuarioEmail = user.email;
     req.usuarioNome = user.nome;
-    next();
+    if (!process.env.DATABASE_URL) return next();
+    db.get('SELECT id FROM usuarios WHERE id = ?', [user.id], (erro, usuario) => {
+      if (erro) return res.status(503).json({ error: 'Não foi possível consultar a conta.' });
+      if (!usuario) return res.status(401).json({ error: 'Conta indisponível.' });
+      next();
+    });
   });
 };
 
@@ -276,14 +281,69 @@ app.post('/api/auth/login', authRateLimiter, async (req, res) => {
 
 // 3. GET /api/auth/perfil (Retorna os dados do usuário autenticado)
 app.get('/api/auth/perfil', autenticarToken, (req, res) => {
-  res.json({
-    success: true,
-    usuario: {
-      id: req.usuarioId,
-      nome: req.usuarioNome,
-      email: req.usuarioEmail
-    }
+  db.get('SELECT id, nome, email FROM usuarios WHERE id = ?', [req.usuarioId], (erro, usuario) => {
+    res.set('Cache-Control', 'no-store');
+    if (erro) return res.status(503).json({ error: 'Não foi possível consultar a conta.' });
+    if (!usuario) return res.status(401).json({ error: 'Conta indisponível.' });
+    const { id, nome, email } = usuario;
+    res.json({ success: true, usuario: { id, nome, email }, podeExcluir: Boolean(process.env.DATABASE_URL) });
   });
+});
+
+function lerConta(id) {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM usuarios WHERE id = ?', [id], (erro, conta) => erro ? reject(erro) : resolve(conta));
+  });
+}
+
+function gravarConta(sql, valores) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, valores, function (erro) { if (erro) reject(erro); else resolve(this.changes); });
+  });
+}
+
+app.patch('/api/auth/perfil', authRateLimiter, autenticarToken, async (req, res) => {
+  const { nome, email, senhaAtual, novaSenha } = req.body || {};
+  if (typeof nome !== 'string' || !nome.trim() || nome.length > 100 ||
+      typeof email !== 'string' || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+      (novaSenha && (typeof novaSenha !== 'string' || novaSenha.length < 6 || Buffer.byteLength(novaSenha) > 72))) {
+    return res.status(400).json({ error: 'Confira nome, e-mail e senha. Use de 6 a 72 bytes para a nova senha.' });
+  }
+  try {
+    const conta = await lerConta(req.usuarioId);
+    if (!conta) return res.status(401).json({ error: 'Conta indisponível.' });
+    const novoEmail = email.trim().toLowerCase();
+    if ((novoEmail !== conta.email || novaSenha) &&
+        (typeof senhaAtual !== 'string' || !await bcrypt.compare(senhaAtual, conta.senha))) {
+      return res.status(400).json({ error: 'Confira sua senha atual.' });
+    }
+    const senha = novaSenha ? await bcrypt.hash(novaSenha, 10) : conta.senha;
+    const usuario = { id: conta.id, nome: nome.trim(), email: novoEmail };
+    const mudancas = await gravarConta('UPDATE usuarios SET nome = ?, email = ?, senha = ? WHERE id = ? AND senha = ? AND email = ?',
+      [usuario.nome, usuario.email, senha, conta.id, conta.senha, conta.email]);
+    if (!mudancas) return res.status(409).json({ error: 'A conta foi alterada. Atualize a página e tente novamente.' });
+    res.json({ usuario, token: jwt.sign(usuario, JWT_SECRET, { expiresIn: '7d' }) });
+  } catch (erro) {
+    if (['23505', 'SQLITE_CONSTRAINT'].includes(erro.code)) return res.status(409).json({ error: 'Este e-mail já está em uso.' });
+    res.status(503).json({ error: 'Não foi possível salvar a conta.' });
+  }
+});
+
+app.delete('/api/auth/perfil', authRateLimiter, autenticarToken, async (req, res) => {
+  if (!process.env.DATABASE_URL) return res.status(503).json({ error: 'Exclusão indisponível neste ambiente.' });
+  const { senhaAtual, confirmacao } = req.body || {};
+  if (confirmacao !== 'EXCLUIR' || typeof senhaAtual !== 'string') {
+    return res.status(400).json({ error: 'Informe a senha atual e digite EXCLUIR.' });
+  }
+  try {
+    const conta = await lerConta(req.usuarioId);
+    if (!conta || !await bcrypt.compare(senhaAtual, conta.senha)) return res.status(400).json({ error: 'Confira sua senha atual.' });
+    const excluidas = await gravarConta('DELETE FROM usuarios WHERE id = ? AND senha = ? AND email = ?', [conta.id, conta.senha, conta.email]);
+    if (!excluidas) return res.status(409).json({ error: 'A conta foi alterada. Atualize a página e tente novamente.' });
+    res.json({ success: true });
+  } catch {
+    res.status(503).json({ error: 'Não foi possível excluir a conta.' });
+  }
 });
 
 app.get('/api/health', (_req, res) => {
