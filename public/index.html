@@ -433,25 +433,9 @@
 
     </div>
 
-    <!-- Rodapé da Sidebar: Ações e Perfil do Aluno -->
+    <!-- Rodapé da Sidebar: Perfil do Aluno -->
     <div class="p-3 border-t border-slate-800/80 bg-slate-900/60 shrink-0 space-y-2">
-      <div class="grid grid-cols-2 gap-2">
-        <button id="btn-open-modal-topic" class="w-full py-2 px-2 text-xs font-medium text-slate-200 bg-slate-800/80 hover:bg-slate-700/80 hover:text-white rounded-md border border-slate-700 transition flex items-center justify-center space-x-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500">
-          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          <span class="truncate">Novo Tópico</span>
-        </button>
-
-        <button id="btn-open-modal-video" class="w-full py-2 px-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-md transition flex items-center justify-center space-x-1.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-brand-400">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-          </svg>
-          <span class="truncate">Novo Vídeo</span>
-        </button>
-      </div>
-
-      <div class="pt-2.5 border-t border-slate-800/60 space-y-2 px-1">
+      <div class="space-y-2 px-1">
         <div class="flex items-center gap-2">
           <button type="button" id="nav-btn-perfil" aria-label="Meu perfil" class="flex flex-1 items-center gap-2 min-w-0 min-h-[36px] rounded-lg border border-emerald-300/40 bg-emerald-400/10 px-2 py-1 text-left cursor-pointer hover:bg-emerald-400/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-300">
             <div id="sidebar-user-avatar" class="w-6 h-6 overflow-hidden rounded-full bg-slate-800/90 flex items-center justify-center text-[11px] font-bold text-slate-200 ring-1 ring-slate-700 shrink-0">
@@ -787,7 +771,21 @@
             <p id="grid-topic-subtitle" class="text-xs text-slate-500 mt-1">Selecione uma videoaula para iniciar sua sessão de aprendizado com anotações sincronizadas.</p>
           </div>
 
-          <div class="flex items-center space-x-2 self-start md:self-auto">
+          <div class="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            <button id="btn-open-modal-topic" class="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-md border border-slate-200 transition flex items-center space-x-1.5 shadow-xs cursor-pointer">
+              <svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              <span>Novo Tópico</span>
+            </button>
+
+            <button id="btn-open-modal-video" class="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-md transition flex items-center space-x-1.5 shadow-xs cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              <span>Novo Vídeo</span>
+            </button>
+
             <span id="video-count-badge" class="text-xs font-semibold text-slate-700 bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-xs">
               0 aulas
             </span>
