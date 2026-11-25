@@ -358,6 +358,14 @@
       position: relative;
       z-index: 1;
     }
+    .cv-logo-box.is-user-photo {
+      padding: 0;
+      border-radius: 50%;
+    }
+    .cv-logo-box.is-user-photo img {
+      border-radius: 50%;
+      object-fit: cover;
+    }
     .cv-logo-box::after {
       content: '';
       position: absolute;
@@ -899,9 +907,13 @@
 
         exibirAlerta(data.message || 'Autenticado com sucesso! Redirecionando...', 'sucesso');
 
-        // Animação "CONVERGE Signature": 4 pilares convergindo no emblema + sincronização em cascata
+        // Animação "CONVERGE Signature" (duração total: 5 segundos): foto de perfil do usuário ou logo CONVERGE
         const nomeBruto = (data.usuario?.nome || nome || 'bem-vindo').trim().split(/\s+/)[0] || 'bem-vindo';
         const primeiroNome = nomeBruto.replace(/[<>&"']/g, '');
+        const emailChave = (data.usuario?.email || email || '').trim().toLowerCase();
+        const fotoSalva = (emailChave && localStorage.getItem('usuarioFoto_' + emailChave)) || localStorage.getItem('usuarioFoto');
+        const usarFotoPerfil = typeof fotoSalva === 'string' && fotoSalva.startsWith('data:image/');
+
         const shell = document.querySelector('.converge-shell');
         if (shell) shell.classList.add('is-leaving');
 
@@ -935,8 +947,8 @@
                 <circle class="cv-ring-progress" cx="66" cy="66" r="60" />
               </svg>
 
-              <div class="cv-logo-box">
-                <img src="/icon-192.png" alt="CONVERGE" />
+              <div class="cv-logo-box ${usarFotoPerfil ? 'is-user-photo' : ''}" id="cv-emblem-box">
+                <img id="cv-emblem-img" src="${usarFotoPerfil ? fotoSalva : '/icon-192.png'}" alt="${primeiroNome}" />
               </div>
 
               <div class="cv-check-badge" aria-hidden="true">
@@ -968,21 +980,41 @@
         `;
         document.body.appendChild(stage);
 
+        // Se ainda não tinha no localStorage, busca a foto salva no perfil oficial do servidor (/api/perfil-portal)
+        if (!usarFotoPerfil && data.token) {
+          fetch('/api/perfil-portal', { headers: { Authorization: 'Bearer ' + data.token } })
+            .then(r => r.ok ? r.json() : null)
+            .then(d => {
+              const fotoSrv = d && d.data && d.data.foto;
+              if (fotoSrv && typeof fotoSrv === 'string' && fotoSrv.startsWith('data:image/')) {
+                localStorage.setItem('usuarioFoto', fotoSrv);
+                if (emailChave) localStorage.setItem('usuarioFoto_' + emailChave, fotoSrv);
+                const box = document.getElementById('cv-emblem-box');
+                const img = document.getElementById('cv-emblem-img');
+                if (box && img) {
+                  box.classList.add('is-user-photo');
+                  img.src = fotoSrv;
+                }
+              }
+            })
+            .catch(() => {});
+        }
+
         requestAnimationFrame(() => {
           stage.classList.add('is-visible');
         });
 
-        // Cascata dos 4 pilares acendendo em sequência
+        // Cascata dos 4 pilares acendendo em sequência ao longo dos 5 segundos
         const pills = stage.querySelectorAll('.cv-pill');
         pills.forEach((pill, i) => {
-          setTimeout(() => pill.classList.add('is-shown'), 960 + i * 95);
-          setTimeout(() => pill.classList.add('is-synced'), 1220 + i * 135);
+          setTimeout(() => pill.classList.add('is-shown'), 1350 + i * 240);
+          setTimeout(() => pill.classList.add('is-synced'), 2400 + i * 360);
         });
 
-        // Transição suave de saída (zoom-through para o tom claro do dashboard)
+        // Transição suave de saída para o dashboard completando exatos 5 segundos
         setTimeout(() => {
           stage.classList.add('is-portal-out');
-        }, 1960);
+        }, 4550);
 
         setTimeout(() => {
           if (window.location.port === '3001') {
@@ -990,7 +1022,7 @@
           } else {
             window.location.href = '/';
           }
-        }, 2350);
+        }, 5000);
 
       } catch (err) {
         exibirAlerta(err.message, 'erro');

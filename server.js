@@ -75,7 +75,7 @@ function autenticarTokenPortal(req, res, next) {
 }
 
 // Middlewares essenciais
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 // Sanitização recursiva simples de strings contra injeções de script HTML
 function sanitizarValor(val) {

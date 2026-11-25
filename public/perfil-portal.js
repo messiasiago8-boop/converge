@@ -33,9 +33,18 @@
 
   function atualizarFoto() {
     const nome = localStorage.getItem('usuarioNome') || 'Pessoa';
+    const email = (localStorage.getItem('usuarioEmail') || '').trim().toLowerCase();
     const iniciais = nome.trim().split(/\s+/).slice(0, 2).map(palavra => palavra[0]).join('').toUpperCase();
+    if (perfil.foto) {
+      localStorage.setItem('usuarioFoto', perfil.foto);
+      if (email) localStorage.setItem('usuarioFoto_' + email, perfil.foto);
+    } else {
+      localStorage.removeItem('usuarioFoto');
+      if (email) localStorage.removeItem('usuarioFoto_' + email);
+    }
     for (const id of ['perfil-avatar', 'sidebar-user-avatar']) {
       const destino = campo(id);
+      if (!destino) continue;
       destino.textContent = iniciais;
       if (perfil.foto) {
         const foto = new Image();
