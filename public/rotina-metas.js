@@ -136,8 +136,31 @@ function renderizarPrioridades() {
 
   if (!containerTop3 || !containerQuick) return;
 
+  const hojeIso = dataLocalRotina(new Date());
   const top3Items = rotinaState.prioridades.filter(p => p.top3);
-  const quickItems = rotinaState.prioridades.filter(p => !p.top3);
+  // Checklist do Dia: mostra apenas tarefas programadas para HOJE, ordenadas por data e horário
+  const quickItems = rotinaState.prioridades
+    .filter(p => {
+      if (p.top3) return false;
+      if (p.adiada_ate && p.adiada_ate > hojeIso) return false;
+      const dataTarefa = p.data || (p.criado_em ? String(p.criado_em).slice(0, 10) : hojeIso);
+      return dataTarefa === hojeIso;
+    })
+    .sort((a, b) => {
+      const da = a.data || hojeIso;
+      const db = b.data || hojeIso;
+      if (da !== db) return da.localeCompare(db);
+      const ha = a.horario || '99:99';
+      const hb = b.horario || '99:99';
+      if (ha !== hb) return ha.localeCompare(hb);
+      return (a.id || 0) - (b.id || 0);
+    });
+
+  const badgeChecklistHoje = document.getElementById('badge-checklist-hoje');
+  if (badgeChecklistHoje) {
+    const feitasQuick = quickItems.filter(p => p.concluida || p.concluido).length;
+    badgeChecklistHoje.textContent = `${feitasQuick}/${quickItems.length} hoje`;
+  }
 
   if (badgeCount) {
     const feitas = top3Items.filter(p => p.concluida || p.concluido).length;
@@ -221,6 +244,7 @@ function renderizarPrioridades() {
           }">
             ${isDone ? '✓' : ''}
           </button>
+          ${item.horario ? `<span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200/70 shrink-0">${escapeHTML(item.horario)}</span>` : ''}
           <span class="text-xs truncate ${isDone ? 'line-through text-slate-400' : 'text-slate-700'}">${escapeHTML(item.texto)}</span>
         </div>
         <div class="flex items-center gap-1 shrink-0">
@@ -1745,14 +1769,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Formulário de Nova Tarefa Rápida
+  // Formulário de Nova Tarefa do Checklist do Dia
   const formQuickTask = document.getElementById('form-quick-task');
+  const inputQuickDate = document.getElementById('input-quick-task-date');
+  const inputQuickTime = document.getElementById('input-quick-task-time');
+  if (inputQuickDate && !inputQuickDate.value) {
+    inputQuickDate.value = dataLocalRotina(new Date());
+  }
   if (formQuickTask) {
     formQuickTask.addEventListener('submit', async (e) => {
       e.preventDefault();
       const input = document.getElementById('input-quick-task-text');
       const texto = input.value.trim();
       if (!texto) return;
+      const dataProg = (inputQuickDate && inputQuickDate.value) ? inputQuickDate.value : dataLocalRotina(new Date());
+      const horarioProg = (inputQuickTime && inputQuickTime.value) ? inputQuickTime.value : null;
       const botao = formQuickTask.querySelector('[type=submit]');
       if (botao.disabled) return;
       botao.disabled = true;
@@ -1761,9 +1792,10 @@ document.addEventListener('DOMContentLoaded', () => {
         await salvarRotina('/api/rotina/prioridades', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texto, top3: false })
+          body: JSON.stringify({ texto, top3: false, data: dataProg, horario: horarioProg })
         });
         input.value = '';
+        if (inputQuickTime) inputQuickTime.value = '';
         await carregarPrioridades();
       } catch (err) {
         avisarFalhaRotina(err);

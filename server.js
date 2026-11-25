@@ -815,14 +815,18 @@ app.get('/api/rotina/prioridades', rotaPortal(async (req, res) => {
   res.json({ success: true, data: dbUser.prioridades_dia || [] });
 }));
 
-function adicionarPrioridade(dados, texto, top3 = false) {
+function adicionarPrioridade(dados, texto, top3 = false, data = null, horario = null) {
   const maioresIds = [dados.prioridades_dia, dados.historico_tarefas || []].map(lista =>
     lista.reduce((maior, item) => Math.max(maior, item.id), 0));
+  const dataLimpa = typeof data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.trim()) ? data.trim() : null;
+  const horarioLimpo = typeof horario === 'string' && /^\d{2}:\d{2}$/.test(horario.trim()) ? horario.trim() : null;
   const tarefa = {
     id: Math.max(...maioresIds) + 1,
     texto,
     concluida: false,
     top3,
+    data: dataLimpa,
+    horario: horarioLimpo,
     criado_em: new Date().toISOString()
   };
   dados.prioridades_dia.push(tarefa);
@@ -830,13 +834,13 @@ function adicionarPrioridade(dados, texto, top3 = false) {
 }
 
 app.post('/api/rotina/prioridades', rotaPortal(async (req, res) => {
-  const { texto, top3 } = req.body;
+  const { texto, top3, data, horario } = req.body;
   if (typeof texto !== 'string' || !texto.trim()) {
     return res.status(400).json({ success: false, message: 'Texto da tarefa é obrigatório.' });
   }
 
   const dbUser = await obterBancoUsuario(req.usuarioId);
-  const novaTarefa = adicionarPrioridade(dbUser, texto.trim(), !!top3);
+  const novaTarefa = adicionarPrioridade(dbUser, texto.trim(), !!top3, data, horario);
   await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novaTarefa });
 }));
