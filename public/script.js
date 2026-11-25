@@ -2064,12 +2064,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       btn.className = 'btn-subnav-rotina w-full text-left px-3 py-2 rounded-lg text-xs transition flex items-center space-x-2.5 text-white bg-slate-800 font-semibold';
 
       const action = btn.getAttribute('data-rotina-action');
-      if (action === 'hoje') {
-        const el = document.getElementById('btn-subaba-hoje');
-        if (el) el.click();
-      } else if (action === 'agenda') {
-        const el = document.getElementById('btn-subaba-agenda');
-        if (el) el.click();
+      if (['hoje', 'checklist', 'agenda'].includes(action)) {
+        document.getElementById('btn-subaba-' + action)?.click();
       } else if (action === 'historico') {
         const el = document.getElementById('btn-abrir-historico-tarefas');
         if (el) el.click();
@@ -2144,7 +2140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const abrirGasto = () => abrirAcaoFinanceira('planilha', 'descPlanilhaDespesa');
   const abrirTarefa = () => {
     showRotinaModule();
-    document.getElementById('btn-subaba-hoje')?.click();
+    document.getElementById('btn-subaba-checklist')?.click();
     document.getElementById('input-quick-task-text')?.focus();
   };
   const abrirAula = () => {

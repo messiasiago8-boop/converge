@@ -1752,28 +1752,28 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnPomStart) btnPomStart.addEventListener('click', alternarPomodoro);
   if (btnPomReset) btnPomReset.addEventListener('click', resetarPomodoro);
 
-  // Sub-abas Hoje vs Agenda
-  const btnSubHoje = document.getElementById('btn-subaba-hoje');
-  const btnSubAgenda = document.getElementById('btn-subaba-agenda');
-  const subviewHoje = document.getElementById('subview-rotina-hoje');
-  const subviewAgenda = document.getElementById('subview-rotina-agenda');
-
-  if (btnSubHoje && btnSubAgenda) {
-    btnSubHoje.addEventListener('click', () => {
-      btnSubHoje.className = 'px-4 py-1.5 rounded-md text-xs font-bold bg-white text-slate-900 shadow-2xs transition cursor-pointer flex items-center gap-1.5';
-      btnSubAgenda.className = 'px-4 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer flex items-center gap-1.5';
-      if (subviewHoje) subviewHoje.classList.remove('hidden');
-      if (subviewAgenda) subviewAgenda.classList.add('hidden');
-    });
-
-    btnSubAgenda.addEventListener('click', () => {
-      btnSubAgenda.className = 'px-4 py-1.5 rounded-md text-xs font-bold bg-white text-slate-900 shadow-2xs transition cursor-pointer flex items-center gap-1.5';
-      btnSubHoje.className = 'px-4 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer flex items-center gap-1.5';
-      if (subviewHoje) subviewHoje.classList.add('hidden');
-      if (subviewAgenda) subviewAgenda.classList.remove('hidden');
-      renderizarAgendaAtiva();
-    });
+  const abasRotina = ['hoje', 'checklist', 'agenda'];
+  const estiloAtivo = document.getElementById('btn-subaba-hoje').className;
+  const estiloInativo = document.getElementById('btn-subaba-agenda').className;
+  function selecionarAbaRotina(aba) {
+    for (const nome of abasRotina) {
+      const ativa = nome === aba;
+      const botao = document.getElementById('btn-subaba-' + nome);
+      botao.className = ativa ? estiloAtivo : estiloInativo;
+      botao.setAttribute('aria-pressed', String(ativa));
+      document.getElementById('subview-rotina-' + nome).classList.toggle('hidden', !ativa);
+      const lateral = document.querySelector('[data-rotina-action="' + nome + '"]');
+      lateral.classList.toggle('bg-slate-800', ativa);
+      lateral.classList.toggle('text-white', ativa);
+      lateral.classList.toggle('font-semibold', ativa);
+      lateral.classList.toggle('text-slate-300', !ativa);
+    }
+    if (aba === 'agenda') renderizarAgendaAtiva();
   }
+  for (const nome of abasRotina) {
+    document.getElementById('btn-subaba-' + nome).addEventListener('click', () => selecionarAbaRotina(nome));
+  }
+  selecionarAbaRotina('hoje');
 
   // Formulário de Nova Tarefa do Checklist do Dia
   const formQuickTask = document.getElementById('form-quick-task');
