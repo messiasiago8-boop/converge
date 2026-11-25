@@ -1501,6 +1501,23 @@ app.put('/api/revisao-semanal/planos/:semana', rotaPortal(async (req, res) => {
   res.json({ success: true, data: plano });
 }));
 
+app.delete('/api/metas/limpar-selecao', rotaPortal(async (req, res) => {
+  const { todas, ids } = req.body || {};
+  if (!todas && (!Array.isArray(ids) || ids.length === 0)) {
+    return res.status(400).json({ success: false, message: 'Selecione ao menos uma meta para excluir.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  if (!Array.isArray(dbUser.metas)) dbUser.metas = [];
+  if (todas) {
+    dbUser.metas = [];
+  } else {
+    const setIds = new Set(ids.map(String));
+    dbUser.metas = dbUser.metas.filter(m => !setIds.has(String(m.id)));
+  }
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, message: 'Metas excluídas com sucesso.' });
+}));
+
 app.delete('/api/metas/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
   const dbUser = await obterBancoUsuario(req.usuarioId);

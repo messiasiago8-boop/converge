@@ -2110,6 +2110,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (action === 'nova') {
         const el = document.getElementById('btn-nova-meta');
         if (el) el.click();
+      } else if (action === 'excluir') {
+        if (typeof window.abrirModalExcluirMetas === 'function') {
+          window.abrirModalExcluirMetas();
+        }
       }
     });
   });
