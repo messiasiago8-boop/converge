@@ -471,72 +471,80 @@ function renderizarHabitos() {
   const container = document.getElementById('container-habitos-lista');
   if (!container) return;
 
+  const badgeResumo = document.getElementById('badge-habitos-resumo');
+  if (badgeResumo) {
+    const total = rotinaState.habitos.length;
+    badgeResumo.textContent = `${total} ${total === 1 ? 'ativo' : 'ativos'}`;
+  }
+
   container.innerHTML = '';
   const diasSemana = obterDiasSemanaAtual();
 
   if (rotinaState.habitos.length === 0) {
     container.innerHTML = `
-      <div class="px-6 py-8 text-center text-slate-400 text-xs border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
-        Nenhum hábito cadastrado ainda. Clique em "+ Novo Hábito" para começar a rastrear sua consistência.
+      <div class="px-6 py-10 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 flex flex-col items-center justify-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-emerald-700 shadow-2xs">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <p class="text-sm font-semibold text-slate-700">Nenhum hábito cadastrado ainda</p>
+        <p class="text-xs text-slate-500 max-w-md">Clique em <strong class="text-emerald-700">+ Novo Hábito</strong> acima para criar sua primeira meta de consistência semanal.</p>
       </div>
     `;
     return;
   }
 
-  // Cabeçalho da grade semanal
-  const headerRow = document.createElement('div');
-  headerRow.className = 'flex items-center justify-between pb-2 text-[10px] font-bold text-slate-400 border-b border-slate-100 uppercase tracking-wider gap-2';
-  headerRow.innerHTML = `
-    <span class="truncate flex-1">Hábito</span>
-    <div class="flex items-center gap-1 shrink-0">
-      ${diasSemana.map(d => `<span class="w-5 text-center text-[9px] ${d.isHoje ? 'text-emerald-700 font-extrabold' : ''}">${d.nome.slice(0, 1)}</span>`).join('')}
-      <span class="w-9 text-center text-[9px]">Seq.</span>
-    </div>
-  `;
-  container.appendChild(headerRow);
-
   rotinaState.habitos.forEach(habito => {
     const el = document.createElement('div');
-    el.className = 'p-2.5 rounded-lg bg-slate-50/80 hover:bg-white border border-slate-200/80 transition flex items-center justify-between gap-2 shadow-2xs';
+    el.className = 'p-3.5 sm:p-4 rounded-xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-emerald-200 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs';
 
     const concluidos = Array.isArray(habito.dias_concluidos) ? habito.dias_concluidos : [];
+    const concluidosSemana = diasSemana.filter(d => concluidos.includes(d.iso)).length;
 
     el.innerHTML = `
-      <div class="flex items-center gap-2 truncate flex-1 min-w-0 pr-1">
-        <div class="w-5 h-5 rounded-md bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0">
-          <svg class="w-3 h-3 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/70 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         </div>
-        <span class="text-xs font-semibold text-slate-900 truncate" title="${escapeHTML(habito.nome)}">${escapeHTML(habito.nome)}</span>
-      </div>
-      <div class="flex items-center gap-1 shrink-0">
-        ${diasSemana.map(d => {
-          const checked = concluidos.includes(d.iso);
-          return `
-            <button
-              type="button"
-              class="btn-checkin-habito w-5 h-5 rounded flex items-center justify-center text-[9px] transition cursor-pointer ${
-                checked
-                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                  : (d.isHoje ? 'border border-emerald-500 bg-white hover:bg-emerald-50' : 'bg-slate-200/70 hover:bg-slate-300')
-              }"
-              data-id="${habito.id}"
-              data-iso="${d.iso}"
-              title="${d.nome} (${d.iso}): ${checked ? 'Concluído (Clique para desmarcar)' : 'Pendente (Clique para marcar)'}"
-            >
-              ${checked ? '✓' : ''}
-            </button>
-          `;
-        }).join('')}
-        
-        <div class="w-9 text-center flex items-center justify-center font-sans tabular-nums text-[10px] font-bold ${habito.streak > 0 ? 'text-emerald-800 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200' : 'text-slate-400'}">
-          <span>${habito.streak || 0}d</span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-slate-900 truncate" title="${escapeHTML(habito.nome)}">${escapeHTML(habito.nome)}</p>
+          <p class="text-[11px] text-slate-500">${concluidosSemana}/7 dias esta semana</p>
         </div>
+      </div>
+      <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0">
+        <div class="flex items-center gap-1.5">
+          ${diasSemana.map(d => {
+            const checked = concluidos.includes(d.iso);
+            return `
+              <button
+                type="button"
+                class="btn-checkin-habito w-7 h-7 rounded-lg flex flex-col items-center justify-center text-[10px] transition cursor-pointer ${
+                  checked
+                    ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                    : (d.isHoje ? 'border-2 border-emerald-500 bg-white text-emerald-700 font-semibold hover:bg-emerald-50' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-100')
+                }"
+                data-id="${habito.id}"
+                data-iso="${d.iso}"
+                title="${d.nome} (${d.iso}): ${checked ? 'Concluído (Clique para desmarcar)' : 'Pendente (Clique para marcar)'}"
+              >
+                ${checked ? '✓' : d.nome.slice(0, 1)}
+              </button>
+            `;
+          }).join('')}
+        </div>
+        
+        <div class="flex items-center gap-1.5">
+          <div class="px-2 py-1 rounded-lg font-sans tabular-nums text-[11px] font-bold ${habito.streak > 0 ? 'text-emerald-800 bg-emerald-50 border border-emerald-200' : 'text-slate-400 bg-slate-100 border border-slate-200/70'}">
+            <span>🔥 ${habito.streak || 0}d</span>
+          </div>
 
-        <button type="button" class="btn-delete-habito text-slate-300 hover:text-rose-600 p-0.5 text-xs cursor-pointer ml-0.5" data-id="${habito.id}" title="Excluir hábito">
-          ✕
-        </button>
+          <button type="button" class="btn-delete-habito text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 text-xs cursor-pointer transition" data-id="${habito.id}" title="Excluir hábito">
+            ✕
+          </button>
+        </div>
       </div>
     `;
 
