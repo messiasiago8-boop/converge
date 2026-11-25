@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const { initPushService } = require('./push-service');
+const { processarMensagemGroq } = require('./groq-assistant');
 const { abrirPortalPostgres } = require('./portal-postgres');
 const { randomBytes, randomUUID, timingSafeEqual } = require('node:crypto');
 let yts = null;
@@ -311,6 +312,30 @@ app.post('/api/push/unsubscribe', rotaPortal(async (req, res) => {
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
+}));
+
+// ================= CONVERGE IA UNIFICADA (GROQ FUNCTION CALLING) ================= //
+app.post('/api/groq-ia', aiRateLimiter, rotaPortal(async (req, res) => {
+  const { mensagem, historico } = req.body || {};
+  if (!mensagem || !String(mensagem).trim()) {
+    return res.status(400).json({ success: false, error: 'Digite uma mensagem para a CONVERGE IA.' });
+  }
+  const resultado = await processarMensagemGroq({
+    mensagem,
+    historico: Array.isArray(historico) ? historico : [],
+    contexto: {
+      usuarioId: req.usuarioId,
+      authHeader: req.headers.authorization,
+      financePort: FINANCE_API_PORT,
+      obterBancoUsuario,
+      salvarBancoUsuario,
+      adicionarPrioridade
+    }
+  });
+  if (!resultado.success) {
+    return res.status(400).json(resultado);
+  }
+  res.json(resultado);
 }));
 
 app.post('/api/push/test', async (req, res) => {
