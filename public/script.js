@@ -319,7 +319,10 @@ async function fetchTopics() {
       renderTopicSelectOptions();
 
       const countBadge = document.getElementById('sidebar-topic-count');
-      if (countBadge) countBadge.textContent = state.topics.length;
+      if (countBadge) {
+        countBadge.textContent = state.topics.length;
+        countBadge.hidden = state.topics.length === 0;
+      }
 
       if (state.selectedTopicId === undefined && state.currentView === 'grid') {
         state.selectedTopicId = null; // Padrão: Catálogo Geral Organizado por tópicos
@@ -366,7 +369,10 @@ async function fetchSchedule() {
       state.agendamentos = result.data;
       
       const badge = document.getElementById('sidebar-schedule-count');
-      if (badge) badge.textContent = state.agendamentos.length;
+      if (badge) {
+        badge.textContent = state.agendamentos.length;
+        badge.hidden = state.agendamentos.length === 0;
+      }
 
       const totalBadge = document.getElementById('schedule-total-badge');
       if (totalBadge) {

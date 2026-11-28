@@ -1,0 +1,209 @@
+#sidebar-portal .sidebar-section-label {
+  padding: .1rem .7rem;
+  margin-block: .15rem .45rem;
+  color: rgba(203, 213, 225, .55);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+#sidebar-portal .sidebar-system-label { margin-block-start: 1rem; }
+#sidebar-portal .sidebar-nav-item,
+#sidebar-portal #sidebar-section-modulos > .space-y-1 > button,
+#sidebar-portal #sidebar-section-planning > button,
+#sidebar-portal #sidebar-section-topics > button,
+#sidebar-portal #nav-btn-inicio {
+  position: relative;
+  min-height: 42px;
+  justify-content: flex-start;
+  gap: .7rem;
+  border: 1px solid transparent;
+  color: rgba(226, 232, 240, .82);
+  transition: transform .18s ease, background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
+}
+#sidebar-portal .sidebar-nav-item > svg,
+#sidebar-portal #sidebar-section-modulos > .space-y-1 > button svg,
+#sidebar-portal #sidebar-section-planning > button svg,
+#sidebar-portal #sidebar-section-topics > button svg,
+#sidebar-portal #nav-btn-inicio svg {
+  width: 17px;
+  height: 17px;
+  color: #92a9a2;
+  transition: color .18s ease, filter .18s ease;
+}
+#sidebar-portal .sidebar-nav-item:hover,
+#sidebar-portal #sidebar-section-modulos > .space-y-1 > button:hover,
+#sidebar-portal #sidebar-section-planning > button:hover,
+#sidebar-portal #sidebar-section-topics > button:hover,
+#sidebar-portal #nav-btn-inicio:hover {
+  transform: translateY(-1px);
+  border-color: rgba(177, 211, 198, .12);
+  background: rgba(206, 232, 222, .075);
+  color: white;
+}
+#sidebar-portal .sidebar-nav-item:hover svg,
+#sidebar-portal #sidebar-section-modulos > .space-y-1 > button:hover svg,
+#sidebar-portal #sidebar-section-planning > button:hover svg,
+#sidebar-portal #sidebar-section-topics > button:hover svg,
+#sidebar-portal #nav-btn-inicio:hover svg { color: #b9ded0; filter: drop-shadow(0 0 5px rgba(143,194,180,.3)); }
+#sidebar-portal button:active { transform: scale(.98); }
+#sidebar-portal button:focus-visible { outline: 2px solid #9bc8b6; outline-offset: 2px; }
+#sidebar-portal button.bg-brand-600,
+#sidebar-portal button.bg-emerald-600,
+#sidebar-portal button.bg-blue-600 {
+  overflow: hidden;
+  border: 1px solid rgba(177, 211, 198, .17);
+  background: linear-gradient(100deg, rgba(138, 183, 165, .17), rgba(111, 155, 139, .07)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.075), 0 5px 18px rgba(0,0,0,.11) !important;
+  color: #f4faf7 !important;
+}
+#sidebar-portal button.bg-brand-600::before,
+#sidebar-portal button.bg-emerald-600::before,
+#sidebar-portal button.bg-blue-600::before {
+  position: absolute;
+  inset-block: 8px;
+  inset-inline-start: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: #a7d6c2;
+  box-shadow: 0 0 10px rgba(143,194,180,.4);
+  content: "";
+}
+#sidebar-portal button.bg-brand-600 svg,
+#sidebar-portal button.bg-emerald-600 svg,
+#sidebar-portal button.bg-blue-600 svg { color: #c2e5d5 !important; }
+#sidebar-portal .sidebar-count:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  padding: .12rem .38rem;
+  border: 1px solid rgba(157, 209, 188, .22);
+  border-radius: 999px;
+  background: rgba(118, 177, 151, .12);
+  color: #b9dfcc;
+  font: 600 10px/1.2 ui-monospace, monospace;
+}
+#sidebar-portal .sidebar-logo {
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(220, 238, 230, .08);
+}
+#sidebar-portal .sidebar-logo img { mix-blend-mode: screen; }
+#sidebar-portal .sidebar-collapse {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  color: #b9c8c2;
+}
+#sidebar-portal .sidebar-collapse svg { width: 17px; height: 17px; transition: transform .2s ease; }
+#sidebar-portal .sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 64px;
+  padding: .6rem .65rem;
+  border-top: 1px solid rgba(255,255,255,.08);
+  background: rgba(9, 18, 16, .24);
+}
+#sidebar-portal .sidebar-user {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: .65rem;
+  padding: .3rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  text-align: left;
+}
+#sidebar-portal .sidebar-user:hover { background: rgba(255,255,255,.06); }
+#sidebar-portal .sidebar-avatar-wrap { position: relative; flex: none; }
+#sidebar-portal .sidebar-avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 50%;
+  background: rgba(255,255,255,.1);
+  color: #edf5f1;
+  font-size: 11px;
+  font-weight: 700;
+}
+#sidebar-portal .sidebar-avatar img { width: 100%; height: 100%; object-fit: cover; }
+#sidebar-portal .sidebar-online {
+  position: absolute;
+  right: -1px;
+  bottom: 0;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #1a2925;
+  border-radius: 50%;
+  background: #73c69b;
+}
+#sidebar-portal .sidebar-user-copy { display: grid; min-width: 0; gap: 2px; }
+#sidebar-portal .sidebar-user-copy strong {
+  overflow: hidden;
+  color: #edf5f1;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#sidebar-portal .sidebar-user-copy > span:not([hidden]) { color: #91a39b; font-size: 10px; }
+#sidebar-portal .sidebar-icon-action {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #a8b8b1;
+  transition: background .16s, color .16s, border-color .16s;
+}
+#sidebar-portal .sidebar-icon-action:hover { border-color: rgba(255,255,255,.08); background: rgba(255,255,255,.07); color: white; }
+#sidebar-portal .sidebar-icon-action svg { width: 17px; height: 17px; }
+#sidebar-portal .sidebar-logout:hover { background: rgba(251,113,133,.12); color: #fda4af; }
+body.sidebar-collapsed #sidebar-portal { width: 78px !important; }
+body.sidebar-collapsed #sidebar-portal .sidebar-section-label,
+body.sidebar-collapsed #sidebar-portal .sidebar-user-copy,
+body.sidebar-collapsed #sidebar-portal .sidebar-nav-item > span:not(.sidebar-count),
+body.sidebar-collapsed #sidebar-portal #sidebar-section-modulos button > div > span,
+body.sidebar-collapsed #sidebar-portal #sidebar-section-planning button > div > span,
+body.sidebar-collapsed #sidebar-portal #sidebar-section-topics button > div > span,
+body.sidebar-collapsed #sidebar-portal #sidebar-section-modulos button > span:not(.sidebar-count),
+body.sidebar-collapsed #sidebar-portal #sidebar-section-planning button > span:not(.sidebar-count),
+body.sidebar-collapsed #sidebar-portal #sidebar-section-topics button > span:not(.sidebar-count) { display: none !important; }
+body.sidebar-collapsed #sidebar-portal .sidebar-nav-item,
+body.sidebar-collapsed #sidebar-portal #sidebar-section-modulos button,
+body.sidebar-collapsed #sidebar-portal #sidebar-section-planning button,
+body.sidebar-collapsed #sidebar-portal #sidebar-section-topics button,
+body.sidebar-collapsed #sidebar-portal #nav-btn-inicio,
+body.sidebar-collapsed #sidebar-portal .sidebar-user { justify-content: center; padding-inline: .5rem; }
+body.sidebar-collapsed #sidebar-portal #sidebar-section-modulos button > div,
+body.sidebar-collapsed #sidebar-portal #sidebar-section-planning button > div,
+body.sidebar-collapsed #sidebar-portal #sidebar-section-topics button > div { justify-content: center; }
+body.sidebar-collapsed #sidebar-portal .sidebar-footer { flex-wrap: wrap; justify-content: center; }
+body.sidebar-collapsed #sidebar-portal .sidebar-user { flex: 0 0 100%; }
+body.sidebar-collapsed #sidebar-portal .sidebar-collapse svg { transform: rotate(180deg); }
+body.sidebar-collapsed #sidebar-portal .sidebar-icon-action { width: 28px; height: 28px; }
+@media (max-width: 1023px) {
+  #sidebar-portal .sidebar-collapse { display: none; }
+  body.sidebar-collapsed #sidebar-portal { width: 290px !important; }
+  body.sidebar-collapsed #sidebar-portal .sidebar-section-label,
+  body.sidebar-collapsed #sidebar-portal .sidebar-user-copy,
+  body.sidebar-collapsed #sidebar-portal .sidebar-nav-item > span,
+  body.sidebar-collapsed #sidebar-portal #sidebar-section-modulos button > div > span,
+  body.sidebar-collapsed #sidebar-portal #sidebar-section-planning button > div > span,
+  body.sidebar-collapsed #sidebar-portal #sidebar-section-topics button > div > span { display: revert !important; }
+  body.sidebar-collapsed #sidebar-portal .sidebar-footer { flex-wrap: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #sidebar-portal *, #sidebar-portal *::before { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}

@@ -81,7 +81,11 @@
     animar('eos-kpi-provas', provas.length + leituras.length);
 
     const badge = document.getElementById('sidebar-estudos-os-count');
-    if (badge) badge.textContent = String(materias.length + paginas.length);
+    if (badge) {
+      const quantidade = materias.length + paginas.length;
+      badge.textContent = String(quantidade);
+      badge.hidden = quantidade === 0;
+    }
   }
 
   function preencherSelectMaterias() {
