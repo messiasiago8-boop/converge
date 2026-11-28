@@ -2255,7 +2255,7 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
 
 app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const { titulo, valor_atual, delta, checklist, prazo, ciclo, proxima_acao, confianca, proposito, woop_obstaculo, woop_plano, nota } = req.body;
+  const { titulo, valor_atual, delta, checklist, prazo, pilar, ciclo, proxima_acao, confianca, proposito, woop_obstaculo, woop_plano, nota } = req.body;
   const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const meta = (dbUser.metas || []).find(m => m.id === idNum);
@@ -2266,6 +2266,7 @@ app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   const progressoAnterior = Number(meta.progresso || 0);
   if (typeof titulo === 'string' && titulo.trim()) meta.titulo = titulo.trim();
   if (prazo !== undefined) meta.prazo = prazo;
+  if (['carreira', 'financeiro', 'saude', 'pessoal'].includes(pilar)) meta.pilar = pilar;
   if (['Q1', 'Q2', 'Q3', 'Q4', 'anual'].includes(ciclo)) meta.ciclo = ciclo;
   if (['alta', 'media', 'baixa'].includes(confianca)) meta.confianca = confianca;
   if (proxima_acao !== undefined) meta.proxima_acao = String(proxima_acao || '').trim().slice(0, 160);

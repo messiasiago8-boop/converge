@@ -2022,46 +2022,46 @@
           </div>
         </div>
 
-        <!-- Pilares da Vida (Gráfico de Radar SVG + Resumo) -->
+        <!-- Pilares da Vida (Gráfico de Radar SVG + Resumo Interativo) -->
         <div id="card-metas-pilares-radar" class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           <div class="md:col-span-5 flex items-center justify-center">
-            <svg id="svg-metas-radar" viewBox="0 0 220 200" class="w-48 h-44 overflow-visible" aria-label="Gráfico de equilíbrio dos Pilares da Vida"></svg>
+            <svg id="svg-metas-radar" viewBox="0 0 220 200" class="w-44 h-40 sm:w-48 sm:h-44 overflow-visible mx-auto" aria-label="Gráfico de equilíbrio dos Pilares da Vida"></svg>
           </div>
-          <div class="md:col-span-7 space-y-2.5">
+          <div class="md:col-span-7 space-y-2.5 min-w-0">
             <div class="flex items-center justify-between gap-2">
               <h3 class="text-sm font-bold text-slate-900" data-help="metas-pilares">Equilíbrio dos Pilares da Vida</h3>
-              <span class="text-[10px] font-semibold text-slate-400">Média por área</span>
+              <span class="text-[10px] font-semibold text-slate-400">Toque p/ filtrar</span>
             </div>
-            <div id="lista-metas-pilares" class="grid grid-cols-2 gap-2"></div>
+            <div id="lista-metas-pilares" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
           </div>
         </div>
 
         <!-- Filtros de Tipo de Meta + Ciclo Trimestral -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div class="flex flex-wrap items-center gap-2">
-            <button class="btn-filtro-meta px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 border border-slate-300 shadow-2xs cursor-pointer" data-tipo="todas">
-              Todas as Metas
+        <div class="bg-white/80 border border-slate-200/80 rounded-2xl p-3 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button class="btn-filtro-meta px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold bg-white text-slate-900 border border-slate-300 shadow-2xs cursor-pointer" data-tipo="todas">
+              Todas
             </button>
-            <button class="btn-filtro-meta px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="financeira">
+            <button class="btn-filtro-meta px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="financeira">
               Financeiras
             </button>
-            <button class="btn-filtro-meta px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="numerica">
+            <button class="btn-filtro-meta px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="numerica">
               Numéricas
             </button>
-            <button class="btn-filtro-meta px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="habito">
+            <button class="btn-filtro-meta px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="habito">
               Por Hábito
             </button>
-            <button class="btn-filtro-meta px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="estudos">
+            <button class="btn-filtro-meta px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="estudos">
               Estudos
             </button>
-            <button class="btn-filtro-meta px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="pessoal">
-              Projetos & Pessoais
+            <button class="btn-filtro-meta px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-tipo="pessoal">
+              Projetos
             </button>
           </div>
 
-          <div class="flex items-center gap-2 shrink-0">
-            <label for="select-filtro-ciclo-meta" class="text-[11px] font-bold text-slate-500">Ciclo:</label>
-            <select id="select-filtro-ciclo-meta" class="px-2.5 py-1.5 text-xs font-semibold border border-slate-200 bg-white rounded-lg cursor-pointer">
+          <div class="flex items-center gap-2 w-full lg:w-auto shrink-0">
+            <label for="select-filtro-ciclo-meta" class="text-[11px] font-bold text-slate-500 shrink-0">Ciclo:</label>
+            <select id="select-filtro-ciclo-meta" class="flex-1 lg:flex-none px-2.5 py-1.5 text-xs font-semibold border border-slate-200 bg-white rounded-lg cursor-pointer">
               <option value="todos">Todos os ciclos</option>
               <option value="Q1">Q1 (Jan–Mar)</option>
               <option value="Q2">Q2 (Abr–Jun)</option>
@@ -2130,11 +2130,11 @@
                 <p class="text-[11px] text-slate-500">Inicie uma sequência guiada com cronômetro e check-in automático por período.</p>
               </div>
             </div>
-            <div class="flex flex-wrap items-center gap-1.5">
-              <button type="button" data-play-periodo="manha" class="btn-iniciar-rotina-play px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-amber-50 text-slate-800 border border-slate-200 hover:border-amber-300 transition cursor-pointer shadow-2xs">🌅 Manhã <span class="play-count text-slate-400 font-normal"></span></button>
-              <button type="button" data-play-periodo="pos_trabalho" class="btn-iniciar-rotina-play px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-indigo-50 text-slate-800 border border-slate-200 hover:border-indigo-300 transition cursor-pointer shadow-2xs">🌆 Pós-Trabalho <span class="play-count text-slate-400 font-normal"></span></button>
-              <button type="button" data-play-periodo="noite" class="btn-iniciar-rotina-play px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 hover:border-slate-300 transition cursor-pointer shadow-2xs">🌙 Noite <span class="play-count text-slate-400 font-normal"></span></button>
-              <button type="button" data-play-periodo="todos" class="btn-iniciar-rotina-play px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white transition cursor-pointer shadow-2xs">▶ Iniciar Pendentes <span class="play-count text-emerald-100 font-normal"></span></button>
+            <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 w-full md:w-auto">
+              <button type="button" data-play-periodo="manha" class="btn-iniciar-rotina-play px-2.5 py-2 sm:py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-amber-50 text-slate-800 border border-slate-200 hover:border-amber-300 transition cursor-pointer shadow-2xs text-center">🌅 Manhã <span class="play-count text-slate-400 font-normal"></span></button>
+              <button type="button" data-play-periodo="pos_trabalho" class="btn-iniciar-rotina-play px-2.5 py-2 sm:py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-indigo-50 text-slate-800 border border-slate-200 hover:border-indigo-300 transition cursor-pointer shadow-2xs text-center">🌆 Pós-Trabalho <span class="play-count text-slate-400 font-normal"></span></button>
+              <button type="button" data-play-periodo="noite" class="btn-iniciar-rotina-play px-2.5 py-2 sm:py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 hover:border-slate-300 transition cursor-pointer shadow-2xs text-center">🌙 Noite <span class="play-count text-slate-400 font-normal"></span></button>
+              <button type="button" data-play-periodo="todos" class="btn-iniciar-rotina-play px-2.5 py-2 sm:py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white transition cursor-pointer shadow-2xs text-center">▶ Pendentes <span class="play-count text-emerald-100 font-normal"></span></button>
             </div>
           </div>
 
@@ -2716,11 +2716,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h3 class="text-sm font-bold text-slate-900">Cadastrar Nova Meta</h3>
+          <h3 id="modal-meta-titulo" class="text-sm font-bold text-slate-900">Cadastrar Nova Meta</h3>
         </div>
         <button type="button" onclick="document.getElementById('modal-meta').classList.add('hidden');document.getElementById('modal-meta').classList.remove('flex')" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">✕</button>
       </div>
       <form id="form-nova-meta" class="p-5 space-y-3.5 overflow-y-auto">
+        <input type="hidden" id="input-meta-id" value="" />
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Título da Meta</label>
           <input type="text" id="input-meta-titulo" placeholder="Ex: Reserva de Emergência R$ 10k, Resolver 500 questões..." class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-600" required />
@@ -2833,8 +2834,8 @@
           <button type="button" onclick="document.getElementById('modal-meta').classList.add('hidden')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition cursor-pointer">
             Cancelar
           </button>
-          <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs cursor-pointer">
-            Criar Meta
+          <button type="submit" id="btn-meta-submit" class="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs cursor-pointer">
+            Salvar Meta
           </button>
         </div>
       </form>
@@ -2867,9 +2868,9 @@
   </div>
 
   <!-- Modal Aporte Rápido de Meta Financeira -->
-  <div id="modal-aporte-meta" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-      <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+  <div id="modal-aporte-meta" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 z-50">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[90dvh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
         <div class="flex items-center space-x-2">
           <div class="w-6 h-6 rounded-md bg-emerald-50 border border-emerald-200/60 flex items-center justify-center">
             <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2878,9 +2879,9 @@
           </div>
           <h3 class="text-sm font-bold text-slate-900">Novo Aporte na Meta</h3>
         </div>
-        <button onclick="document.getElementById('modal-aporte-meta').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">✕</button>
+        <button type="button" onclick="document.getElementById('modal-aporte-meta').classList.add('hidden');document.getElementById('modal-aporte-meta').classList.remove('flex')" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">✕</button>
       </div>
-      <form id="form-aporte-meta" class="p-5 space-y-3.5">
+      <form id="form-aporte-meta" class="p-5 space-y-3.5 overflow-y-auto">
         <input type="hidden" id="input-aporte-meta-id" />
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Meta Selecionada</label>
@@ -2892,7 +2893,7 @@
           <p class="text-[10px] text-slate-400 mt-1">Este valor será somado ao progresso atual desta meta.</p>
         </div>
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-          <button type="button" onclick="document.getElementById('modal-aporte-meta').classList.add('hidden')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition cursor-pointer">
+          <button type="button" onclick="document.getElementById('modal-aporte-meta').classList.add('hidden');document.getElementById('modal-aporte-meta').classList.remove('flex')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition cursor-pointer">
             Cancelar
           </button>
           <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs cursor-pointer">

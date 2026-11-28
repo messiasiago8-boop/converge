@@ -1390,15 +1390,27 @@ function renderizarRadarPilares() {
     ${labelsSvg}
   `;
 
-  lista.innerHTML = stats.map(s => `
-    <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex items-center justify-between gap-2">
+  const pilarAtivo = rotinaState.filtroPilarMeta || 'todos';
+  lista.innerHTML = stats.map(s => {
+    const selecionado = pilarAtivo === s.id;
+    return `
+    <button type="button" data-pilar="${s.id}" class="btn-filtro-pilar p-2.5 rounded-xl border text-left flex items-center justify-between gap-2 transition cursor-pointer ${selecionado ? 'bg-emerald-50 border-emerald-400 shadow-2xs' : 'bg-slate-50/80 hover:bg-white border-slate-200/80 hover:border-emerald-200'}">
       <div class="min-w-0">
         <p class="text-[11px] font-bold text-slate-800 truncate">${s.icone} ${s.label}</p>
         <p class="text-[10px] text-slate-500">${s.total} ${s.total === 1 ? 'meta' : 'metas'}</p>
       </div>
       <span class="text-xs font-extrabold tabular-nums text-emerald-800 shrink-0">${s.media}%</span>
-    </div>
-  `).join('');
+    </button>
+  `;
+  }).join('');
+
+  lista.querySelectorAll('.btn-filtro-pilar').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = btn.getAttribute('data-pilar');
+      rotinaState.filtroPilarMeta = rotinaState.filtroPilarMeta === p ? 'todos' : p;
+      renderizarMetas();
+    });
+  });
 }
 
 function renderizarMetas() {
@@ -1423,11 +1435,13 @@ function renderizarMetas() {
   container.innerHTML = '';
 
   const tipo = rotinaState.filtroMetaAtual;
+  const pilarFiltro = rotinaState.filtroPilarMeta || 'todos';
   const cicloFiltro = document.getElementById('select-filtro-ciclo-meta')?.value || 'todos';
   const metasFiltradas = (rotinaState.metas || []).filter(m => {
     const matchTipo = tipo === 'todas' || m.tipo === tipo;
+    const matchPilar = pilarFiltro === 'todos' || (m.pilar || 'pessoal') === pilarFiltro;
     const matchCiclo = cicloFiltro === 'todos' || (m.ciclo || 'anual') === cicloFiltro;
-    return matchTipo && matchCiclo;
+    return matchTipo && matchPilar && matchCiclo;
   });
 
   const metasAtivasFiltradas = metasFiltradas.filter(m => Number(m.progresso || 0) < 100);
@@ -1554,9 +1568,14 @@ function renderizarMetas() {
             </span>
             ${seloRitmo}
           </div>
-          <button class="btn-delete-meta text-slate-300 hover:text-rose-600 p-1 text-xs cursor-pointer shrink-0" data-id="${meta.id}" title="Excluir meta">
-            ✕
-          </button>
+          <div class="flex items-center gap-1 shrink-0">
+            <button type="button" class="btn-edit-meta text-slate-400 hover:text-emerald-700 p-1 text-xs cursor-pointer" data-id="${meta.id}" title="Editar meta">
+              ✎
+            </button>
+            <button type="button" class="btn-delete-meta text-slate-300 hover:text-rose-600 p-1 text-xs cursor-pointer" data-id="${meta.id}" title="Excluir meta">
+              ✕
+            </button>
+          </div>
         </div>
 
         <div class="flex items-start justify-between gap-3 mt-2.5">
@@ -1718,6 +1737,10 @@ function renderizarMetas() {
         </div>
       </div>
     `;
+
+    card.querySelector('.btn-edit-meta')?.addEventListener('click', () => {
+      if (typeof window.abrirModalEditarMeta === 'function') window.abrirModalEditarMeta(meta);
+    });
 
     card.querySelector('.btn-meta-historico')?.addEventListener('click', () => {
       abrirModalHistoricoMeta(meta);
@@ -2922,13 +2945,58 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function abrirModalEditarMeta(meta) {
+    if (!modalMeta || !meta) return;
+    if (formNovaMeta) formNovaMeta.reset();
+    statusMeta.textContent = '';
+    const idEl = document.getElementById('input-meta-id');
+    const modalTit = document.getElementById('modal-meta-titulo');
+    if (idEl) idEl.value = String(meta.id);
+    if (modalTit) modalTit.textContent = 'Editar Meta';
+    document.getElementById('input-meta-titulo').value = meta.titulo || '';
+    if (selectMetaTipo) {
+      selectMetaTipo.value = meta.tipo || 'pessoal';
+      selectMetaTipo.disabled = true; // Tipo não muda após criação para preservar dados
+    }
+    if (selectMetaPilar) selectMetaPilar.value = meta.pilar || 'pessoal';
+    const selCiclo = document.getElementById('select-meta-ciclo');
+    if (selCiclo) selCiclo.value = meta.ciclo || 'anual';
+    const prazoEl = document.getElementById('input-meta-prazo');
+    if (prazoEl) prazoEl.value = meta.prazo || '';
+    const proxEl = document.getElementById('input-meta-proxima-acao');
+    if (proxEl) proxEl.value = meta.proxima_acao || '';
+    const propEl = document.getElementById('input-meta-proposito');
+    if (propEl) propEl.value = meta.proposito || '';
+    const obsEl = document.getElementById('input-meta-woop-obstaculo');
+    if (obsEl) obsEl.value = meta.woop_obstaculo || '';
+    const planoEl = document.getElementById('input-meta-woop-plano');
+    if (planoEl) planoEl.value = meta.woop_plano || '';
+
+    campoMetaValores?.classList.add('hidden');
+    campoMetaNumerica?.classList.add('hidden');
+    campoMetaHabito?.classList.add('hidden');
+    campoMetaChecklist?.classList.add('hidden');
+
+    modalMeta.classList.remove('hidden');
+    modalMeta.classList.add('flex');
+  }
+
+  window.abrirModalEditarMeta = abrirModalEditarMeta;
+
   if (btnNovaMeta && modalMeta) {
     btnNovaMeta.addEventListener('click', () => {
       // Limpa os campos para um novo cadastro limpo
       if (formNovaMeta) formNovaMeta.reset();
       statusMeta.textContent = '';
+      const idEl = document.getElementById('input-meta-id');
+      const modalTit = document.getElementById('modal-meta-titulo');
+      if (idEl) idEl.value = '';
+      if (modalTit) modalTit.textContent = 'Cadastrar Nova Meta';
       selectMetaProjeto.dispatchEvent(new Event('change'));
-      if (selectMetaTipo) selectMetaTipo.value = 'pessoal';
+      if (selectMetaTipo) {
+        selectMetaTipo.disabled = false;
+        selectMetaTipo.value = 'pessoal';
+      }
       if (selectMetaPilar) selectMetaPilar.value = 'pessoal';
       const selCiclo = document.getElementById('select-meta-ciclo');
       if (selCiclo) selCiclo.value = `Q${Math.floor(new Date().getMonth() / 3) + 1}`;
@@ -2944,6 +3012,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (formNovaMeta) {
     formNovaMeta.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const idEdit = document.getElementById('input-meta-id')?.value?.trim() || '';
       const titulo = document.getElementById('input-meta-titulo').value.trim();
       const tipo = document.getElementById('select-meta-tipo').value;
       const pilar = selectMetaPilar?.value || 'pessoal';
@@ -2952,40 +3021,58 @@ document.addEventListener('DOMContentLoaded', () => {
       const proposito = document.getElementById('input-meta-proposito')?.value?.trim() || '';
       const woop_obstaculo = document.getElementById('input-meta-woop-obstaculo')?.value?.trim() || '';
       const woop_plano = document.getElementById('input-meta-woop-plano')?.value?.trim() || '';
-      const valor_atual = tipo === 'numerica'
-        ? Number(document.getElementById('input-meta-num-atual')?.value || 0)
-        : Number(document.getElementById('input-meta-valor-atual')?.value || 0);
-      const valor_alvo = tipo === 'numerica'
-        ? Number(document.getElementById('input-meta-num-alvo')?.value || 100)
-        : (tipo === 'habito'
-          ? Number(document.getElementById('input-meta-habito-alvo')?.value || 30)
-          : Number(document.getElementById('input-meta-valor-alvo')?.value || 100));
-      const unidade = document.getElementById('input-meta-unidade')?.value?.trim() || 'un';
-      const habito_id = tipo === 'habito' ? (selectMetaHabito?.value || '') : '';
       const prazo = document.getElementById('input-meta-prazo')?.value || '';
-      const rawChecklist = document.getElementById('textarea-meta-checklist')?.value || '';
 
-      const checklist = rawChecklist.split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(linha => {
-        const partes = linha.split('|');
-        const texto = partes[0].trim();
-        const pesoNum = partes[1] ? parseInt(partes[1].trim(), 10) : 0;
-        return Number.isFinite(pesoNum) && pesoNum > 0
-          ? { texto, peso: pesoNum, concluido: false }
-          : { texto, concluido: false };
-      }).filter(s => s.texto);
+      const btnSub = document.getElementById('btn-meta-submit');
+      if (btnSub?.disabled) return;
+      if (btnSub) btnSub.disabled = true;
 
       try {
-        await salvarRotina('/api/metas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ titulo, tipo, pilar, ciclo, proxima_acao, proposito, woop_obstaculo, woop_plano, valor_atual, valor_alvo, unidade, habito_id, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
-        });
+        if (idEdit) {
+          await salvarRotina(`/api/metas/${idEdit}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ titulo, pilar, ciclo, prazo, proxima_acao, proposito, woop_obstaculo, woop_plano })
+          });
+        } else {
+          const valor_atual = tipo === 'numerica'
+            ? Number(document.getElementById('input-meta-num-atual')?.value || 0)
+            : Number(document.getElementById('input-meta-valor-atual')?.value || 0);
+          const valor_alvo = tipo === 'numerica'
+            ? Number(document.getElementById('input-meta-num-alvo')?.value || 100)
+            : (tipo === 'habito'
+              ? Number(document.getElementById('input-meta-habito-alvo')?.value || 30)
+              : Number(document.getElementById('input-meta-valor-alvo')?.value || 100));
+          const unidade = document.getElementById('input-meta-unidade')?.value?.trim() || 'un';
+          const habito_id = tipo === 'habito' ? (selectMetaHabito?.value || '') : '';
+          const rawChecklist = document.getElementById('textarea-meta-checklist')?.value || '';
+
+          const checklist = rawChecklist.split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(linha => {
+            const partes = linha.split('|');
+            const texto = partes[0].trim();
+            const pesoNum = partes[1] ? parseInt(partes[1].trim(), 10) : 0;
+            return Number.isFinite(pesoNum) && pesoNum > 0
+              ? { texto, peso: pesoNum, concluido: false }
+              : { texto, concluido: false };
+          }).filter(s => s.texto);
+
+          await salvarRotina('/api/metas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ titulo, tipo, pilar, ciclo, proxima_acao, proposito, woop_obstaculo, woop_plano, valor_atual, valor_alvo, unidade, habito_id, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
+          });
+        }
         document.getElementById('input-meta-titulo').value = '';
         modalMeta.classList.add('hidden');
         modalMeta.classList.remove('flex');
         await carregarMetas();
+        if (typeof window.mostrarToast === 'function') {
+          window.mostrarToast(idEdit ? 'Meta atualizada com sucesso!' : 'Nova meta criada com sucesso!', 'success');
+        }
       } catch (err) {
         statusMeta.textContent = err.message;
+      } finally {
+        if (btnSub) btnSub.disabled = false;
       }
     });
   }
@@ -3050,9 +3137,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.btn-filtro-meta').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.btn-filtro-meta').forEach(b => {
-        b.className = 'btn-filtro-meta px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer';
+        b.className = 'btn-filtro-meta px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer';
       });
-      btn.className = 'btn-filtro-meta px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 border border-slate-300 shadow-2xs cursor-pointer';
+      btn.className = 'btn-filtro-meta px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold bg-white text-slate-900 border border-slate-300 shadow-2xs cursor-pointer';
 
       rotinaState.filtroMetaAtual = btn.getAttribute('data-tipo');
       renderizarMetas();
