@@ -1353,12 +1353,27 @@ function renderizarMetas() {
   atualizarKpisResumoMetas();
   renderizarRadarPilares();
 
+  // Alerta de foco (3 a 5 metas ativas simultaneamente)
+  const alertaFoco = document.getElementById('alerta-foco-metas');
+  const ativasTotal = (rotinaState.metas || []).filter(m => Number(m.progresso || 0) < 100).length;
+  if (alertaFoco) {
+    if (ativasTotal > 5) {
+      alertaFoco.textContent = `🎯 Alerta de Foco: você tem ${ativasTotal} metas ativas ao mesmo tempo. Para evitar dispersão, priorize de 3 a 5 metas principais neste trimestre.`;
+      alertaFoco.classList.remove('hidden');
+    } else {
+      alertaFoco.classList.add('hidden');
+    }
+  }
+
   container.innerHTML = '';
 
   const tipo = rotinaState.filtroMetaAtual;
-  const metasFiltradas = tipo === 'todas'
-    ? rotinaState.metas
-    : rotinaState.metas.filter(m => m.tipo === tipo);
+  const cicloFiltro = document.getElementById('select-filtro-ciclo-meta')?.value || 'todos';
+  const metasFiltradas = (rotinaState.metas || []).filter(m => {
+    const matchTipo = tipo === 'todas' || m.tipo === tipo;
+    const matchCiclo = cicloFiltro === 'todos' || (m.ciclo || 'anual') === cicloFiltro;
+    return matchTipo && matchCiclo;
+  });
 
   if (metasFiltradas.length === 0) {
     container.innerHTML = `
@@ -1436,6 +1451,17 @@ function renderizarMetas() {
     const seloRitmo = `<span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${ritmo.classe}">${ritmo.label}</span>`;
     const esforcoTexto = calcularEsforcoMeta(meta, ritmo.diffDias);
 
+    const CONFIANCA_MAP = {
+      alta: { label: '🟢 Confiança Alta', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200', prox: 'media' },
+      media: { label: '🟡 Confiança Média', cls: 'bg-amber-50 text-amber-800 border-amber-200', prox: 'baixa' },
+      baixa: { label: '🔴 Confiança Baixa', cls: 'bg-rose-50 text-rose-800 border-rose-200', prox: 'alta' }
+    };
+    const conf = CONFIANCA_MAP[meta.confianca || 'alta'] || CONFIANCA_MAP.alta;
+
+    const primeiroPassoPendente = Array.isArray(meta.checklist) ? meta.checklist.find(s => !s.concluido)?.texto : '';
+    const proximaAcao = meta.proxima_acao || primeiroPassoPendente || `Avançar em "${meta.titulo}"`;
+    const cicloLabel = meta.ciclo || 'anual';
+
     card.innerHTML = `
       <div>
         <div class="flex items-center justify-between pb-2.5 border-b border-slate-100 gap-2">
@@ -1443,8 +1469,8 @@ function renderizarMetas() {
             <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-800">
               ${tipoLabel}
             </span>
-            <span class="text-[9px] font-semibold px-2 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-600">
-              ${pilarObj.icone} ${pilarObj.label}
+            <span class="text-[9px] font-bold px-2 py-0.5 rounded border border-slate-200 bg-white text-slate-600">
+              ${pilarObj.icone} ${cicloLabel}
             </span>
             ${seloRitmo}
           </div>
@@ -1578,8 +1604,72 @@ function renderizarMetas() {
             `).join('')}
           </div>
         ` : ''}
+
+        <!-- 4. Próxima Ação + Semáforo de Confiança (Metas Ativas) -->
+        ${!isConcluida ? `
+          <div class="mt-3.5 pt-3 border-t border-slate-100 space-y-2">
+            <div class="flex items-center justify-between gap-2 text-[11px]">
+              <span class="text-slate-500 truncate" title="${escapeHTML(proximaAcao)}">👉 <strong class="text-slate-700">Próxima:</strong> ${escapeHTML(proximaAcao)}</span>
+              <button type="button" class="btn-meta-enviar-agenda px-2 py-1 rounded-md text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer shrink-0" title="Criar tarefa na Agenda/Inbox de Hoje">
+                ⚡ Enviar p/ Agenda
+              </button>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <button type="button" class="btn-meta-confianca px-2 py-0.5 rounded-md text-[10px] font-bold border transition cursor-pointer ${conf.cls}" title="Clique para alternar seu nível de confiança (aparece na Revisão Semanal)">
+                ${conf.label}
+              </button>
+              <span class="text-[10px] text-slate-400">${pilarObj.label}</span>
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
+
+    card.querySelector('.btn-meta-confianca')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      if (btn.disabled) return;
+      btn.disabled = true;
+      try {
+        await salvarRotina(`/api/metas/${meta.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confianca: conf.prox })
+        });
+        await carregarMetas();
+      } catch (err) {
+        avisarFalhaRotina(err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    card.querySelector('.btn-meta-enviar-agenda')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      if (btn.disabled) return;
+      btn.disabled = true;
+      try {
+        const hoje = dataLocalRotina(new Date());
+        await salvarRotina('/api/rotina/prioridades', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            texto: `[Meta] ${proximaAcao}`,
+            top3: false,
+            data: hoje,
+            duracao_min: 30,
+            energia: 'alto'
+          })
+        });
+        if (typeof carregarPrioridades === 'function') await carregarPrioridades();
+        if (typeof window.mostrarToast === 'function') {
+          window.mostrarToast('Próxima ação enviada para Rotina & Agenda de Hoje! ⚡', 'success');
+        }
+      } catch (err) {
+        avisarFalhaRotina(err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
 
     card.querySelector('.btn-delete-meta').addEventListener('click', async () => {
       const confirmado = typeof window.nxConfirmarExclusao === 'function'
@@ -2687,6 +2777,8 @@ document.addEventListener('DOMContentLoaded', () => {
       selectMetaProjeto.dispatchEvent(new Event('change'));
       if (selectMetaTipo) selectMetaTipo.value = 'pessoal';
       if (selectMetaPilar) selectMetaPilar.value = 'pessoal';
+      const selCiclo = document.getElementById('select-meta-ciclo');
+      if (selCiclo) selCiclo.value = `Q${Math.floor(new Date().getMonth() / 3) + 1}`;
       campoMetaValores?.classList.add('hidden');
       campoMetaNumerica?.classList.add('hidden');
       campoMetaHabito?.classList.add('hidden');
@@ -2702,6 +2794,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const titulo = document.getElementById('input-meta-titulo').value.trim();
       const tipo = document.getElementById('select-meta-tipo').value;
       const pilar = selectMetaPilar?.value || 'pessoal';
+      const ciclo = document.getElementById('select-meta-ciclo')?.value || 'Q1';
+      const proxima_acao = document.getElementById('input-meta-proxima-acao')?.value?.trim() || '';
       const valor_atual = tipo === 'numerica'
         ? Number(document.getElementById('input-meta-num-atual')?.value || 0)
         : Number(document.getElementById('input-meta-valor-atual')?.value || 0);
@@ -2728,7 +2822,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await salvarRotina('/api/metas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ titulo, tipo, pilar, valor_atual, valor_alvo, unidade, habito_id, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
+          body: JSON.stringify({ titulo, tipo, pilar, ciclo, proxima_acao, valor_atual, valor_alvo, unidade, habito_id, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
         });
         document.getElementById('input-meta-titulo').value = '';
         modalMeta.classList.add('hidden');
@@ -2738,6 +2832,11 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMeta.textContent = err.message;
       }
     });
+  }
+
+  const selectFiltroCicloMeta = document.getElementById('select-filtro-ciclo-meta');
+  if (selectFiltroCicloMeta) {
+    selectFiltroCicloMeta.addEventListener('change', renderizarMetas);
   }
 
   // Botão "Usar Modelo"

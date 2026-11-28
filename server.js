@@ -2154,7 +2154,7 @@ app.get('/api/metas', rotaPortal(async (req, res) => {
 }));
 
 app.post('/api/metas', rotaPortal(async (req, res) => {
-  const { titulo, tipo, pilar, valor_alvo, valor_atual, unidade, habito_id, prazo, checklist, projeto_id, sugestao_semana } = req.body;
+  const { titulo, tipo, pilar, ciclo, proxima_acao, confianca, valor_alvo, valor_atual, unidade, habito_id, prazo, checklist, projeto_id, sugestao_semana } = req.body;
   if (!titulo || !titulo.trim()) {
     return res.status(400).json({ success: false, message: 'Título da meta é obrigatório.' });
   }
@@ -2200,11 +2200,21 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
       })).filter(s => s.texto)
     : [];
 
+  const ciclosValidos = ['Q1', 'Q2', 'Q3', 'Q4', 'anual'];
+  const qAtual = `Q${Math.floor(new Date().getMonth() / 3) + 1}`;
+  const cicloNorm = ciclosValidos.includes(ciclo) ? ciclo : qAtual;
+  const confiancasValidas = ['alta', 'media', 'baixa'];
+  const confiancaNorm = confiancasValidas.includes(confianca) ? confianca : 'alta';
+  const proxAcaoLimpa = typeof proxima_acao === 'string' ? proxima_acao.trim().slice(0, 160) : '';
+
   const novaMeta = {
     id: dbUser.metas.length > 0 ? Math.max(...dbUser.metas.map(m => m.id)) + 1 : 1,
     titulo: titulo.trim(),
     tipo: tipoNorm, // 'financeira' | 'estudos' | 'pessoal' | 'numerica' | 'habito'
     pilar: pilarNorm,
+    ciclo: cicloNorm,
+    confianca: confiancaNorm,
+    ...(proxAcaoLimpa ? { proxima_acao: proxAcaoLimpa } : {}),
     ...(tipoNorm === 'numerica' ? { unidade: unidadeLimpa } : {}),
     ...(habitoIdNorm ? { habito_id: habitoIdNorm } : {}),
     ...(sugestao_semana ? { sugestao_semana } : {}),
@@ -2239,7 +2249,7 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
 
 app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const { titulo, valor_atual, delta, checklist, prazo } = req.body;
+  const { titulo, valor_atual, delta, checklist, prazo, ciclo, proxima_acao, confianca } = req.body;
   const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const meta = (dbUser.metas || []).find(m => m.id === idNum);
@@ -2250,6 +2260,9 @@ app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   const progressoAnterior = Number(meta.progresso || 0);
   if (typeof titulo === 'string' && titulo.trim()) meta.titulo = titulo.trim();
   if (prazo !== undefined) meta.prazo = prazo;
+  if (['Q1', 'Q2', 'Q3', 'Q4', 'anual'].includes(ciclo)) meta.ciclo = ciclo;
+  if (['alta', 'media', 'baixa'].includes(confianca)) meta.confianca = confianca;
+  if (proxima_acao !== undefined) meta.proxima_acao = String(proxima_acao || '').trim().slice(0, 160);
   if (meta.projeto_id && (valor_atual !== undefined || delta !== undefined)) {
     return res.status(409).json({ success: false, message: 'Registre o aporte no projeto financeiro vinculado.' });
   }

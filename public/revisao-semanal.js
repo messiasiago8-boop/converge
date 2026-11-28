@@ -121,6 +121,12 @@
       objetivos.append(elemento('h3', 'Prazos próximos', 'font-semibold'));
       adicionarLista(objetivos, proximas.slice(0, 5).map(meta =>
         `${meta.titulo} · ${vencimento(meta.prazo)} · faltam ${Math.max(0, 100 - Number(meta.progresso || 0))} pontos percentuais`), 'Nenhum prazo próximo registrado.');
+      const emAlerta = metas.filter(m => Number(m.progresso || 0) < 100 && (m.confianca === 'baixa' || m.confianca === 'media'));
+      if (emAlerta.length > 0) {
+        objetivos.append(elemento('h3', 'Semáforo de Confiança (Atenção)', 'font-semibold text-amber-900'));
+        adicionarLista(objetivos, emAlerta.slice(0, 5).map(m =>
+          `${m.confianca === 'baixa' ? '🔴 Confiança Baixa' : '🟡 Confiança Média'}: ${m.titulo} (${m.progresso || 0}%)`), '');
+      }
       objetivos.append(botao('Abrir Metas', () => window.navIrParaMetas()));
     } else objetivos.append(elemento('p', 'Não foi possível carregar as metas.'));
 
