@@ -134,7 +134,7 @@
     btn.setAttribute('aria-label', `Ajuda sobre ${label || 'esta função'}`);
     btn.setAttribute('aria-expanded', 'false');
     btn.setAttribute('title', 'Como funciona?');
-    btn.innerHTML = SVG_ICON;
+    btn.textContent = '?';
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
