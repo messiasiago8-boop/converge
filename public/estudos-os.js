@@ -207,6 +207,9 @@
     renderizarOverview();
     renderizarMaterias();
     renderizarPaginas();
+    if (window.EstudosViews && typeof window.EstudosViews.renderizarTudo === 'function') {
+      window.EstudosViews.renderizarTudo();
+    }
   }
 
   async function carregar() {

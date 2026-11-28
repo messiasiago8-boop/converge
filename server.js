@@ -998,6 +998,155 @@ app.put('/api/estudos-os/synced-blocks/:syncId', rotaPortal(async (req, res) => 
   res.json({ success: true, data: os.synced_blocks[syncId] });
 }));
 
+function aplicarSM2(item, nivel) {
+  const q = nivel === 'facil' ? 5 : (nivel === 'medio' ? 3 : 1);
+  let rep = Number(item.repeticoes) || 0;
+  let ef = Number(item.fator_ease) || 2.5;
+  let intervalo = 1;
+
+  if (q < 3) {
+    rep = 0;
+    intervalo = 1;
+  } else {
+    if (rep === 0) intervalo = 1;
+    else if (rep === 1) intervalo = 6;
+    else intervalo = Math.round((Number(item.intervalo_dias) || 6) * ef);
+    rep += 1;
+  }
+  ef = Math.max(1.3, Number((ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))).toFixed(2)));
+  const hoje = new Date();
+  const prox = new Date(hoje.getTime() + intervalo * 86400000);
+  item.repeticoes = rep;
+  item.fator_ease = ef;
+  item.intervalo_dias = intervalo;
+  item.nivel_confianca = nivel;
+  item.ultima_revisao = hoje.toISOString().slice(0, 10);
+  item.proxima_revisao = prox.toISOString().slice(0, 10);
+  return item;
+}
+
+app.post('/api/estudos-os/paginas/:id/revisar', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const { nivel } = req.body || {};
+  if (!['facil', 'medio', 'dificil'].includes(nivel)) {
+    return res.status(400).json({ success: false, message: 'Nível deve ser facil, medio ou dificil.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const pag = os.paginas.find(p => p.id === idNum);
+  if (!pag) return res.status(404).json({ success: false, message: 'Página não encontrada.' });
+
+  aplicarSM2(pag, nivel);
+  pag.atualizada_em = new Date().toISOString();
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, data: pag });
+}));
+
+app.post('/api/estudos-os/flashcards', rotaPortal(async (req, res) => {
+  const { frente, verso, materia_id, pagina_id } = req.body || {};
+  if (!frente || !String(frente).trim() || !verso || !String(verso).trim()) {
+    return res.status(400).json({ success: false, message: 'Frente e verso do flashcard são obrigatórios.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const hojeIso = new Date().toISOString().slice(0, 10);
+  const novo = {
+    id: proximoIdLista(os.flashcards),
+    materia_id: materia_id ? parseInt(materia_id, 10) : null,
+    pagina_id: pagina_id ? parseInt(pagina_id, 10) : null,
+    frente: String(frente).trim().slice(0, 500),
+    verso: String(verso).trim().slice(0, 1500),
+    nivel_confianca: 'medio',
+    repeticoes: 0,
+    fator_ease: 2.5,
+    intervalo_dias: 0,
+    ultima_revisao: null,
+    proxima_revisao: hojeIso,
+    criado_em: new Date().toISOString()
+  };
+  os.flashcards.push(novo);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.status(201).json({ success: true, data: novo });
+}));
+
+app.post('/api/estudos-os/flashcards/:id/revisar', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const { nivel } = req.body || {};
+  if (!['facil', 'medio', 'dificil'].includes(nivel)) {
+    return res.status(400).json({ success: false, message: 'Nível inválido.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const fc = os.flashcards.find(f => f.id === idNum);
+  if (!fc) return res.status(404).json({ success: false, message: 'Flashcard não encontrado.' });
+
+  aplicarSM2(fc, nivel);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, data: fc });
+}));
+
+app.delete('/api/estudos-os/flashcards/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const idx = os.flashcards.findIndex(f => f.id === idNum);
+  if (idx === -1) return res.status(404).json({ success: false, message: 'Flashcard não encontrado.' });
+
+  os.flashcards.splice(idx, 1);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, message: 'Flashcard removido.' });
+}));
+
+app.post('/api/estudos-os/erros', rotaPortal(async (req, res) => {
+  const { enunciado, motivo_erro, resolucao, materia_id } = req.body || {};
+  if (!enunciado || !String(enunciado).trim()) {
+    return res.status(400).json({ success: false, message: 'O enunciado da questão é obrigatório.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const novo = {
+    id: proximoIdLista(os.erros),
+    materia_id: materia_id ? parseInt(materia_id, 10) : null,
+    enunciado: String(enunciado).trim().slice(0, 800),
+    motivo_erro: typeof motivo_erro === 'string' && motivo_erro.trim() ? motivo_erro.trim().slice(0, 200) : 'Lacuna conceitual',
+    resolucao: typeof resolucao === 'string' ? resolucao.trim().slice(0, 1200) : '',
+    acertos: 0,
+    tentativas: 1,
+    criado_em: new Date().toISOString()
+  };
+  os.erros.push(novo);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.status(201).json({ success: true, data: novo });
+}));
+
+app.patch('/api/estudos-os/erros/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const errItem = os.erros.find(e => e.id === idNum);
+  if (!errItem) return res.status(404).json({ success: false, message: 'Registro de erro não encontrado.' });
+
+  const { acertou } = req.body || {};
+  if (typeof acertou === 'boolean') {
+    errItem.tentativas = (Number(errItem.tentativas) || 0) + 1;
+    if (acertou) errItem.acertos = (Number(errItem.acertos) || 0) + 1;
+  }
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, data: errItem });
+}));
+
+app.delete('/api/estudos-os/erros/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const idx = os.erros.findIndex(e => e.id === idNum);
+  if (idx === -1) return res.status(404).json({ success: false, message: 'Registro não encontrado.' });
+
+  os.erros.splice(idx, 1);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, message: 'Registro removido.' });
+}));
+
 // ================= ROTAS DE ANOTAÇÕES ================= //
 
 app.get('/api/notas', rotaPortal(async (req, res) => {
