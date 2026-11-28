@@ -1032,7 +1032,133 @@ function renderVideosGrid() {
   });
 }
 
-// ================= RENDERIZAÇÃO DO CRONOGRAMA ================= //
+// ================= RENDERIZAÇÃO DO CRONOGRAMA (SEMANAL & MENSAL) ================= //
+
+let scheduleViewMode = 'semana'; // 'semana' | 'mes'
+let scheduleMesOffset = 0;
+
+function renderScheduleMonthGrid() {
+  const container = document.getElementById('schedule-month-grid');
+  if (!container) return;
+
+  const hoje = new Date();
+  const ref = new Date(hoje.getFullYear(), hoje.getMonth() + scheduleMesOffset, 1);
+  const ano = ref.getFullYear();
+  const mes = ref.getMonth();
+  const nomeMes = ref.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const primeiroDiaSemana = (ref.getDay() + 6) % 7; // 0 = Segunda .. 6 = Domingo
+  const totalDiasMes = new Date(ano, mes + 1, 0).getDate();
+  const nomesSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const cabecalhoCols = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+  let celulas = '';
+  for (let i = 0; i < primeiroDiaSemana; i++) {
+    celulas += '<div class="min-h-[104px] rounded-xl bg-slate-50/60 border border-slate-200/50"></div>';
+  }
+
+  for (let diaNum = 1; diaNum <= totalDiasMes; diaNum++) {
+    const dt = new Date(ano, mes, diaNum);
+    const diaSemana = nomesSemana[dt.getDay()];
+    const ehHoje = dt.getFullYear() === hoje.getFullYear() && dt.getMonth() === hoje.getMonth() && dt.getDate() === hoje.getDate();
+    const aulasDia = state.agendamentos.filter(a => a.dia_semana === diaSemana && a.video);
+
+    celulas += `
+      <div class="min-h-[104px] rounded-xl border p-2 flex flex-col justify-between transition ${ehHoje ? 'bg-emerald-50/70 border-emerald-400 shadow-2xs' : 'bg-white border-slate-200/90 hover:border-emerald-300'}">
+        <div class="flex items-center justify-between gap-1 mb-1">
+          <span class="text-xs font-bold tabular-nums ${ehHoje ? 'text-emerald-800' : 'text-slate-700'}">${diaNum}</span>
+          <div class="flex items-center gap-1">
+            ${ehHoje ? '<span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">Hoje</span>' : ''}
+            <button type="button" class="btn-month-add-aula w-5 h-5 rounded-md bg-slate-100 hover:bg-emerald-600 text-slate-600 hover:text-white text-[11px] font-bold flex items-center justify-center transition cursor-pointer" data-day="${diaSemana}" title="Programar aula para ${diaSemana}">+</button>
+          </div>
+        </div>
+        <div class="space-y-1 overflow-y-auto max-h-[72px]">
+          ${aulasDia.length === 0
+            ? '<p class="text-[10px] text-slate-300 italic">Livre</p>'
+            : aulasDia.map(item => `
+                <button type="button" class="btn-month-open-aula w-full text-left px-1.5 py-1 rounded-md text-[10px] font-medium truncate border transition cursor-pointer ${item.video.concluido ? 'bg-emerald-50 text-emerald-800 border-emerald-200 line-through' : 'bg-slate-50 hover:bg-emerald-50 text-slate-800 border-slate-200'}" data-video-id="${item.video.id}" title="${escapeHTML(item.video.titulo)}">
+                  ${item.video.concluido ? '✓ ' : '▶ '}${escapeHTML(item.video.titulo)}
+                </button>
+              `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h3 class="text-sm font-bold text-slate-900 capitalize">${nomeMes}</h3>
+        <div class="flex items-center gap-1.5">
+          <button type="button" id="btn-sched-mes-prev" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">‹</button>
+          <button type="button" id="btn-sched-mes-hoje" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-pointer">Mês atual</button>
+          <button type="button" id="btn-sched-mes-next" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer">›</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto pb-1">
+        <div class="min-w-[640px] space-y-2">
+          <div class="grid grid-cols-7 gap-2 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            ${cabecalhoCols.map(c => `<div>${c}</div>`).join('')}
+          </div>
+          <div class="grid grid-cols-7 gap-2">
+            ${celulas}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.querySelector('#btn-sched-mes-prev')?.addEventListener('click', () => {
+    scheduleMesOffset -= 1;
+    renderScheduleMonthGrid();
+  });
+  container.querySelector('#btn-sched-mes-hoje')?.addEventListener('click', () => {
+    scheduleMesOffset = 0;
+    renderScheduleMonthGrid();
+  });
+  container.querySelector('#btn-sched-mes-next')?.addEventListener('click', () => {
+    scheduleMesOffset += 1;
+    renderScheduleMonthGrid();
+  });
+  container.querySelectorAll('.btn-month-add-aula').forEach(btn => {
+    btn.addEventListener('click', () => openScheduleModal(btn.getAttribute('data-day')));
+  });
+  container.querySelectorAll('.btn-month-open-aula').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const vid = Number(btn.getAttribute('data-video-id'));
+      const found = state.agendamentos.find(a => a.video && a.video.id === vid);
+      if (found?.video) openLessonView(found.video, 'schedule');
+    });
+  });
+}
+
+function alternarVisaoCronograma(modo) {
+  scheduleViewMode = modo === 'mes' ? 'mes' : 'semana';
+  const gridSem = document.getElementById('schedule-days-grid');
+  const gridMes = document.getElementById('schedule-month-grid');
+  const btnSem = document.getElementById('btn-schedule-view-semana');
+  const btnMes = document.getElementById('btn-schedule-view-mes');
+  const pill = document.getElementById('schedule-periodo-pill');
+
+  if (scheduleViewMode === 'mes') {
+    gridSem?.classList.add('hidden');
+    gridMes?.classList.remove('hidden');
+    if (btnSem) btnSem.className = 'px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-800 transition cursor-pointer';
+    if (btnMes) btnMes.className = 'px-3 py-1.5 rounded-md bg-white text-slate-900 shadow-2xs cursor-pointer';
+    if (pill) pill.textContent = 'Planejamento Mensal';
+    renderScheduleMonthGrid();
+  } else {
+    gridSem?.classList.remove('hidden');
+    gridMes?.classList.add('hidden');
+    if (btnSem) btnSem.className = 'px-3 py-1.5 rounded-md bg-white text-slate-900 shadow-2xs cursor-pointer';
+    if (btnMes) btnMes.className = 'px-3 py-1.5 rounded-md text-slate-500 hover:text-slate-800 transition cursor-pointer';
+    if (pill) pill.textContent = 'Planejamento Semanal';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-schedule-view-semana')?.addEventListener('click', () => alternarVisaoCronograma('semana'));
+  document.getElementById('btn-schedule-view-mes')?.addEventListener('click', () => alternarVisaoCronograma('mes'));
+});
 
 function renderScheduleGrid() {
   const container = document.getElementById('schedule-days-grid');
@@ -1142,6 +1268,10 @@ function renderScheduleGrid() {
 
     container.appendChild(dayCard);
   });
+
+  if (scheduleViewMode === 'mes') {
+    renderScheduleMonthGrid();
+  }
 }
 
 function openLessonView(video, fromView = 'grid') {
