@@ -1851,6 +1851,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   const showFinancasModule = () => {
+    const painel = document.getElementById('iframe-financas');
+    if (!painel.hasAttribute('src')) painel.src = painel.dataset.src;
+
     ocultarRevisao();
     state.currentView = 'financas';
     if (viewDashboardGeral) viewDashboardGeral.classList.add('hidden');
@@ -2198,9 +2201,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const tab = btn.getAttribute('data-tab');
       const iframe = document.getElementById('iframe-financas');
-      if (iframe && iframe.contentWindow && typeof iframe.contentWindow.alternarAba === 'function') {
-        iframe.contentWindow.alternarAba(tab);
-      }
+      const selecionar = () => {
+        if (btn.classList.contains('bg-slate-800')) iframe.contentWindow?.alternarAba?.(tab);
+      };
+      if (typeof iframe.contentWindow?.alternarAba === 'function') selecionar();
+      else iframe.addEventListener('load', selecionar, { once: true });
     });
   });
 

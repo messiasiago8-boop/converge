@@ -44,3 +44,31 @@
   :is(.nx-portal, .nx-finance, body:has(.converge-shell)) :is(input, select, textarea):not([type=checkbox]):not([type=radio]) { font-size: 16px; }
   .converge-shell > section:last-child { padding: 1.3rem; }
 }
+
+@media (max-width: 1023px) {
+  body.nx-portal > div.flex-1,
+  body.nx-finance,
+  body:has(.converge-shell) {
+    padding-left: max(.35rem, env(safe-area-inset-left));
+    padding-right: max(.35rem, env(safe-area-inset-right));
+    padding-top: max(.35rem, env(safe-area-inset-top));
+    padding-bottom: max(.5rem, env(safe-area-inset-bottom));
+  }
+  body.nx-portal #sidebar-portal {
+    height: 100dvh !important;
+    padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom);
+  }
+  #sidebar-portal button, #formPlanilhaDespesa :is(input, button, select),
+  #form-novo-compromisso :is(input, select, button), .converge-shell button {
+    min-height: 44px;
+  }
+  .nx-portal #view-financas { height: 85dvh; }
+  :is(.nx-portal, .nx-finance) .fixed[id^="modal"] {
+    padding-block: max(.75rem, env(safe-area-inset-top)) max(.75rem, env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+  :is(.nx-portal, .nx-finance) .fixed[id^="modal"] > div:not(.absolute) {
+    max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+}

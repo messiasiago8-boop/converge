@@ -2,7 +2,7 @@
 <html lang="pt-BR" class="h-full">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <title>CONVERGE | Portal Integrado de Gestão</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#047857">
@@ -1444,7 +1444,7 @@
 
       <!-- ================= VISÃO 4: MÓDULO FINANÇAS INTELIGENTE INTEGRADO ================= -->
       <section id="view-financas" class="hidden h-full w-full bg-slate-100 flex flex-col overflow-hidden">
-        <iframe id="iframe-financas" src="/financas-app" class="w-full h-full border-0"></iframe>
+        <iframe id="iframe-financas" title="Finanças" data-src="/financas-app" class="w-full h-full border-0"></iframe>
       </section>
 
       <!-- ================= VISÃO 5: NOVO PILAR - ROTINA & AGENDA ================= -->
@@ -2565,14 +2565,17 @@
         document.body.classList.remove('sidebar-portal-aberta');
       }
 
-      // Fecha a sidebar no celular ao clicar em qualquer item do menu (exceto botões de navegação interna da sidebar)
-      document.querySelectorAll('#sidebar-portal button, #sidebar-portal a').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (btn.getAttribute('data-keep-sidebar-open') === 'true') return;
-          if (window.innerWidth < 1024 && document.body.classList.contains('modo-celular-ativo')) {
-            toggleSidebarPortal(false);
-          }
-        });
+      document.getElementById('sidebar-portal').addEventListener('click', event => {
+        const destino = event.target.closest('button, a');
+        if (destino && destino.dataset.keepSidebarOpen !== 'true' && window.innerWidth < 1024) {
+          toggleSidebarPortal(false);
+        }
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && document.body.classList.contains('sidebar-portal-aberta')) {
+          toggleSidebarPortal(false);
+          document.getElementById('btn-toggle-menu-portal').focus();
+        }
       });
     })();
 
