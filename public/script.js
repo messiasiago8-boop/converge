@@ -459,7 +459,15 @@ async function deleteTopic(id) {
     ? `Tem certeza que deseja excluir o tópico ${nome}?\n\nATENÇÃO: Ele contém ${qtdAulas} aula(s) associada(s) que também serão removidas do catálogo!`
     : `Tem certeza que deseja excluir o tópico ${nome}?`;
 
-  if (!confirm(msgAviso)) return false;
+  const confirmado = typeof window.nxConfirmarExclusao === 'function'
+    ? await window.nxConfirmarExclusao({
+        titulo: 'Excluir trilha de estudos?',
+        nomeItem: topico ? topico.nome : 'esta trilha',
+        descricao: qtdAulas > 0 ? `Atenção: ${qtdAulas} aula(s) associada(s) também serão removidas do catálogo.` : 'Esta trilha será removida do catálogo.',
+        textoConfirmar: 'Excluir trilha'
+      })
+    : confirm(msgAviso);
+  if (!confirmado) return false;
 
   try {
     const response = await fetchAuth(`/api/topicos/${id}`, { method: 'DELETE' });
@@ -545,7 +553,15 @@ async function deleteVideo(videoId) {
   const video = state.videos.find(v => v.id === videoId) || state.allVideos.find(v => v.id === videoId);
   const titulo = video ? `"${video.titulo}"` : 'este vídeo';
   
-  if (!confirm(`Tem certeza que deseja apagar permanentemente ${titulo}, além de suas anotações e agendamentos?`)) {
+  const confirmado = typeof window.nxConfirmarExclusao === 'function'
+    ? await window.nxConfirmarExclusao({
+        titulo: 'Excluir aula permanentemente?',
+        nomeItem: video ? video.titulo : 'este vídeo',
+        descricao: 'As anotações e agendamentos ligados a este vídeo também serão removidos.',
+        textoConfirmar: 'Excluir aula'
+      })
+    : confirm(`Tem certeza que deseja apagar permanentemente ${titulo}, além de suas anotações e agendamentos?`);
+  if (!confirmado) {
     return false;
   }
 
@@ -599,7 +615,15 @@ async function createSchedule(dia_semana, id_video) {
 }
 
 async function deleteSchedule(scheduleId) {
-  if (!confirm('Deseja desmarcar esta aula deste dia no cronograma?')) return;
+  const confirmado = typeof window.nxConfirmarExclusao === 'function'
+    ? await window.nxConfirmarExclusao({
+        titulo: 'Desmarcar aula do cronograma?',
+        nomeItem: 'Agendamento semanal',
+        descricao: 'A aula continua disponível no catálogo de vídeos.',
+        textoConfirmar: 'Desmarcar aula'
+      })
+    : confirm('Deseja desmarcar esta aula deste dia no cronograma?');
+  if (!confirmado) return;
   try {
     const response = await fetchAuth(`/api/agendamentos/${scheduleId}`, { method: 'DELETE' });
     const result = await response.json();
@@ -640,7 +664,15 @@ async function createNote(texto) {
 }
 
 async function deleteNote(noteId) {
-  if (!confirm('Deseja excluir esta anotação permanente da aula?')) return;
+  const confirmado = typeof window.nxConfirmarExclusao === 'function'
+    ? await window.nxConfirmarExclusao({
+        titulo: 'Excluir anotação?',
+        nomeItem: 'Anotação da aula',
+        descricao: 'Esta anotação com timestamp será removida permanentemente.',
+        textoConfirmar: 'Excluir anotação'
+      })
+    : confirm('Deseja excluir esta anotação permanente da aula?');
+  if (!confirmado) return;
   try {
     const response = await fetchAuth(`/api/notas/${noteId}`, { method: 'DELETE' });
     const result = await response.json();
