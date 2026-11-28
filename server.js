@@ -1147,6 +1147,184 @@ app.delete('/api/estudos-os/erros/:id', rotaPortal(async (req, res) => {
   res.json({ success: true, message: 'Registro removido.' });
 }));
 
+app.post('/api/estudos-os/provas', rotaPortal(async (req, res) => {
+  const { titulo, materia_id, data, nota, peso } = req.body || {};
+  if (!titulo || !String(titulo).trim()) {
+    return res.status(400).json({ success: false, message: 'O título da prova é obrigatório.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const nova = {
+    id: proximoIdLista(os.provas),
+    materia_id: materia_id ? parseInt(materia_id, 10) : null,
+    titulo: String(titulo).trim().slice(0, 140),
+    data: typeof data === 'string' ? data.slice(0, 10) : '',
+    nota: nota !== '' && nota !== null && nota !== undefined ? Math.max(0, Math.min(100, Number(nota))) : null,
+    peso: Math.max(0.1, Number(peso) || 1),
+    criada_em: new Date().toISOString()
+  };
+  os.provas.push(nova);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.status(201).json({ success: true, data: nova });
+}));
+
+app.patch('/api/estudos-os/provas/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const prova = os.provas.find(p => p.id === idNum);
+  if (!prova) return res.status(404).json({ success: false, message: 'Prova não encontrada.' });
+
+  const { nota, peso, data, titulo } = req.body || {};
+  if (typeof titulo === 'string' && titulo.trim()) prova.titulo = titulo.trim().slice(0, 140);
+  if (typeof data === 'string') prova.data = data.slice(0, 10);
+  if (nota !== undefined) prova.nota = nota === null || nota === '' ? null : Math.max(0, Math.min(100, Number(nota)));
+  if (peso !== undefined) prova.peso = Math.max(0.1, Number(peso) || 1);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, data: prova });
+}));
+
+app.delete('/api/estudos-os/provas/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const idx = os.provas.findIndex(p => p.id === idNum);
+  if (idx === -1) return res.status(404).json({ success: false, message: 'Prova não encontrada.' });
+
+  os.provas.splice(idx, 1);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, message: 'Prova removida.' });
+}));
+
+app.post('/api/estudos-os/leituras', rotaPortal(async (req, res) => {
+  const { titulo, autor, tipo, materia_id, total_paginas, paginas_lidas, status } = req.body || {};
+  if (!titulo || !String(titulo).trim()) {
+    return res.status(400).json({ success: false, message: 'O título da leitura é obrigatório.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const total = Math.max(1, parseInt(total_paginas, 10) || 100);
+  const lidas = Math.max(0, Math.min(total, parseInt(paginas_lidas, 10) || 0));
+  const nova = {
+    id: proximoIdLista(os.leituras),
+    materia_id: materia_id ? parseInt(materia_id, 10) : null,
+    titulo: String(titulo).trim().slice(0, 160),
+    autor: typeof autor === 'string' ? autor.trim().slice(0, 100) : '',
+    tipo: ['livro', 'artigo', 'pdf'].includes(tipo) ? tipo : 'livro',
+    status: ['quero_ler', 'lendo', 'concluido'].includes(status) ? status : (lidas >= total ? 'concluido' : (lidas > 0 ? 'lendo' : 'quero_ler')),
+    paginas_lidas: lidas,
+    total_paginas: total,
+    criada_em: new Date().toISOString()
+  };
+  os.leituras.push(nova);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.status(201).json({ success: true, data: nova });
+}));
+
+app.patch('/api/estudos-os/leituras/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const leit = os.leituras.find(l => l.id === idNum);
+  if (!leit) return res.status(404).json({ success: false, message: 'Leitura não encontrada.' });
+
+  const { paginas_lidas, status } = req.body || {};
+  if (paginas_lidas !== undefined) {
+    leit.paginas_lidas = Math.max(0, Math.min(leit.total_paginas || 100, parseInt(paginas_lidas, 10) || 0));
+    if (leit.paginas_lidas >= leit.total_paginas) leit.status = 'concluido';
+    else if (leit.paginas_lidas > 0 && leit.status === 'quero_ler') leit.status = 'lendo';
+  }
+  if (['quero_ler', 'lendo', 'concluido'].includes(status)) leit.status = status;
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, data: leit });
+}));
+
+app.delete('/api/estudos-os/leituras/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const idx = os.leituras.findIndex(l => l.id === idNum);
+  if (idx === -1) return res.status(404).json({ success: false, message: 'Leitura não encontrada.' });
+
+  os.leituras.splice(idx, 1);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, message: 'Leitura removida.' });
+}));
+
+app.post('/api/estudos-os/sessoes-foco', rotaPortal(async (req, res) => {
+  const { materia_id, duracao_min } = req.body || {};
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const sessao = {
+    id: proximoIdLista(os.sessoes_foco),
+    materia_id: materia_id ? parseInt(materia_id, 10) : null,
+    duracao_min: Math.max(1, Math.min(240, parseInt(duracao_min, 10) || 25)),
+    data: new Date().toISOString().slice(0, 10)
+  };
+  os.sessoes_foco.push(sessao);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.status(201).json({ success: true, data: sessao });
+}));
+
+app.post('/api/estudos-os/ia', aiRateLimiter, rotaPortal(async (req, res) => {
+  const groqKey = process.env.GROQ_API_KEY || '';
+  if (!groqKey) {
+    return res.status(503).json({ success: false, message: 'GROQ_API_KEY não configurada no servidor.' });
+  }
+  const { acao, texto, pergunta } = req.body || {};
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+
+  let systemPrompt = 'Você é o Tutor de Estudos do CONVERGE Study OS. Responda sempre em português do Brasil, de forma clara e objetiva.';
+  let userPrompt = '';
+  let expectJson = false;
+
+  if (acao === 'estruturar') {
+    expectJson = true;
+    systemPrompt += ' Retorne APENAS JSON válido no formato {"blocos":[{"type":"h2|paragraph|callout|toggle","content":"...","props":{"body":"..."}}]}.';
+    userPrompt = `Estruture as seguintes anotações bagunçadas em blocos organizados (títulos h2, parágrafos, callouts de destaque e toggles de revisão):\n\n${String(texto || '').slice(0, 6000)}`;
+  } else if (acao === 'gerar_questoes') {
+    expectJson = true;
+    systemPrompt += ' Retorne APENAS JSON válido no formato {"flashcards":[{"frente":"...","verso":"..."}]}. Crie de 3 a 5 flashcards objetivos baseados exclusivamente nas anotações fornecidas.';
+    userPrompt = `Crie questões práticas de Active Recall (frente e verso) baseadas nestas anotações:\n\n${String(texto || '').slice(0, 6000)}`;
+  } else {
+    const contexto = {
+      hoje: new Date().toISOString().slice(0, 10),
+      materias: os.materias.map(m => ({ id: m.id, nome: m.nome })),
+      paginas: os.paginas.map(p => ({ titulo: p.titulo, materia_id: p.materia_id, status: p.status, ultima_revisao: p.ultima_revisao, proxima_revisao: p.proxima_revisao, atualizada_em: p.atualizada_em })),
+      provas: os.provas,
+      leituras: os.leituras,
+      erros_count: os.erros.length,
+      flashcards_count: os.flashcards.length
+    };
+    userPrompt = `Contexto real do aluno:\n${JSON.stringify(contexto)}\n\nPergunta do aluno: ${String(pergunta || '').slice(0, 800)}`;
+  }
+
+  try {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.3,
+        ...(expectJson ? { response_format: { type: 'json_object' } } : {}),
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ]
+      })
+    });
+    const data = await resp.json();
+    const content = data?.choices?.[0]?.message?.content || '';
+    if (!resp.ok || !content) {
+      return res.status(502).json({ success: false, message: data?.error?.message || 'Erro ao consultar Groq IA.' });
+    }
+    res.json({ success: true, data: expectJson ? JSON.parse(content) : { resposta: content } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Falha na integração com Groq IA: ' + err.message });
+  }
+}));
+
 // ================= ROTAS DE ANOTAÇÕES ================= //
 
 app.get('/api/notas', rotaPortal(async (req, res) => {

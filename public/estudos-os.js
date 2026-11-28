@@ -210,6 +210,9 @@
     if (window.EstudosViews && typeof window.EstudosViews.renderizarTudo === 'function') {
       window.EstudosViews.renderizarTudo();
     }
+    if (window.EstudosDesempenho && typeof window.EstudosDesempenho.renderizarTudo === 'function') {
+      window.EstudosDesempenho.renderizarTudo();
+    }
   }
 
   async function carregar() {
