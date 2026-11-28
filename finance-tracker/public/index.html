@@ -273,16 +273,41 @@
               <span>Saldo a Distribuir: <span id="valorSaldoRestanteLivre" class="text-emerald-700 font-black">R$ 0,00</span></span>
             </div>
 
-            <div class="inline-flex p-1 bg-slate-100 rounded-lg border border-slate-200 gap-1 text-xs font-semibold" id="seletorModeloOrcamento">
-              <button onclick="aplicarModeloOrcamento('50-30-20')" id="btnModelo503020" class="px-3 py-1.5 rounded-md transition shadow-xs bg-white text-blue-700 font-bold border border-slate-200/60">
-                Regra 50 / 30 / 20
+            <div class="relative w-full sm:w-auto" id="seletorModeloOrcamento">
+              <button type="button" id="btnDropdownModelo" onclick="toggleDropdownModelo()" aria-haspopup="listbox" aria-expanded="false" class="w-full sm:w-auto min-w-[245px] px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-white border border-slate-200 hover:border-emerald-300 text-xs font-semibold text-slate-800 flex items-center justify-between gap-3 transition shadow-2xs cursor-pointer">
+                <span class="flex items-center gap-2 truncate">
+                  <span class="w-2 h-2 rounded-full bg-emerald-600 shrink-0"></span>
+                  <span id="lblDropdownModeloAtivo" class="truncate">Regra 50 / 30 / 20</span>
+                </span>
+                <i id="icoDropdownModelo" class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform duration-200"></i>
               </button>
-              <button onclick="aplicarModeloOrcamento('60-20-20')" id="btnModelo602020" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900">
-                Regra 60 / 20 / 20
-              </button>
-              <button onclick="aplicarModeloOrcamento('livre')" id="btnModeloPersonalizado" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900">
-                Orçamento Livre (Manual)
-              </button>
+
+              <div id="menuDropdownModelo" role="listbox" class="hidden absolute right-0 mt-2 w-full sm:w-72 rounded-xl bg-white border border-slate-200 shadow-xl p-1.5 z-40 space-y-1 animate-in">
+                <div class="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                  Escolha seu Modelo de Gestão Orçamentária
+                </div>
+                <button type="button" onclick="selecionarModeloNoDropdown('50-30-20')" data-modelo-opt="50-30-20" class="btn-opt-modelo w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between gap-2 bg-emerald-50 text-emerald-900 font-bold transition cursor-pointer">
+                  <div>
+                    <p class="leading-tight">Regra 50 / 30 / 20</p>
+                    <p class="text-[10px] font-normal text-slate-500 mt-0.5">Equilíbrio clássico de renda</p>
+                  </div>
+                  <i class="fa-solid fa-check text-[11px] text-emerald-700"></i>
+                </button>
+                <button type="button" onclick="selecionarModeloNoDropdown('60-20-20')" data-modelo-opt="60-20-20" class="btn-opt-modelo w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between gap-2 text-slate-700 hover:bg-slate-50 font-medium transition cursor-pointer">
+                  <div>
+                    <p class="leading-tight">Regra 60 / 20 / 20</p>
+                    <p class="text-[10px] font-normal text-slate-500 mt-0.5">Foco em custos fixos maiores</p>
+                  </div>
+                  <i class="fa-solid fa-check text-[11px] text-emerald-700 hidden"></i>
+                </button>
+                <button type="button" onclick="selecionarModeloNoDropdown('livre')" data-modelo-opt="livre" class="btn-opt-modelo w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between gap-2 text-slate-700 hover:bg-slate-50 font-medium transition cursor-pointer">
+                  <div>
+                    <p class="leading-tight">Orçamento Livre (Manual)</p>
+                    <p class="text-[10px] font-normal text-slate-500 mt-0.5">Defina limites personalizados</p>
+                  </div>
+                  <i class="fa-solid fa-check text-[11px] text-emerald-700 hidden"></i>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1971,20 +1996,143 @@
 
     // Gestor de Modelos de Orçamento (50/30/20, 60/20/20 ou Livre)
     let modeloAtivo = '50-30-20';
+    let modeloPendenteModal = null;
+
+    const MODELOS_ORCAMENTO_INFO = {
+      '50-30-20': {
+        nome: 'Regra 50 / 30 / 20',
+        descricao: 'Divide automaticamente a sua receita mensal em três pilares equilibrados para manter saúde financeira sem abrir mão do lazer:',
+        itens: [
+          '50% para Essenciais / Necessidades (moradia, contas fixas, alimentação)',
+          '30% para Desejos / Estilo de Vida (lazer, restaurantes, compras pessoais)',
+          '20% para Investimentos e Metas (reserva de emergência e patrimônio)'
+        ]
+      },
+      '60-20-20': {
+        nome: 'Regra 60 / 20 / 20',
+        descricao: 'Modelo adaptado para quem possui custos fixos mais elevados, preservando ainda 20% para investir no futuro:',
+        itens: [
+          '60% para Essenciais / Gastos Fixos (maior folga para despesas obrigatórias)',
+          '20% para Desejos / Lazer (gastos variáveis controlados)',
+          '20% para Investimentos e Metas (consistência nos aportes)'
+        ]
+      },
+      'livre': {
+        nome: 'Orçamento Livre (Manual)',
+        descricao: 'Remove as travas automáticas de porcentagem para que você tenha controle total sobre cada categoria:',
+        itens: [
+          'Defina manualmente o valor limite de Essenciais, Desejos e Reserva',
+          'Acompanhe o Saldo a Distribuir em tempo real conforme sua receita',
+          'Ideal para meses atípicos ou planejamento financeiro personalizado'
+        ]
+      }
+    };
+
+    function toggleDropdownModelo(forcarEstado) {
+      const menu = document.getElementById('menuDropdownModelo');
+      const btn = document.getElementById('btnDropdownModelo');
+      const ico = document.getElementById('icoDropdownModelo');
+      if (!menu) return;
+      const abrir = typeof forcarEstado === 'boolean' ? forcarEstado : menu.classList.contains('hidden');
+      menu.classList.toggle('hidden', !abrir);
+      if (btn) btn.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+      if (ico) ico.style.transform = abrir ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+
+    function atualizarUIDropdownModelo(modelo) {
+      const lbl = document.getElementById('lblDropdownModeloAtivo');
+      const info = MODELOS_ORCAMENTO_INFO[modelo];
+      if (lbl && info) lbl.textContent = info.nome;
+
+      document.querySelectorAll('.btn-opt-modelo').forEach(btn => {
+        const opt = btn.getAttribute('data-modelo-opt');
+        const ativo = opt === modelo;
+        const check = btn.querySelector('.fa-check');
+        if (ativo) {
+          btn.className = 'btn-opt-modelo w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between gap-2 bg-emerald-50 text-emerald-900 font-bold transition cursor-pointer';
+          if (check) check.classList.remove('hidden');
+        } else {
+          btn.className = 'btn-opt-modelo w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between gap-2 text-slate-700 hover:bg-slate-50 font-medium transition cursor-pointer';
+          if (check) check.classList.add('hidden');
+        }
+      });
+    }
+
+    function selecionarModeloNoDropdown(modelo) {
+      toggleDropdownModelo(false);
+      if (!MODELOS_ORCAMENTO_INFO[modelo] || modelo === modeloAtivo) return;
+
+      try {
+        if (localStorage.getItem('converge_skip_modal_modelo_' + modelo) === '1') {
+          aplicarModeloOrcamento(modelo);
+          return;
+        }
+      } catch (e) {}
+
+      abrirModalConfirmarModelo(modelo);
+    }
+
+    function abrirModalConfirmarModelo(modelo) {
+      const info = MODELOS_ORCAMENTO_INFO[modelo];
+      const modal = document.getElementById('modalConfirmarModelo');
+      if (!info || !modal) {
+        aplicarModeloOrcamento(modelo);
+        return;
+      }
+      modeloPendenteModal = modelo;
+      document.getElementById('modalModeloTitulo').textContent = info.nome;
+      document.getElementById('modalModeloDescricao').textContent = info.descricao;
+      document.getElementById('modalModeloDetalhes').innerHTML = info.itens
+        .map(txt => `<li class="flex items-start gap-2"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-1.5 shrink-0"></span><span>${txt}</span></li>`)
+        .join('');
+      const chk = document.getElementById('chkNaoMostrarModeloNovamente');
+      if (chk) chk.checked = false;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function fecharModalConfirmarModelo() {
+      const modal = document.getElementById('modalConfirmarModelo');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+      modeloPendenteModal = null;
+    }
+
+    async function confirmarTrocaModeloModal() {
+      if (!modeloPendenteModal) return;
+      const modeloEscolhido = modeloPendenteModal;
+      const chk = document.getElementById('chkNaoMostrarModeloNovamente');
+      if (chk && chk.checked) {
+        try {
+          localStorage.setItem('converge_skip_modal_modelo_' + modeloEscolhido, '1');
+        } catch (e) {}
+      }
+      fecharModalConfirmarModelo();
+      await aplicarModeloOrcamento(modeloEscolhido);
+    }
+
+    document.addEventListener('click', (e) => {
+      const seletor = document.getElementById('seletorModeloOrcamento');
+      if (seletor && !seletor.contains(e.target)) {
+        toggleDropdownModelo(false);
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        toggleDropdownModelo(false);
+        fecharModalConfirmarModelo();
+      }
+    });
 
     async function aplicarModeloOrcamento(modelo) {
       modeloAtivo = modelo;
       const totalRenda = dadosMesAtual.entradas.reduce((acc, item) => acc + item.valor, 0);
 
-      // Estilização visual dos botões do seletor
-      const btn50 = document.getElementById('btnModelo503020');
-      const btn60 = document.getElementById('btnModelo602020');
-      const btnLivre = document.getElementById('btnModeloPersonalizado');
+      atualizarUIDropdownModelo(modelo);
       const painelSaldoLivre = document.getElementById('painelSaldoDisponivelLivre');
-
-      [btn50, btn60, btnLivre].forEach(b => {
-        if (b) b.className = "px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900";
-      });
 
       const lblEssenciais = document.getElementById('labelCardEssenciais');
       const lblDesejos = document.getElementById('labelCardDesejos');
@@ -1995,7 +2143,6 @@
       const editBtnReserva = document.getElementById('btnEditCustomReserva');
 
       if (modelo === '50-30-20') {
-        if (btn50) btn50.className = "px-3 py-1.5 rounded-md transition shadow-xs bg-white text-blue-700 font-bold border border-slate-200/60";
         if (lblEssenciais) lblEssenciais.textContent = "Essenciais (50%)";
         if (lblDesejos) lblDesejos.textContent = "Desejos (30%)";
         if (lblReserva) lblReserva.textContent = "Aporte / Reserva (20%)";
@@ -2010,7 +2157,6 @@
         dadosMesAtual.limites["30"] = parseFloat((totalRenda * 0.30).toFixed(2));
         dadosMesAtual.limites["20"] = parseFloat((totalRenda * 0.20).toFixed(2));
       } else if (modelo === '60-20-20') {
-        if (btn60) btn60.className = "px-3 py-1.5 rounded-md transition shadow-xs bg-white text-blue-700 font-bold border border-slate-200/60";
         if (lblEssenciais) lblEssenciais.textContent = "Essenciais (60%)";
         if (lblDesejos) lblDesejos.textContent = "Desejos (20%)";
         if (lblReserva) lblReserva.textContent = "Aporte / Reserva (20%)";
@@ -2024,7 +2170,6 @@
         dadosMesAtual.limites["30"] = parseFloat((totalRenda * 0.20).toFixed(2));
         dadosMesAtual.limites["20"] = parseFloat((totalRenda * 0.20).toFixed(2));
       } else if (modelo === 'livre') {
-        if (btnLivre) btnLivre.className = "px-3 py-1.5 rounded-md transition shadow-xs bg-white text-emerald-700 font-bold border border-slate-200/60";
         if (lblEssenciais) lblEssenciais.textContent = "Essenciais (Livre)";
         if (lblDesejos) lblDesejos.textContent = "Desejos (Livre)";
         if (lblReserva) lblReserva.textContent = "Aporte / Reserva (Livre)";
@@ -5336,6 +5481,43 @@
       await carregarDadosDoBanco(mesPadraoIso);
     };
   </script>
+  <!-- Modal de Explicação e Confirmação do Modelo Orçamentário -->
+  <div id="modalConfirmarModelo" onclick="if (event.target === this) fecharModalConfirmarModelo()" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4" role="dialog" aria-modal="true" aria-labelledby="modalModeloTitulo">
+    <div class="animate-in w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Confirmar Alteração</span>
+            <h3 id="modalModeloTitulo" class="text-base font-bold text-slate-900">Regra 50 / 30 / 20</h3>
+          </div>
+        </div>
+        <button type="button" onclick="fecharModalConfirmarModelo()" class="text-slate-400 hover:text-slate-700 text-sm p-1 cursor-pointer" aria-label="Fechar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <p id="modalModeloDescricao" class="text-xs text-slate-600 leading-relaxed"></p>
+      <ul id="modalModeloDetalhes" class="space-y-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700"></ul>
+
+      <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none pt-1">
+        <input type="checkbox" id="chkNaoMostrarModeloNovamente" class="w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600 cursor-pointer" />
+        <span>Não mostrar esta mensagem novamente</span>
+      </label>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button type="button" onclick="fecharModalConfirmarModelo()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition cursor-pointer">
+          Cancelar
+        </button>
+        <button type="button" onclick="confirmarTrocaModeloModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 shadow-xs transition cursor-pointer">
+          Confirmar modelo
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="loading.js"></script>
   <script src="theme.js"></script>
 
