@@ -2132,7 +2132,7 @@ app.get('/api/metas', rotaPortal(async (req, res) => {
 }));
 
 app.post('/api/metas', rotaPortal(async (req, res) => {
-  const { titulo, tipo, valor_alvo, valor_atual, prazo, checklist, projeto_id, sugestao_semana } = req.body;
+  const { titulo, tipo, valor_alvo, valor_atual, unidade, prazo, checklist, projeto_id, sugestao_semana } = req.body;
   if (!titulo || !titulo.trim()) {
     return res.status(400).json({ success: false, message: 'Título da meta é obrigatório.' });
   }
@@ -2154,14 +2154,19 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
     return res.status(409).json({ success: false, message: 'Já existe uma meta sugerida para este período ou a data é inválida.' });
   }
 
+  const tiposValidos = ['pessoal', 'financeira', 'estudos', 'numerica'];
+  const tipoNorm = tiposValidos.includes(tipo) ? tipo : 'pessoal';
+  const unidadeLimpa = typeof unidade === 'string' && unidade.trim() ? unidade.trim().slice(0, 24) : 'un';
+
   const novaMeta = {
     id: dbUser.metas.length > 0 ? Math.max(...dbUser.metas.map(m => m.id)) + 1 : 1,
     titulo: titulo.trim(),
-    tipo: tipo || 'pessoal', // 'financeira' | 'estudos' | 'pessoal'
+    tipo: tipoNorm, // 'financeira' | 'estudos' | 'pessoal' | 'numerica'
+    ...(tipoNorm === 'numerica' ? { unidade: unidadeLimpa } : {}),
     ...(sugestao_semana ? { sugestao_semana } : {}),
     ...(projetoId ? { projeto_id: projetoId } : {}),
-    valor_alvo: Number(valor_alvo) || 100,
-    valor_atual: Number(valor_atual) || 0,
+    valor_alvo: Number(valor_alvo) > 0 ? Number(valor_alvo) : 100,
+    valor_atual: Math.max(0, Number(valor_atual) || 0),
     progresso: 0,
     prazo: prazo || '',
     checklist: Array.isArray(checklist) ? checklist : [],
@@ -2169,7 +2174,7 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
   };
 
   // Cálculo inicial de progresso
-  if (novaMeta.tipo === 'financeira' && novaMeta.valor_alvo > 0) {
+  if ((novaMeta.tipo === 'financeira' || novaMeta.tipo === 'numerica') && novaMeta.valor_alvo > 0) {
     novaMeta.progresso = Math.min(100, Math.round((novaMeta.valor_atual / novaMeta.valor_alvo) * 100));
   } else if (novaMeta.tipo === 'pessoal' && novaMeta.checklist.length > 0) {
     const done = novaMeta.checklist.filter(s => s.concluido).length;
@@ -2183,7 +2188,7 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
 
 app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const { titulo, valor_atual, checklist, prazo } = req.body;
+  const { titulo, valor_atual, delta, checklist, prazo } = req.body;
   const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const meta = (dbUser.metas || []).find(m => m.id === idNum);
@@ -2194,11 +2199,16 @@ app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   const progressoAnterior = Number(meta.progresso || 0);
   if (typeof titulo === 'string' && titulo.trim()) meta.titulo = titulo.trim();
   if (prazo !== undefined) meta.prazo = prazo;
-  if (meta.projeto_id && valor_atual !== undefined) {
+  if (meta.projeto_id && (valor_atual !== undefined || delta !== undefined)) {
     return res.status(409).json({ success: false, message: 'Registre o aporte no projeto financeiro vinculado.' });
   }
-  if (valor_atual !== undefined && !isNaN(Number(valor_atual))) {
-    meta.valor_atual = Number(valor_atual);
+  if (delta !== undefined && !isNaN(Number(delta))) {
+    meta.valor_atual = Math.max(0, Number(meta.valor_atual || 0) + Number(delta));
+    if (meta.valor_alvo > 0) {
+      meta.progresso = Math.min(100, Math.round((meta.valor_atual / meta.valor_alvo) * 100));
+    }
+  } else if (valor_atual !== undefined && !isNaN(Number(valor_atual))) {
+    meta.valor_atual = Math.max(0, Number(valor_atual));
     if (meta.valor_alvo > 0) {
       meta.progresso = Math.min(100, Math.round((meta.valor_atual / meta.valor_alvo) * 100));
     }

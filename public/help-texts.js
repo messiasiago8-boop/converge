@@ -167,8 +167,8 @@ window.CONVERGE_HELP = {
   /* ==================== METAS & HÁBITOS ==================== */
   'metas-geral': {
     titulo: 'Painel de Metas & Objetivos',
-    descricao: 'Acompanhe objetivos financeiros, de estudos e pessoais com anéis de progresso, contagem regressiva de prazos e sincronização automática.',
-    dica: 'Use "Usar Modelo" para criar metas estruturadas em 1 clique ou filtre por categoria abaixo dos KPIs.'
+    descricao: 'Acompanhe objetivos financeiros, numéricos (com botões +1/+5/+10), de estudos e pessoais com Indicador de Ritmo (Pace), Calculadora de Esforço Diário/Mensal e contagem regressiva.',
+    dica: 'Metas com prazo mostram se você está 🟢 No Ritmo, 🟡 Atenção ou 🔴 Em Risco e calculam exatamente quanto falta por dia/semana/mês.'
   },
   'metas-habitos': {
     titulo: 'Metas de Hábitos & Força (%)',

@@ -1163,6 +1163,106 @@ function atualizarKpisResumoMetas() {
   }
 }
 
+function calcularRitmoMeta(meta) {
+  const progresso = Math.min(100, Math.max(0, Number(meta?.progresso || 0)));
+  if (progresso >= 100) {
+    return { status: 'concluida', label: 'Concluída ✓', esperadoPct: 100, diffDias: 0, classe: 'text-emerald-800 bg-emerald-100/90 border-emerald-300' };
+  }
+  if (!meta?.prazo || !/^\d{4}-\d{2}-\d{2}$/.test(meta.prazo)) {
+    return { status: 'sem_prazo', label: 'Em andamento', esperadoPct: null, diffDias: null, classe: 'text-slate-500 bg-slate-100 border-slate-200' };
+  }
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const fim = new Date(meta.prazo + 'T00:00:00');
+  const diffDias = Math.ceil((fim - hoje) / (1000 * 60 * 60 * 24));
+
+  if (diffDias < 0) {
+    return { status: 'vencida', label: `🔴 Prazo vencido (${Math.abs(diffDias)}d)`, esperadoPct: 100, diffDias, classe: 'text-rose-800 bg-rose-50 border-rose-200' };
+  }
+
+  let inicio = meta.criado_em ? new Date(meta.criado_em) : new Date(hoje.getTime() - 30 * 86400000);
+  if (!Number.isFinite(inicio.getTime())) inicio = new Date(hoje.getTime() - 30 * 86400000);
+  inicio.setHours(0, 0, 0, 0);
+  if (inicio >= fim) inicio = new Date(fim.getTime() - 30 * 86400000);
+
+  const duracaoTotal = Math.max(1, Math.round((fim - inicio) / 86400000));
+  const decorrido = Math.max(0, Math.min(duracaoTotal, Math.round((hoje - inicio) / 86400000)));
+  const esperadoPct = Math.round((decorrido / duracaoTotal) * 100);
+  const deltaRitmo = progresso - esperadoPct;
+
+  if (deltaRitmo >= 10) {
+    return { status: 'adiantada', label: `🟢 Adiantado (+${deltaRitmo}% · ${diffDias}d)`, esperadoPct, diffDias, classe: 'text-emerald-800 bg-emerald-50 border-emerald-200' };
+  }
+  if (deltaRitmo >= -5) {
+    return { status: 'no_ritmo', label: `🟢 No Ritmo (${diffDias}d)`, esperadoPct, diffDias, classe: 'text-emerald-800 bg-emerald-50 border-emerald-200' };
+  }
+  if (deltaRitmo >= -20) {
+    return { status: 'atencao', label: `🟡 Atenção (${progresso}% vs ${esperadoPct}%)`, esperadoPct, diffDias, classe: 'text-amber-800 bg-amber-50 border-amber-200' };
+  }
+  return { status: 'em_risco', label: `🔴 Em Risco (${progresso}% vs ${esperadoPct}%)`, esperadoPct, diffDias, classe: 'text-rose-800 bg-rose-50 border-rose-200' };
+}
+
+function calcularEsforcoMeta(meta, diffDias) {
+  if (!meta || Number(meta.progresso || 0) >= 100) return '';
+  if (diffDias === null || diffDias === undefined || diffDias < 1) return '';
+
+  const dias = Math.max(1, diffDias);
+  const semanas = Math.max(1, dias / 7);
+  const meses = Math.max(1, dias / 30);
+
+  if (meta.tipo === 'financeira') {
+    const falta = Math.max(0, Number(meta.valor_alvo || 0) - Number(meta.valor_atual || 0));
+    if (falta <= 0) return '';
+    if (dias >= 45) {
+      const m = Math.max(1, Math.round(meses));
+      const porMes = falta / m;
+      return `📐 Esforço: R$ ${porMes.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}/mês (${m} ${m === 1 ? 'mês' : 'meses'})`;
+    }
+    if (dias >= 14) {
+      const porSem = falta / semanas;
+      return `📐 Esforço: R$ ${porSem.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}/semana`;
+    }
+    const porDia = falta / dias;
+    return `📐 Esforço: R$ ${porDia.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}/dia`;
+  }
+
+  if (meta.tipo === 'numerica') {
+    const falta = Math.max(0, Number(meta.valor_alvo || 0) - Number(meta.valor_atual || 0));
+    if (falta <= 0) return '';
+    const un = meta.unidade || 'un';
+    const porDia = falta / dias;
+    if (porDia >= 1 || dias <= 21) {
+      const txtDia = porDia >= 1 ? Math.ceil(porDia) : porDia.toFixed(1).replace('.', ',');
+      return `📐 Faltam ${falta} ${un} em ${dias}d → ${txtDia} ${un}/dia`;
+    }
+    const porSem = Math.ceil(falta / semanas);
+    return `📐 Faltam ${falta} ${un} → ${porSem} ${un}/semana`;
+  }
+
+  if (meta.tipo === 'estudos') {
+    const falta = Math.max(0, Number(meta.valor_alvo || 0) - Number(meta.valor_atual || 0));
+    if (falta <= 0) return '';
+    const porSem = Math.ceil(falta / semanas);
+    return dias <= 14
+      ? `📐 Faltam ${falta} aulas em ${dias}d → ${Math.ceil(falta / dias)} aula(s)/dia`
+      : `📐 Faltam ${falta} aulas → ${porSem} aula(s)/semana`;
+  }
+
+  if (meta.tipo === 'pessoal' && Array.isArray(meta.checklist) && meta.checklist.length > 0) {
+    const falta = meta.checklist.filter(s => !s.concluido).length;
+    if (falta <= 0) return '';
+    return dias <= 14
+      ? `📐 Faltam ${falta} etapa(s) em ${dias}d`
+      : `📐 Faltam ${falta} etapa(s) → ${Math.ceil(falta / semanas)}/semana`;
+  }
+
+  return '';
+}
+
+window.calcularRitmoMeta = calcularRitmoMeta;
+window.calcularEsforcoMeta = calcularEsforcoMeta;
+
 function renderizarMetas() {
   const container = document.getElementById('grid-cards-metas');
   if (!container) return;
@@ -1243,48 +1343,22 @@ function renderizarMetas() {
     let tipoLabel = 'Projeto & Pessoal';
     if (meta.tipo === 'financeira') tipoLabel = 'Financeiro';
     else if (meta.tipo === 'estudos') tipoLabel = 'Estudos';
+    else if (meta.tipo === 'numerica') tipoLabel = 'Numérica';
 
-    // Cálculo de Prazo e Ritmo
-    let seloRitmo = '';
-    let calculoMensalTexto = '';
-
-    if (isConcluida) {
-      seloRitmo = `<span class="text-[9px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded border border-emerald-300">Concluída ✓</span>`;
-    } else if (meta.prazo) {
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      const dataPrazo = new Date(meta.prazo + 'T00:00:00');
-      const diffDias = Math.ceil((dataPrazo - hoje) / (1000 * 60 * 60 * 24));
-
-      if (diffDias < 0) {
-        seloRitmo = `<span class="text-[9px] font-bold uppercase tracking-wider text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">Atenção (Atrasada)</span>`;
-      } else if (diffDias <= 15) {
-        seloRitmo = `<span class="text-[9px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">${diffDias}d restantes</span>`;
-      } else {
-        seloRitmo = `<span class="text-[9px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">No ritmo (${diffDias}d)</span>`;
-      }
-
-      // Se for meta financeira, calcula quanto falta por mês
-      if (meta.tipo === 'financeira' && meta.valor_alvo > meta.valor_atual) {
-        const mesesRestantes = Math.max(1, Math.round(diffDias / 30));
-        const faltaTotal = Math.max(0, meta.valor_alvo - meta.valor_atual);
-        const porMes = faltaTotal / mesesRestantes;
-        calculoMensalTexto = `Faltam R$ ${porMes.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}/mês (${mesesRestantes} ${mesesRestantes === 1 ? 'mês' : 'meses'})`;
-      }
-    } else {
-      seloRitmo = `<span class="text-[9px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Em andamento</span>`;
-    }
+    const ritmo = calcularRitmoMeta(meta);
+    const seloRitmo = `<span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${ritmo.classe}">${ritmo.label}</span>`;
+    const esforcoTexto = calcularEsforcoMeta(meta, ritmo.diffDias);
 
     card.innerHTML = `
       <div>
-        <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
-          <div class="flex items-center gap-1.5">
+        <div class="flex items-center justify-between pb-2.5 border-b border-slate-100 gap-2">
+          <div class="flex flex-wrap items-center gap-1.5 min-w-0">
             <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-800">
               ${tipoLabel}
             </span>
             ${seloRitmo}
           </div>
-          <button class="btn-delete-meta text-slate-300 hover:text-rose-600 p-1 text-xs cursor-pointer" data-id="${meta.id}" title="Excluir meta">
+          <button class="btn-delete-meta text-slate-300 hover:text-rose-600 p-1 text-xs cursor-pointer shrink-0" data-id="${meta.id}" title="Excluir meta">
             ✕
           </button>
         </div>
@@ -1304,15 +1378,17 @@ function renderizarMetas() {
           </div>
         </div>
 
-        <!-- Barra de Progresso Viva -->
+        <!-- Barra de Progresso Viva (com marcador de ritmo esperado quando houver prazo) -->
         <div class="mt-3 space-y-1.5">
           <div class="flex items-center justify-between text-xs font-semibold">
-            <span class="text-slate-600">Progresso</span>
+            <span class="text-slate-600">Progresso${ritmo.esperadoPct !== null && !isConcluida ? ` <span class="text-[10px] font-normal text-slate-400">(esperado hoje: ${ritmo.esperadoPct}%)</span>` : ''}</span>
             <span class="font-sans font-bold tabular-nums text-emerald-800">${progresso}%</span>
           </div>
-          <div class="nx-bar-track w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+          <div class="relative nx-bar-track w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
             <div class="nx-bar-fill h-full rounded-full bg-emerald-600" style="width: ${progresso}%;"></div>
+            ${ritmo.esperadoPct !== null && !isConcluida ? `<div class="absolute top-0 bottom-0 w-0.5 bg-slate-700/60" style="left: ${Math.min(99, Math.max(1, ritmo.esperadoPct))}%;" title="Ritmo esperado hoje: ${ritmo.esperadoPct}%"></div>` : ''}
           </div>
+          ${esforcoTexto ? `<p class="text-[11px] font-semibold text-emerald-900 bg-emerald-50/70 border border-emerald-200/60 rounded-lg px-2.5 py-1">${esforcoTexto}</p>` : ''}
         </div>
 
         <!-- 1. Conteúdo Interativo: Meta Financeira -->
@@ -1329,7 +1405,6 @@ function renderizarMetas() {
                 <p class="font-bold text-slate-800 font-sans tabular-nums">R$ ${Number(meta.valor_alvo || 0).toLocaleString('pt-BR')}</p>
               </div>
             </div>
-            ${calculoMensalTexto ? `<p class="text-[10px] font-semibold text-emerald-800 border-t border-emerald-200/50 pt-1.5">${calculoMensalTexto}</p>` : ''}
           </div>
           <div class="mt-2.5 flex items-center justify-between">
             ${meta.projeto_id ? `
@@ -1342,6 +1417,24 @@ function renderizarMetas() {
               <span>Aportar</span>
             </button>
             `}
+          </div>
+        ` : ''}
+
+        <!-- 1B. Conteúdo Interativo: Meta Numérica (+1, +5, +10) -->
+        ${meta.tipo === 'numerica' ? `
+          <div class="mt-3.5 p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2.5">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-600 font-medium">Acumulado:</span>
+              <span class="font-bold text-slate-900 font-sans tabular-nums">${Number(meta.valor_atual || 0).toLocaleString('pt-BR')} / ${Number(meta.valor_alvo || 0).toLocaleString('pt-BR')} ${escapeHTML(meta.unidade || 'un')}</span>
+            </div>
+            <div class="flex items-center justify-between gap-1.5">
+              <span class="text-[10px] font-semibold text-slate-400">Somar rápido:</span>
+              <div class="flex items-center gap-1.5">
+                <button type="button" class="btn-inc-meta-num px-2.5 py-1 rounded-md text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-200 transition cursor-pointer" data-id="${meta.id}" data-delta="1">+1</button>
+                <button type="button" class="btn-inc-meta-num px-2.5 py-1 rounded-md text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-50 border border-emerald-200 transition cursor-pointer" data-id="${meta.id}" data-delta="5">+5</button>
+                <button type="button" class="btn-inc-meta-num px-2.5 py-1 rounded-md text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition cursor-pointer shadow-2xs" data-id="${meta.id}" data-delta="10">+10</button>
+              </div>
+            </div>
           </div>
         ` : ''}
 
@@ -1380,8 +1473,40 @@ function renderizarMetas() {
     `;
 
     card.querySelector('.btn-delete-meta').addEventListener('click', async () => {
-      if (!confirm(`Deseja excluir a meta "${meta.titulo}"?`)) return;
+      const confirmado = typeof window.nxConfirmarExclusao === 'function'
+        ? await window.nxConfirmarExclusao({
+            titulo: 'Excluir meta?',
+            nomeItem: meta.titulo,
+            descricao: 'Todo o progresso e histórico de avanços desta meta serão removidos.',
+            textoConfirmar: 'Excluir meta'
+          })
+        : confirm(`Deseja excluir a meta "${meta.titulo}"?`);
+      if (!confirmado) return;
       await excluirMeta(meta.id);
+    });
+
+    card.querySelectorAll('.btn-inc-meta-num').forEach(btnInc => {
+      btnInc.addEventListener('click', async () => {
+        if (btnInc.disabled) return;
+        btnInc.disabled = true;
+        const delta = Number(btnInc.getAttribute('data-delta') || 1);
+        try {
+          const resp = await salvarRotina(`/api/metas/${meta.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ delta })
+          });
+          await carregarMetas();
+          if (resp?.data?.progresso >= 100) {
+            const cardAtual = document.getElementById('meta-portal-' + meta.id);
+            if (cardAtual && typeof window.nxCelebrate === 'function') window.nxCelebrate(cardAtual);
+          }
+        } catch (err) {
+          avisarFalhaRotina(err);
+        } finally {
+          btnInc.disabled = false;
+        }
+      });
     });
 
     const btnAporte = card.querySelector('.btn-aportar-meta');
@@ -2395,6 +2520,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const formNovaMeta = document.getElementById('form-nova-meta');
   const selectMetaTipo = document.getElementById('select-meta-tipo');
   const campoMetaValores = document.getElementById('campo-meta-valores');
+  const campoMetaNumerica = document.getElementById('campo-meta-numerica');
   const campoMetaChecklist = document.getElementById('campo-meta-checklist');
   const selectMetaProjeto = document.getElementById('select-meta-projeto');
   const statusMeta = document.getElementById('status-meta-form');
@@ -2420,17 +2546,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (selectMetaTipo) {
     selectMetaTipo.addEventListener('change', () => {
       const tipo = selectMetaTipo.value;
-      if (tipo === 'financeira') {
-        campoMetaValores?.classList.remove('hidden');
-        campoMetaChecklist?.classList.add('hidden');
-        carregarProjetosVinculaveis();
-      } else if (tipo === 'pessoal') {
-        campoMetaValores?.classList.add('hidden');
-        campoMetaChecklist?.classList.remove('hidden');
-      } else {
-        campoMetaValores?.classList.add('hidden');
-        campoMetaChecklist?.classList.add('hidden');
-      }
+      campoMetaValores?.classList.toggle('hidden', tipo !== 'financeira');
+      campoMetaNumerica?.classList.toggle('hidden', tipo !== 'numerica');
+      campoMetaChecklist?.classList.toggle('hidden', tipo !== 'pessoal');
+      if (tipo === 'financeira') carregarProjetosVinculaveis();
     });
   }
 
@@ -2442,6 +2561,7 @@ document.addEventListener('DOMContentLoaded', () => {
       selectMetaProjeto.dispatchEvent(new Event('change'));
       if (selectMetaTipo) selectMetaTipo.value = 'pessoal';
       campoMetaValores?.classList.add('hidden');
+      campoMetaNumerica?.classList.add('hidden');
       campoMetaChecklist?.classList.remove('hidden');
       modalMeta.classList.remove('hidden');
       modalMeta.classList.add('flex');
@@ -2453,8 +2573,13 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const titulo = document.getElementById('input-meta-titulo').value.trim();
       const tipo = document.getElementById('select-meta-tipo').value;
-      const valor_atual = Number(document.getElementById('input-meta-valor-atual')?.value || 0);
-      const valor_alvo = Number(document.getElementById('input-meta-valor-alvo')?.value || 100);
+      const valor_atual = tipo === 'numerica'
+        ? Number(document.getElementById('input-meta-num-atual')?.value || 0)
+        : Number(document.getElementById('input-meta-valor-atual')?.value || 0);
+      const valor_alvo = tipo === 'numerica'
+        ? Number(document.getElementById('input-meta-num-alvo')?.value || 100)
+        : Number(document.getElementById('input-meta-valor-alvo')?.value || 100);
+      const unidade = document.getElementById('input-meta-unidade')?.value?.trim() || 'un';
       const prazo = document.getElementById('input-meta-prazo')?.value || '';
       const rawChecklist = document.getElementById('textarea-meta-checklist')?.value || '';
 
@@ -2467,7 +2592,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await salvarRotina('/api/metas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ titulo, tipo, valor_atual, valor_alvo, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
+          body: JSON.stringify({ titulo, tipo, valor_atual, valor_alvo, unidade, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
         });
         document.getElementById('input-meta-titulo').value = '';
         modalMeta.classList.add('hidden');
