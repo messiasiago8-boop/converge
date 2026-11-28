@@ -144,9 +144,9 @@ window.CONVERGE_HELP = {
     dica: 'Arraste tarefas da coluna Sem Horário (Inbox) para uma lacuna livre para fazer Time Blocking.'
   },
   'rotina-capacidade': {
-    titulo: 'Capacidade do Dia & Captura Natural',
-    descricao: 'Soma a duração estimada de tudo que você planejou para hoje e alerta em Mel ou Argila se o dia ficar sobrecarregado. A captura rápida entende data, hora, duração e energia no texto.',
-    dica: 'Experimente digitar: "Estudar matemática hoje 19h 45m #alto" e clique em Agendar Rápido.'
+    titulo: 'Capacidade do Dia, Pico de Energia & Captura Natural',
+    descricao: 'Soma a duração estimada de tudo que você planejou para hoje, destaca seu período de pico de foco (Manhã, Tarde ou Noite) com sugestões visuais na Timeline e entende data, hora, duração e energia na captura rápida.',
+    dica: 'Escolha seu Pico de Energia ao lado da Meta de horas e digite ex.: "Estudar matemática hoje 09h 45m #alto".'
   },
   'rotina-timeblock': {
     titulo: 'Inbox & Time Blocking',

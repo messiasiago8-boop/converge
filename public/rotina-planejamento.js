@@ -9,7 +9,26 @@
   'use strict';
 
   const STORAGE_CAP_KEY = 'converge_rotina_cap_horas';
+  const STORAGE_PICO_KEY = 'converge_rotina_pico_energia';
   let dragTaskId = null;
+
+  const PICOS_ENERGIA = {
+    manha: { id: 'manha', label: 'Manhã (06h–12h)', ini: 6 * 60, fim: 12 * 60, sugestao: '09:00' },
+    tarde: { id: 'tarde', label: 'Tarde (12h–18h)', ini: 12 * 60, fim: 18 * 60, sugestao: '14:00' },
+    noite: { id: 'noite', label: 'Noite (18h–23h)', ini: 18 * 60, fim: 23 * 60, sugestao: '19:30' }
+  };
+
+  function obterPicoEnergia() {
+    const sel = document.getElementById('select-pico-energia');
+    const val = (sel && sel.value) || localStorage.getItem(STORAGE_PICO_KEY) || 'manha';
+    return PICOS_ENERGIA[val] || PICOS_ENERGIA.manha;
+  }
+
+  function estaNoPico(minutos) {
+    if (minutos === null || minutos === undefined) return false;
+    const pico = obterPicoEnergia();
+    return minutos >= pico.ini && minutos < pico.fim;
+  }
 
   function esc(str) {
     return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({
@@ -272,13 +291,15 @@
             inicio: ini,
             duracao: Number(p.duracao_min) || 30,
             origem: 'Tarefa',
-            categoria: 'estudos'
+            categoria: 'estudos',
+            energia: p.energia || 'medio'
           });
         }
       }
     });
 
     blocos.sort((a, b) => a.inicio - b.inicio);
+    const pico = obterPicoEnergia();
 
     if (blocos.length === 0) {
       container.innerHTML = `
@@ -286,9 +307,12 @@
           <p class="text-xs font-semibold text-slate-700">Dia livre até agora</p>
           <p class="text-[11px] text-slate-500">Use a Captura Rápida acima ou clique em uma lacuna abaixo para bloquear seu tempo.</p>
           <div class="flex flex-wrap justify-center gap-2 pt-2">
-            ${['09:00', '14:00', '19:00'].map(h => `
-              <button type="button" class="gap-drop-zone px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-gap-hora="${h}">+ Preencher ${h}</button>
-            `).join('')}
+            ${['09:00', '14:00', '19:00'].map(h => {
+              const noPico = estaNoPico(paraMinutos(h));
+              return `
+              <button type="button" class="gap-drop-zone px-3 py-1.5 rounded-lg text-xs font-semibold ${noPico ? 'text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300' : 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'} cursor-pointer" data-gap-hora="${h}">+ Preencher ${h}${noPico ? ' · ⚡ Pico' : ''}</button>
+            `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -300,11 +324,19 @@
       blocos.forEach((b, i) => {
         const fim = b.inicio + b.duracao;
         const passado = fim < agoraMin;
+        let badgeEnergia = '';
+        if (b.energia === 'alto') {
+          badgeEnergia = estaNoPico(b.inicio)
+            ? '<span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">⚡ Foco Alto · no pico</span>'
+            : `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0" title="Sugestão: mova para ${pico.label}">⚠️ Foco Alto · fora do pico</span>`;
+        } else if (b.energia === 'baixo') {
+          badgeEnergia = '<span class="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">🌿 Baixa Energia</span>';
+        }
         html += `
           <div class="flex items-stretch gap-3 ${passado ? 'opacity-60' : ''}">
             <div class="w-12 shrink-0 pt-2.5 text-right text-[11px] font-mono font-bold text-slate-700">${minParaHHMM(b.inicio)}</div>
             <div class="flex flex-col items-center shrink-0">
-              <span class="w-2.5 h-2.5 rounded-full mt-3 bg-emerald-600"></span>
+              <span class="w-2.5 h-2.5 rounded-full mt-3 ${b.energia === 'alto' ? 'bg-amber-500' : 'bg-emerald-600'}"></span>
               <span class="flex-1 w-px bg-slate-200"></span>
             </div>
             <div class="flex-1 min-w-0 mb-1.5 p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between gap-2">
@@ -312,6 +344,7 @@
                 <p class="text-xs font-bold text-slate-900 truncate">${esc(b.titulo)}</p>
                 <p class="text-[10px] text-slate-500">${esc(b.origem)} · ${minParaHHMM(b.inicio)} – ${minParaHHMM(fim)} (${formatarDuracao(b.duracao)})</p>
               </div>
+              ${badgeEnergia}
             </div>
           </div>
         `;
@@ -321,9 +354,10 @@
         if (prox && prox.inicio - fim >= 15) {
           const gapMin = prox.inicio - fim;
           const horaGap = minParaHHMM(fim);
+          const gapNoPico = estaNoPico(fim);
           html += `
-            <div class="gap-drop-zone flex items-center gap-3 my-1 py-2 px-3 rounded-xl border border-dashed border-emerald-300/80 bg-emerald-50/40 hover:bg-emerald-50 transition" data-gap-hora="${horaGap}">
-              <span class="text-[11px] font-semibold text-emerald-800 flex-1">⏱ ${formatarDuracao(gapMin)} livres (${horaGap} – ${minParaHHMM(prox.inicio)})</span>
+            <div class="gap-drop-zone flex items-center gap-3 my-1 py-2 px-3 rounded-xl border border-dashed ${gapNoPico ? 'border-amber-300 bg-amber-50/50 hover:bg-amber-50' : 'border-emerald-300/80 bg-emerald-50/40 hover:bg-emerald-50'} transition" data-gap-hora="${horaGap}">
+              <span class="text-[11px] font-semibold ${gapNoPico ? 'text-amber-900' : 'text-emerald-800'} flex-1">⏱ ${formatarDuracao(gapMin)} livres (${horaGap} – ${minParaHHMM(prox.inicio)})${gapNoPico ? ' · ⚡ Ideal p/ Foco Alto' : ''}</span>
               <button type="button" class="btn-preencher-lacuna px-2.5 py-1 rounded-lg text-[10px] font-bold text-emerald-800 bg-white border border-emerald-200 hover:bg-emerald-100 cursor-pointer" data-gap-hora="${horaGap}">+ Preencher</button>
             </div>
           `;
@@ -371,8 +405,29 @@
     });
   }
 
+  function atualizarSugestaoEnergia() {
+    const alerta = document.getElementById('alerta-energia-pico');
+    if (!alerta || typeof rotinaState === 'undefined') return;
+    const hoje = dataIsoOffset(0);
+    const pico = obterPicoEnergia();
+    const tarefas = (rotinaState.prioridades || []).filter(t => !t.concluida && !t.adiada_ate && (!t.data || t.data === hoje));
+    const altoForaPico = tarefas.filter(t => t.energia === 'alto' && t.horario && !estaNoPico(paraMinutos(t.horario)));
+    const altoInbox = tarefas.filter(t => t.energia === 'alto' && !t.horario);
+
+    if (altoForaPico.length > 0) {
+      alerta.textContent = `⚡ Dica de Energia: você tem ${altoForaPico.length} ${altoForaPico.length === 1 ? 'tarefa de Foco Alto agendada' : 'tarefas de Foco Alto agendadas'} fora do seu pico (${pico.label}). Tente movê-la para o período em que você rende mais!`;
+      alerta.classList.remove('hidden');
+    } else if (altoInbox.length > 0) {
+      alerta.textContent = `⚡ Dica de Energia: você tem ${altoInbox.length} ${altoInbox.length === 1 ? 'tarefa de Foco Alto' : 'tarefas de Foco Alto'} na Inbox. Arraste para uma lacuna da ${pico.label} (seu pico de foco).`;
+      alerta.classList.remove('hidden');
+    } else {
+      alerta.classList.add('hidden');
+    }
+  }
+
   function atualizarTudoPlanejamento() {
     atualizarCapacidadeDia();
+    atualizarSugestaoEnergia();
     renderizarInboxTimeBlocking();
     aprimorarTimelineComLacunas();
   }
@@ -385,6 +440,16 @@
       selCap.addEventListener('change', () => {
         localStorage.setItem(STORAGE_CAP_KEY, selCap.value);
         atualizarCapacidadeDia();
+      });
+    }
+
+    const selPico = document.getElementById('select-pico-energia');
+    if (selPico) {
+      const savedPico = localStorage.getItem(STORAGE_PICO_KEY);
+      if (savedPico && PICOS_ENERGIA[savedPico]) selPico.value = savedPico;
+      selPico.addEventListener('change', () => {
+        localStorage.setItem(STORAGE_PICO_KEY, selPico.value);
+        atualizarTudoPlanejamento();
       });
     }
 

@@ -1548,7 +1548,7 @@
                   <p class="text-[11px] text-slate-500">Controle sua carga horária real e digite tarefas em linguagem natural.</p>
                 </div>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 <span id="badge-capacidade-status" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 tabular-nums">0h / 8h · Equilibrado</span>
                 <select id="select-capacidade-horas" class="px-2 py-1 text-[11px] font-semibold border border-slate-200 bg-slate-50 rounded-lg cursor-pointer" title="Horas disponíveis no dia">
                   <option value="6">Meta: 6h</option>
@@ -1556,15 +1556,21 @@
                   <option value="10">Meta: 10h</option>
                   <option value="12">Meta: 12h</option>
                 </select>
+                <select id="select-pico-energia" class="px-2 py-1 text-[11px] font-semibold border border-amber-200 bg-amber-50/70 text-amber-900 rounded-lg cursor-pointer" title="Período em que você tem mais foco e energia">
+                  <option value="manha" selected>🌅 Pico: Manhã</option>
+                  <option value="tarde">☀️ Pico: Tarde</option>
+                  <option value="noite">🌙 Pico: Noite</option>
+                </select>
               </div>
             </div>
 
             <!-- Barra de Capacidade -->
-            <div class="space-y-1">
+            <div class="space-y-1.5">
               <div class="nx-bar-track w-full h-2.5 rounded-full bg-slate-100 border border-slate-200 overflow-hidden">
                 <div id="bar-capacidade-dia" class="nx-bar-fill h-full rounded-full bg-emerald-600" style="width: 0%;"></div>
               </div>
               <p id="txt-capacidade-alerta" class="text-[11px] text-slate-500">Nenhuma sobrecarga detectada. Você tem margem livre hoje.</p>
+              <p id="alerta-energia-pico" class="hidden text-[11px] font-medium text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-1.5"></p>
             </div>
 
             <!-- Captura Rápida em Linguagem Natural -->
