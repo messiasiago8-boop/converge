@@ -531,6 +531,8 @@
 
     <!-- Conteúdo Dinâmico (Painel Inicial / Grade de Vídeos / Cronograma / Visão de Aula / Finanças / Rotina / Metas) -->
     <main class="flex-1 overflow-y-auto">
+      <!-- Barra Sticky de Sub-navegação Interna (Exclusiva para Mobile) -->
+      <nav id="mobile-module-subnav" class="hidden md:hidden" aria-label="Seções do módulo ativo"></nav>
 
       <!-- ================= VISÃO 0: NOVO PAINEL INICIAL (VISÃO GERAL / TORRE DE CONTROLE) ================= -->
       <section id="view-dashboard-geral" class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -2645,6 +2647,7 @@
   <script src="/estudos-views.js"></script>
   <script src="/estudos-desempenho.js"></script>
   <script src="/estudos-os.js"></script>
+  <script src="/mobile-subnav.js"></script>
   <script src="/groq-ia.js"></script>
   <script src="/theme.js"></script>
 </body>

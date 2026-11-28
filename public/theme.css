@@ -618,3 +618,56 @@ body.nx-finance section.grid.lg\:grid-cols-5 #statusGlobalTexto { word-break: no
 @keyframes nxSpinLoader {
   to { transform: rotate(360deg); }
 }
+
+/* ===================================================================== */
+/* Barra Sticky de Sub-navegação Exclusiva para Mobile (< 768px)         */
+/* ===================================================================== */
+@media (min-width: 768px) {
+  #mobile-module-subnav { display: none !important; }
+}
+@media (max-width: 767px) {
+  #mobile-module-subnav {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    background: rgba(255, 253, 248, .88);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+    border-bottom: 1px solid rgba(31, 42, 39, .08);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  #mobile-module-subnav.hidden { display: none !important; }
+  #mobile-module-subnav::-webkit-scrollbar { display: none; }
+  .nx-mob-pill {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid rgba(31, 42, 39, .10);
+    background: rgba(255, 255, 255, .85);
+    color: var(--nx-ink-soft);
+    transition: background-color .2s ease, color .2s ease, border-color .2s ease, transform .15s ease;
+  }
+  .nx-mob-pill.is-active {
+    background: linear-gradient(135deg, #5f9a8c 0%, #3d6f64 100%);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 6px 14px -6px rgba(67, 114, 104, .55);
+  }
+  .nx-mob-pill.is-danger {
+    color: #9e4b4b;
+    background: rgba(199, 139, 139, .14);
+    border-color: rgba(199, 139, 139, .35);
+  }
+}

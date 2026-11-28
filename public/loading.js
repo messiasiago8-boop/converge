@@ -14,6 +14,7 @@
   const FINISH_DEBOUNCE_MS = 280;
   const FAILSAFE_TIMEOUT_MS = 25000;
   const SILENT_URL_RE = /(\/progresso\b|\/api\/push|manifest\.json|sw\.js|favicon)/i;
+  const PAGE_BOOT_AT = Date.now();
   const IS_EMBEDDED = (() => {
     try { return window.self !== window.top; } catch (e) { return true; }
   })();
@@ -221,15 +222,25 @@
     }
   }, true);
 
+  document.addEventListener('change', () => {
+    lastUserActionAt = Date.now();
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') lastUserActionAt = Date.now();
+  }, true);
+
   if (typeof window.fetch === 'function') {
     const originalFetch = window.fetch.bind(window);
     window.fetch = async function (input, init) {
       const urlStr = typeof input === 'string' ? input : (input && input.url ? input.url : '');
       const method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+      const agora = Date.now();
+      const semAcaoRecente = (agora - PAGE_BOOT_AT > 3500) && (agora - lastUserActionAt > 1500);
       const isSilent = Boolean(
         (init && init.silent) ||
         SILENT_URL_RE.test(urlStr) ||
-        (method === 'GET' && urlStr.includes('/api/videos') && (Date.now() - lastUserActionAt > 2000))
+        (method === 'GET' && semAcaoRecente)
       );
 
       if (isSilent) {
