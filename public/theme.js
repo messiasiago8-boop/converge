@@ -153,6 +153,65 @@
     setTimeout(() => targetEl.classList.remove('nx-celebrate-pulse'), 820);
   };
 
+  window.nxConfirmarExclusao = function ({
+    titulo = 'Confirmar exclusão',
+    descricao = 'Esta ação não poderá ser desfeita.',
+    nomeItem = '',
+    textoConfirmar = 'Sim, excluir'
+  } = {}) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+
+      const escHtml = (s) => String(s || '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+
+      overlay.innerHTML = `
+        <div class="animate-in w-full max-w-md rounded-2xl border border-slate-200 bg-[#fffdf8] p-6 shadow-2xl space-y-4">
+          <div class="flex items-start gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0 text-rose-600 text-lg">
+              🗑️
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-base font-bold text-slate-900 leading-snug">${escHtml(titulo)}</h3>
+              ${nomeItem ? `<p class="mt-1.5 inline-block max-w-full truncate px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-800">${escHtml(nomeItem)}</p>` : ''}
+              <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">${escHtml(descricao)}</p>
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <button type="button" class="nx-btn-cancel px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition cursor-pointer">
+              Cancelar
+            </button>
+            <button type="button" class="nx-btn-confirm px-4 py-2 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 shadow-xs transition cursor-pointer">
+              ${escHtml(textoConfirmar)}
+            </button>
+          </div>
+        </div>
+      `;
+
+      const fechar = (resultado) => {
+        document.removeEventListener('keydown', onKey);
+        overlay.remove();
+        resolve(resultado);
+      };
+
+      const onKey = (e) => {
+        if (e.key === 'Escape') fechar(false);
+      };
+
+      document.addEventListener('keydown', onKey);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) fechar(false); });
+      overlay.querySelector('.nx-btn-cancel').addEventListener('click', () => fechar(false));
+      overlay.querySelector('.nx-btn-confirm').addEventListener('click', () => fechar(true));
+
+      document.body.appendChild(overlay);
+      overlay.querySelector('.nx-btn-cancel').focus();
+    });
+  };
+
   /* ---------- 4. Hero do Portal ---------- */
   const fmtTime = (s) => {
     s = Math.max(0, Math.floor(s || 0));

@@ -178,8 +178,17 @@
 
     grid.querySelectorAll('.btn-eos-del-materia').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        if (!confirm('Remover esta matéria? As páginas vinculadas serão preservadas.')) return;
+        const id = parseInt(btn.getAttribute('data-id'), 10);
+        const matObj = materias.find(m => m.id === id);
+        const ok = typeof window.nxConfirmarExclusao === 'function'
+          ? await window.nxConfirmarExclusao({
+              titulo: 'Remover matéria?',
+              nomeItem: matObj ? matObj.nome : '',
+              descricao: 'A disciplina será removida, mas suas páginas vinculadas serão preservadas.',
+              textoConfirmar: 'Remover matéria'
+            })
+          : confirm('Remover esta matéria? As páginas vinculadas serão preservadas.');
+        if (!ok) return;
         await apiEstudos(`/api/estudos-os/materias/${id}`, { method: 'DELETE' });
         await carregar();
       });

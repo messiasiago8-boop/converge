@@ -160,7 +160,16 @@
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = parseInt(btn.getAttribute('data-id'), 10);
-        if (!confirm('Excluir esta página? Subpáginas serão mantidas na raiz.')) return;
+        const pagObj = paginas.find(p => p.id === id);
+        const ok = typeof window.nxConfirmarExclusao === 'function'
+          ? await window.nxConfirmarExclusao({
+              titulo: 'Excluir página de estudo?',
+              nomeItem: pagObj ? pagObj.titulo : '',
+              descricao: 'Esta página será removida do caderno. Subpáginas vinculadas serão mantidas na raiz.',
+              textoConfirmar: 'Excluir página'
+            })
+          : confirm('Excluir esta página? Subpáginas serão mantidas na raiz.');
+        if (!ok) return;
         await apiReq(`/api/estudos-os/paginas/${id}`, { method: 'DELETE' });
         if (ebState.paginaAtivaId === id) ebState.paginaAtivaId = null;
         if (window.EstudosOS) await window.EstudosOS.carregar();
