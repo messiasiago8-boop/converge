@@ -1981,7 +1981,7 @@
             </div>
             <div>
               <h2 class="text-base font-bold text-slate-900 tracking-tight">Tutorial: App e Notificações no Celular (iOS & Android)</h2>
-              <p class="text-xs text-slate-500">Assista ao vídeo rápido de 26 segundos para receber alertas na tela bloqueada mesmo com o site fechado.</p>
+              <p class="text-xs text-slate-500">Escolha seu aparelho e assista ao vídeo narrado em português para receber alertas na tela bloqueada.</p>
             </div>
           </div>
           <div class="flex flex-wrap items-center gap-2">
@@ -2005,11 +2005,11 @@
           <div class="lg:col-span-5 bg-slate-950 rounded-2xl p-4 shadow-lg border border-slate-800 flex flex-col items-center">
             <div class="w-full flex items-center justify-between mb-3 px-1">
               <span id="tutorial-video-label" class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Vídeo Guia • iPhone (iOS)</span>
-              <span id="tutorial-video-meta" class="text-[10px] font-mono text-slate-400">Full HD • PT-BR</span>
+              <span id="tutorial-video-meta" class="text-[10px] font-mono text-slate-400">36s • Full HD • PT-BR</span>
             </div>
             <video
               id="video-tutorial-ios"
-              src="/tutorial-ios-notificacoes.mp4"
+              src="/tutorial-ios-notificacoes.mp4?v=2"
               controls
               playsinline
               preload="metadata"
@@ -2114,11 +2114,13 @@
             const clsInativo = 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition cursor-pointer';
             if (btnIos) btnIos.className = ehAndroid ? clsInativo : clsAtivo;
             if (btnAnd) btnAnd.className = ehAndroid ? clsAtivo : clsInativo;
+            const meta = document.getElementById('tutorial-video-meta');
             if (lbl) lbl.textContent = ehAndroid ? 'Vídeo Guia • Android' : 'Vídeo Guia • iPhone (iOS)';
+            if (meta) meta.textContent = ehAndroid ? '35s • Full HD • PT-BR' : '36s • Full HD • PT-BR';
             if (pIos) pIos.classList.toggle('hidden', ehAndroid);
             if (pAnd) pAnd.classList.toggle('hidden', !ehAndroid);
             if (vid) {
-              const novoSrc = ehAndroid ? '/tutorial-android-notificacoes.mp4' : '/tutorial-ios-notificacoes.mp4';
+              const novoSrc = ehAndroid ? '/tutorial-android-notificacoes.mp4?v=2' : '/tutorial-ios-notificacoes.mp4?v=2';
               if (vid.getAttribute('src') !== novoSrc) {
                 try { vid.pause(); } catch (e) {}
                 vid.setAttribute('src', novoSrc);
