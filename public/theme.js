@@ -50,7 +50,10 @@
     'grid-cards-metas',
     'container-habitos-lista',
     'container-agenda-hoje-timeline',
-    'cards-revisao'
+    'cards-revisao',
+    'eos-kpis-grid',
+    'eos-materias-grid',
+    'eos-paginas-list'
   ];
   function revealChildren(parent) {
     if (reduce || !parent) return;
@@ -71,7 +74,7 @@
   }
 
   /* ---------- 3. Transição ao trocar de aba / visão ---------- */
-  const TAB_IDS = /^(aba[A-Z]\w*|view-(dashboard-geral|grid|schedule|lesson|financas|rotina|perfil|configuracoes|revisao|metas|tutorial-ios)|subview-rotina-(hoje|checklist|agenda))$/;
+  const TAB_IDS = /^(aba[A-Z]\w*|view-(dashboard-geral|grid|schedule|lesson|estudos-os|financas|rotina|perfil|configuracoes|revisao|metas|tutorial-ios)|subview-rotina-(hoje|checklist|agenda))$/;
   function replaySectionAnimations(el) {
     if (reduce || !el) return;
     // Re-dispara reveal em grades filhas visíveis quando a aba é aberta

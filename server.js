@@ -455,12 +455,27 @@ const DADOS_PADRAO = {
 
 let portalPostgres = null;
 
+function garantirEstruturaEstudosOS(dados) {
+  if (!dados.estudos_os || typeof dados.estudos_os !== 'object' || Array.isArray(dados.estudos_os)) {
+    dados.estudos_os = {};
+  }
+  const os = dados.estudos_os;
+  for (const col of ['materias', 'paginas', 'flashcards', 'erros', 'provas', 'leituras', 'sessoes_foco']) {
+    if (!Array.isArray(os[col])) os[col] = [];
+  }
+  if (!os.synced_blocks || typeof os.synced_blocks !== 'object' || Array.isArray(os.synced_blocks)) {
+    os.synced_blocks = {};
+  }
+  return os;
+}
+
 async function obterBancoUsuario(usuarioId) {
   const dados = portalPostgres ? await portalPostgres.carregar(usuarioId) : obterBancoLocal(usuarioId);
   for (const campo of ['topicos', 'videos', 'agendamentos', 'notas', 'prioridades_dia', 'historico_tarefas', 'habitos', 'compromissos', 'metas', 'push_subscriptions']) {
     if (!Array.isArray(dados[campo])) dados[campo] = [];
   }
   if (!dados.push_notificados || typeof dados.push_notificados !== 'object') dados.push_notificados = {};
+  garantirEstruturaEstudosOS(dados);
   return dados;
 }
 
@@ -818,6 +833,152 @@ app.delete('/api/agendamentos/:id', rotaPortal(async (req, res) => {
   dbUser.agendamentos.splice(index, 1);
   await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Agendamento removido com sucesso.' });
+}));
+
+// ================= ROTAS DO STUDY OS (EDUCAÇÃO AVANÇADA) ================= //
+
+function proximoIdLista(lista) {
+  return lista.length > 0 ? Math.max(...lista.map(i => Number(i.id) || 0)) + 1 : 1;
+}
+
+app.get('/api/estudos-os', rotaPortal(async (req, res) => {
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  res.json({ success: true, data: os });
+}));
+
+app.post('/api/estudos-os/materias', rotaPortal(async (req, res) => {
+  const { nome, cor, meta_horas, capa } = req.body || {};
+  if (!nome || !String(nome).trim()) {
+    return res.status(400).json({ success: false, message: 'O nome da matéria é obrigatório.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const novaMateria = {
+    id: proximoIdLista(os.materias),
+    nome: String(nome).trim().slice(0, 120),
+    cor: ['sage', 'dusk', 'honey', 'clay'].includes(cor) ? cor : 'sage',
+    meta_horas: Math.max(0, Number(meta_horas) || 0),
+    capa: typeof capa === 'string' ? capa.trim().slice(0, 300) : '',
+    criada_em: new Date().toISOString()
+  };
+  os.materias.push(novaMateria);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.status(201).json({ success: true, data: novaMateria });
+}));
+
+app.patch('/api/estudos-os/materias/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const mat = os.materias.find(m => m.id === idNum);
+  if (!mat) return res.status(404).json({ success: false, message: 'Matéria não encontrada.' });
+
+  const { nome, cor, meta_horas, capa } = req.body || {};
+  if (typeof nome === 'string' && nome.trim()) mat.nome = nome.trim().slice(0, 120);
+  if (['sage', 'dusk', 'honey', 'clay'].includes(cor)) mat.cor = cor;
+  if (meta_horas !== undefined) mat.meta_horas = Math.max(0, Number(meta_horas) || 0);
+  if (typeof capa === 'string') mat.capa = capa.trim().slice(0, 300);
+
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, data: mat });
+}));
+
+app.delete('/api/estudos-os/materias/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const idx = os.materias.findIndex(m => m.id === idNum);
+  if (idx === -1) return res.status(404).json({ success: false, message: 'Matéria não encontrada.' });
+
+  os.materias.splice(idx, 1);
+  // Desvincula páginas órfãs sem apagar o conteúdo do usuário
+  os.paginas.forEach(p => { if (p.materia_id === idNum) p.materia_id = null; });
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, message: 'Matéria removida com sucesso.' });
+}));
+
+app.post('/api/estudos-os/paginas', rotaPortal(async (req, res) => {
+  const { titulo, materia_id, parent_id, status, prioridade, dificuldade, tags, template, blocos } = req.body || {};
+  if (!titulo || !String(titulo).trim()) {
+    return res.status(400).json({ success: false, message: 'O título da página é obrigatório.' });
+  }
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const agora = new Date().toISOString();
+  const statusValidos = ['a_estudar', 'estudando', 'revisar', 'dominado'];
+  const blocosIniciais = Array.isArray(blocos) ? blocos : (
+    template === 'aula'
+      ? [
+          { id: 'b1', type: 'h2', content: 'Resumo da Aula' },
+          { id: 'b2', type: 'paragraph', content: '' },
+          { id: 'b3', type: 'toggle', content: 'Questões de Active Recall', children: [] },
+          { id: 'b4', type: 'callout', content: 'Pontos de atenção / Dúvidas', props: { tone: 'honey' } }
+        ]
+      : [{ id: 'b1', type: 'paragraph', content: '' }]
+  );
+
+  const novaPagina = {
+    id: proximoIdLista(os.paginas),
+    titulo: String(titulo).trim().slice(0, 160),
+    materia_id: materia_id ? parseInt(materia_id, 10) : null,
+    parent_id: parent_id ? parseInt(parent_id, 10) : null,
+    status: statusValidos.includes(status) ? status : 'a_estudar',
+    prioridade: ['baixa', 'media', 'alta'].includes(prioridade) ? prioridade : 'media',
+    dificuldade: ['facil', 'medio', 'dificil'].includes(dificuldade) ? dificuldade : 'medio',
+    tags: Array.isArray(tags) ? tags.map(t => String(t).trim()).filter(Boolean).slice(0, 12) : [],
+    blocos: blocosIniciais,
+    ultima_revisao: null,
+    proxima_revisao: null,
+    repeticoes: 0,
+    fator_ease: 2.5,
+    criada_em: agora,
+    atualizada_em: agora
+  };
+  os.paginas.push(novaPagina);
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.status(201).json({ success: true, data: novaPagina });
+}));
+
+app.patch('/api/estudos-os/paginas/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const pag = os.paginas.find(p => p.id === idNum);
+  if (!pag) return res.status(404).json({ success: false, message: 'Página não encontrada.' });
+
+  const { titulo, materia_id, parent_id, status, prioridade, dificuldade, tags, blocos, ultima_revisao, proxima_revisao, repeticoes, fator_ease } = req.body || {};
+  const statusValidos = ['a_estudar', 'estudando', 'revisar', 'dominado'];
+  if (typeof titulo === 'string' && titulo.trim()) pag.titulo = titulo.trim().slice(0, 160);
+  if (materia_id !== undefined) pag.materia_id = materia_id ? parseInt(materia_id, 10) : null;
+  if (parent_id !== undefined) pag.parent_id = parent_id ? parseInt(parent_id, 10) : null;
+  if (statusValidos.includes(status)) pag.status = status;
+  if (['baixa', 'media', 'alta'].includes(prioridade)) pag.prioridade = prioridade;
+  if (['facil', 'medio', 'dificil'].includes(dificuldade)) pag.dificuldade = dificuldade;
+  if (Array.isArray(tags)) pag.tags = tags.map(t => String(t).trim()).filter(Boolean).slice(0, 12);
+  if (Array.isArray(blocos)) pag.blocos = blocos;
+  if (ultima_revisao !== undefined) pag.ultima_revisao = ultima_revisao;
+  if (proxima_revisao !== undefined) pag.proxima_revisao = proxima_revisao;
+  if (repeticoes !== undefined) pag.repeticoes = Math.max(0, Number(repeticoes) || 0);
+  if (fator_ease !== undefined) pag.fator_ease = Math.max(1.3, Number(fator_ease) || 2.5);
+  pag.atualizada_em = new Date().toISOString();
+
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, data: pag });
+}));
+
+app.delete('/api/estudos-os/paginas/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  const idx = os.paginas.findIndex(p => p.id === idNum);
+  if (idx === -1) return res.status(404).json({ success: false, message: 'Página não encontrada.' });
+
+  os.paginas.splice(idx, 1);
+  // Promove subpáginas para raiz em vez de perdê-las
+  os.paginas.forEach(p => { if (p.parent_id === idNum) p.parent_id = null; });
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, message: 'Página removida com sucesso.' });
 }));
 
 // ================= ROTAS DE ANOTAÇÕES ================= //

@@ -690,6 +690,9 @@ function showScheduleView() {
   document.getElementById('view-grid').classList.add('hidden');
   document.getElementById('view-schedule').classList.remove('hidden');
   document.getElementById('view-lesson').classList.add('hidden');
+  document.getElementById('view-estudos-os')?.classList.add('hidden');
+  const btnEstudosOs = document.getElementById('nav-btn-estudos-os');
+  if (btnEstudosOs) btnEstudosOs.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white cursor-pointer';
   const viewRotinaEl = document.getElementById('view-rotina');
   if (viewRotinaEl) viewRotinaEl.classList.add('hidden');
   const viewMetasEl = document.getElementById('view-metas');
@@ -1145,6 +1148,7 @@ function openLessonView(video, fromView = 'grid') {
   document.getElementById('view-grid').classList.add('hidden');
   document.getElementById('view-schedule').classList.add('hidden');
   document.getElementById('view-lesson').classList.remove('hidden');
+  document.getElementById('view-estudos-os')?.classList.add('hidden');
 
   const btnBack = document.getElementById('btn-back-to-origin');
   const btnBackText = document.getElementById('btn-back-text');
@@ -1201,6 +1205,9 @@ function showGridView() {
   document.getElementById('view-grid').classList.remove('hidden');
   document.getElementById('view-schedule').classList.add('hidden');
   document.getElementById('view-lesson').classList.add('hidden');
+  document.getElementById('view-estudos-os')?.classList.add('hidden');
+  const btnEstudosOs = document.getElementById('nav-btn-estudos-os');
+  if (btnEstudosOs) btnEstudosOs.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group text-slate-300 hover:bg-slate-900 hover:text-white cursor-pointer';
   const viewRotinaEl = document.getElementById('view-rotina');
   if (viewRotinaEl) viewRotinaEl.classList.add('hidden');
   const viewMetasEl = document.getElementById('view-metas');
@@ -1749,6 +1756,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('view-grid').classList.add('hidden');
     document.getElementById('view-schedule').classList.add('hidden');
     document.getElementById('view-lesson').classList.add('hidden');
+    document.getElementById('view-estudos-os')?.classList.add('hidden');
     if (viewFinancas) viewFinancas.classList.add('hidden');
     if (viewRotina) viewRotina.classList.add('hidden');
     if (viewMetas) viewMetas.classList.add('hidden');
@@ -1843,6 +1851,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('view-grid').classList.add('hidden');
     document.getElementById('view-schedule').classList.add('hidden');
     document.getElementById('view-lesson').classList.add('hidden');
+    document.getElementById('view-estudos-os')?.classList.add('hidden');
     const viewRotinaEl = document.getElementById('view-rotina');
     if (viewRotinaEl) viewRotinaEl.classList.add('hidden');
     const viewMetasEl = document.getElementById('view-metas');
@@ -1895,6 +1904,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('view-grid').classList.add('hidden');
     document.getElementById('view-schedule').classList.add('hidden');
     document.getElementById('view-lesson').classList.add('hidden');
+    document.getElementById('view-estudos-os')?.classList.add('hidden');
     if (viewFinancas) viewFinancas.classList.add('hidden');
     const viewMetasEl = document.getElementById('view-metas');
     if (viewMetasEl) viewMetasEl.classList.add('hidden');
@@ -1950,6 +1960,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('view-grid').classList.add('hidden');
     document.getElementById('view-schedule').classList.add('hidden');
     document.getElementById('view-lesson').classList.add('hidden');
+    document.getElementById('view-estudos-os')?.classList.add('hidden');
     if (viewFinancas) viewFinancas.classList.add('hidden');
     if (viewRotina) viewRotina.classList.add('hidden');
     if (viewTutorialIos) viewTutorialIos.classList.add('hidden');
@@ -1996,7 +2007,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const showTutorialIosModule = () => {
     ocultarRevisao();
     state.currentView = 'tutorial-ios';
-    for (const id of ['view-dashboard-geral', 'view-grid', 'view-schedule', 'view-lesson', 'view-financas', 'view-rotina', 'view-metas']) {
+    for (const id of ['view-dashboard-geral', 'view-grid', 'view-schedule', 'view-lesson', 'view-estudos-os', 'view-financas', 'view-rotina', 'view-metas']) {
       document.getElementById(id)?.classList.add('hidden');
     }
     if (viewTutorialIos) viewTutorialIos.classList.remove('hidden');
@@ -2027,6 +2038,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Expõe para chamadas globais inline dos cards
   window.navIrParaInicio = showInicioModule;
   window.navIrParaLms = showLmsModule;
+  window.navIrParaEstudosOS = (subtab = 'overview') => {
+    ocultarRevisao();
+    state.currentView = 'estudos-os';
+    state.selectedTopicId = null;
+    for (const id of ['view-dashboard-geral', 'view-grid', 'view-schedule', 'view-lesson', 'view-financas', 'view-rotina', 'view-metas', 'view-tutorial-ios']) {
+      document.getElementById(id)?.classList.add('hidden');
+    }
+    pausarVideoTutorial();
+    if (btnBack) btnBack.classList.add('hidden');
+
+    atualizarSidebarDrilldown('lms');
+    if (sectionPlanning) sectionPlanning.classList.remove('hidden');
+    if (sectionTopics) sectionTopics.classList.remove('hidden');
+    if (btnOpenTopic) btnOpenTopic.parentElement.classList.add('hidden');
+
+    updateScheduleButtonState(false);
+    renderSidebarTopics();
+
+    const btnEstudosOs = document.getElementById('nav-btn-estudos-os');
+    if (btnEstudosOs) {
+      btnEstudosOs.className = 'w-full text-left px-3 py-2.5 rounded-lg text-xs transition flex items-center justify-between group bg-brand-600 text-white font-semibold shadow-xs ring-1 ring-white/10 cursor-pointer';
+    }
+
+    document.getElementById('view-estudos-os')?.classList.remove('hidden');
+    const breadcrumb = document.getElementById('breadcrumb-topic');
+    if (breadcrumb) breadcrumb.textContent = 'Educação › Central Study OS';
+
+    if (state.player && state.isPlayerReady) {
+      try { state.player.pauseVideo(); } catch (e) {}
+    }
+    if (window.EstudosOS) {
+      window.EstudosOS.carregar().then(() => window.EstudosOS.irParaSubaba(subtab));
+    }
+  };
+  document.getElementById('nav-btn-estudos-os')?.addEventListener('click', () => {
+    if (typeof toggleSidebarPortal === 'function') toggleSidebarPortal(false);
+    window.navIrParaEstudosOS('overview');
+  });
   window.navIrParaFinancas = showFinancasModule;
   window.navIrParaRotina = showRotinaModule;
   window.navIrParaMetas = showMetasModule;
@@ -2036,7 +2085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.currentView = 'revisao';
     pausarVideoTutorial();
     atualizarSidebarDrilldown('inicio');
-    for (const id of ['view-dashboard-geral', 'view-grid', 'view-schedule', 'view-lesson', 'view-financas', 'view-rotina', 'view-metas', 'view-tutorial-ios']) {
+    for (const id of ['view-dashboard-geral', 'view-grid', 'view-schedule', 'view-lesson', 'view-estudos-os', 'view-financas', 'view-rotina', 'view-metas', 'view-tutorial-ios']) {
       document.getElementById(id)?.classList.add('hidden');
     }
     for (const botao of [navBtnInicio, navBtnLms, navBtnFinancas, navBtnRotina, navBtnMetas, navBtnTutorialIos]) {
