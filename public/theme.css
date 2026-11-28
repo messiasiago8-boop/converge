@@ -671,3 +671,148 @@ body.nx-finance section.grid.lg\:grid-cols-5 #statusGlobalTexto { word-break: no
     border-color: rgba(199, 139, 139, .35);
   }
 }
+
+/* ===================================================================== */
+/* Sistema de Ajuda Contextual ("?" HelpButton + Popover / Bottom Sheet) */
+/* ===================================================================== */
+.nx-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  border-radius: 999px;
+  color: var(--nx-sage-d);
+  background: rgba(91, 144, 134, .12);
+  border: 1px solid rgba(91, 144, 134, .28);
+  cursor: pointer;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: background-color .18s ease, color .18s ease, transform .18s ease, border-color .18s ease;
+}
+.nx-help-btn svg { width: 12px; height: 12px; }
+.nx-help-btn:hover {
+  background: var(--nx-sage-d);
+  color: #fffdf8;
+  border-color: var(--nx-sage-d);
+  transform: scale(1.08);
+}
+
+.nx-help-popover {
+  position: fixed;
+  z-index: 99990;
+  width: min(330px, calc(100vw - 24px));
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 253, 248, .97);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(91, 144, 134, .32);
+  box-shadow: 0 24px 54px -18px rgba(31, 42, 39, .35), 0 0 0 1px rgba(255, 255, 255, .85) inset;
+  color: var(--nx-ink);
+  animation: nxPop .22s var(--nx-ease) both;
+}
+
+.nx-help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99989;
+  background: rgba(21, 31, 29, .45);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.nx-help-sheet {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 99990;
+  max-height: 75dvh;
+  overflow-y: auto;
+  padding: 14px 18px 18px;
+  border-radius: 24px;
+  background: #fffdf8;
+  border: 1px solid rgba(91, 144, 134, .30);
+  box-shadow: 0 -18px 46px -12px rgba(21, 31, 29, .38);
+  color: var(--nx-ink);
+  animation: nxTabIn .24s var(--nx-ease) both;
+}
+.nx-help-sheet-handle {
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(31, 42, 39, .16);
+  margin: 0 auto 12px;
+}
+
+.nx-help-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.nx-help-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.nx-help-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(91, 144, 134, .14);
+  color: var(--nx-sage-d);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nx-help-badge svg { width: 15px; height: 15px; }
+.nx-help-head h4 {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--nx-ink);
+  line-height: 1.25;
+}
+.nx-help-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  color: var(--nx-ink-soft);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.nx-help-close:hover { background: rgba(31, 42, 39, .07); color: var(--nx-ink); }
+.nx-help-desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--nx-ink-soft);
+}
+.nx-help-tip {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: rgba(91, 144, 134, .10);
+  border: 1px solid rgba(91, 144, 134, .22);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--nx-ink);
+}
+.nx-help-tip strong { color: var(--nx-sage-d); }
+.nx-help-ok {
+  margin-top: 14px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--nx-sage-d);
+  color: #fffdf8;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
