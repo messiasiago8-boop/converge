@@ -65,7 +65,7 @@
   }
 
   function renderizar(dados) {
-    const { inicio, diaInicial, diaFinal, tarefas, historico, aulas, metas, despesas, planos, atual } = dados;
+    const { inicio, diaInicial, diaFinal, tarefas, historico, aulas, metas, despesas, planos, rituais, atual } = dados;
     const pertence = dia => dia >= diaInicial && dia <= diaFinal;
     campo('cards-revisao').replaceChildren();
 
@@ -124,6 +124,21 @@
       objetivos.append(botao('Abrir Metas', () => window.navIrParaMetas()));
     } else objetivos.append(elemento('p', 'Não foi possível carregar as metas.'));
 
+    const energiaCard = cartao('Energia & Encerramentos');
+    const diario = Array.isArray(rituais?.diario_energia) ? rituais.diario_energia.filter(item => pertence(item.data)) : [];
+    const emojisEnergia = { 1: '😫', 2: '😕', 3: '😐', 4: '🙂', 5: '🤩' };
+    if (diario.length > 0) {
+      const media = (diario.reduce((acc, r) => acc + (Number(r.energia) || 3), 0) / diario.length).toFixed(1);
+      const emojiMedia = emojisEnergia[Math.round(Number(media))] || '🙂';
+      energiaCard.append(elemento('p', `${emojiMedia} Energia média da semana: ${media} / 5 (${diario.length} ${diario.length === 1 ? 'encerramento' : 'encerramentos'})`, 'font-medium text-emerald-900'));
+      const notas = diario
+        .sort((a, b) => String(b.data).localeCompare(String(a.data)))
+        .map(r => `${emojisEnergia[r.energia] || '🙂'} ${vencimento(r.data)} (${r.energia}/5)${r.nota ? ` — ${r.nota}` : ''}`);
+      adicionarLista(energiaCard, notas.slice(0, 7), '');
+    } else {
+      energiaCard.append(elemento('p', 'Nenhum encerramento do dia registrado nesta semana. Use "🌙 Encerrar Dia" em Rotina & Agenda para acompanhar sua energia.', 'text-sm text-slate-600'));
+    }
+
     const container = campo('planos-revisao');
     container.replaceChildren();
     for (const inicioPlano of [inicio, segunda(1)].filter((data, indice) => indice === 0 || atual)) {
@@ -154,14 +169,14 @@
     const meses = [...new Set([diaInicial.slice(0, 7), diaFinal.slice(0, 7)])];
     const respostas = await Promise.allSettled([
       api('/api/rotina/prioridades'), api('/api/rotina/historico-tarefas'), api('/api/videos'),
-      api('/api/metas'), api('/api/revisao-semanal/planos'),
+      api('/api/metas'), api('/api/revisao-semanal/planos'), api('/api/rotina/rituais'),
       Promise.all(meses.map(mes => api(`/api/dados?mes=${mes}`)))
     ]);
     if (pedido !== carregamento) return;
-    const [tarefas, historico, aulas, metas, planos, mesesFinanceiros] = respostas.map(item => item.value);
+    const [tarefas, historico, aulas, metas, planos, rituais, mesesFinanceiros] = respostas.map(item => item.value);
     dadosAtuais = {
       inicio, diaInicial, diaFinal, atual: offset === 0, tarefas: tarefas?.data, historico: historico?.data,
-      aulas: aulas?.data, metas: metas?.data, planos: planos?.data,
+      aulas: aulas?.data, metas: metas?.data, planos: planos?.data, rituais: rituais?.data,
       despesas: mesesFinanceiros?.flatMap(mes => mes.despesas || [])
     };
     renderizar(dadosAtuais);

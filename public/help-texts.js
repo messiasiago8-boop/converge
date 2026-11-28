@@ -180,6 +180,16 @@ window.CONVERGE_HELP = {
     descricao: 'Agrupa seus hábitos por período (Manhã, Pós-Trabalho ou Noite) e abre uma tela limpa de foco com cronômetro etapa por etapa.',
     dica: 'Ao clicar em "Concluir & Avançar", o hábito recebe check-in automático no dia de hoje e a próxima etapa já começa.'
   },
+  'rotina-rituais': {
+    titulo: 'Rituais de Abertura e Encerramento',
+    descricao: 'O Check-in Matinal (2 min) ajuda a revisar pendências e escolher suas 3 prioridades máximas; o Encerramento do Dia move sobras para amanhã e registra sua energia/humor para a Revisão Semanal.',
+    dica: 'Use o Check-in ao começar o dia e o Encerramento à noite para fechar a mente sem pendências soltas.'
+  },
+  'rotina-reagendar': {
+    titulo: 'Reagendar Atrasadas (1 Clique)',
+    descricao: 'Detecta automaticamente tarefas atrasadas de dias anteriores ou de horários já passados hoje e permite encaixá-las nos espaços livres restantes do dia ou mover tudo para amanhã.',
+    dica: 'Use "⚡ Encaixar hoje" para redistribuir sem colidir com seus compromissos atuais.'
+  },
 
   /* ==================== REVISÃO, PERFIL, CONFIGURAÇÕES E TUTORIAL ==================== */
   'revisao-semanal': {

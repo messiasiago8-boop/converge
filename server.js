@@ -1623,6 +1623,180 @@ app.delete('/api/rotina/limpar-selecao', rotaPortal(async (req, res) => {
   });
 }));
 
+// --- 1B. REAGENDAR ATRASADAS (1 CLIQUE) & RITUAIS (CHECK-IN / ENCERRAMENTO) ---
+app.post('/api/rotina/reagendar-atrasadas', rotaPortal(async (req, res) => {
+  const { modo, hoje, amanha, agora_min } = req.body || {};
+  const modoNorm = modo === 'hoje_livres' ? 'hoje_livres' : 'amanha';
+  const agoraSrv = new Date();
+  const hojeIso = dataAgendaValida(hoje) ? hoje : agoraSrv.toISOString().slice(0, 10);
+  const amanhaSrv = new Date(agoraSrv.getTime() + 86400000).toISOString().slice(0, 10);
+  const amanhaIso = dataAgendaValida(amanha) ? amanha : amanhaSrv;
+  const agoraMin = Number.isFinite(Number(agora_min))
+    ? Math.max(0, Math.min(1439, Math.round(Number(agora_min))))
+    : (agoraSrv.getHours() * 60 + agoraSrv.getMinutes());
+
+  const horaParaMin = (hhmm) => {
+    const m = /^(\d{2}):(\d{2})$/.exec(String(hhmm || '').trim());
+    return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
+  };
+  const minParaHHMM = (total) => {
+    const c = Math.max(0, Math.min(23 * 60 + 59, Math.round(total)));
+    return `${String(Math.floor(c / 60)).padStart(2, '0')}:${String(c % 60).padStart(2, '0')}`;
+  };
+
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const tarefas = Array.isArray(dbUser.prioridades_dia) ? dbUser.prioridades_dia : [];
+
+  const atrasadas = tarefas.filter(t => {
+    if (t.concluida || t.adiada_ate) return false;
+    if (t.data && t.data < hojeIso) return true;
+    if (t.data === hojeIso && t.horario) {
+      const hm = horaParaMin(t.horario);
+      if (hm !== null && hm < agoraMin) return true;
+    }
+    return false;
+  });
+
+  if (atrasadas.length === 0) {
+    return res.json({ success: true, reagendadas: 0, movidas_amanha: 0, modo: modoNorm });
+  }
+
+  let reagendadas = 0;
+  let movidasAmanha = 0;
+
+  if (modoNorm === 'amanha') {
+    for (const t of atrasadas) {
+      t.data = amanhaIso;
+      reagendadas++;
+      movidasAmanha++;
+    }
+  } else {
+    // Coleta blocos já ocupados hoje (tarefas futuras de hoje + compromissos de hoje)
+    const idsAtrasadas = new Set(atrasadas.map(t => t.id));
+    const ocupados = [];
+    for (const t of tarefas) {
+      if (t.concluida || idsAtrasadas.has(t.id)) continue;
+      if (t.data === hojeIso && t.horario) {
+        const ini = horaParaMin(t.horario);
+        if (ini !== null) ocupados.push([ini, ini + (Number(t.duracao_min) || 30)]);
+      }
+    }
+    for (const c of (dbUser.compromissos || [])) {
+      if (c.data === hojeIso && c.horario) {
+        const ini = horaParaMin(c.horario);
+        if (ini !== null) ocupados.push([ini, ini + 45]);
+      }
+    }
+
+    const colide = (ini, fim) => ocupados.some(([a, b]) => ini < b && fim > a);
+    let cursor = Math.ceil((agoraMin + 10) / 15) * 15;
+    const limiteDia = 22 * 60;
+
+    for (const t of atrasadas) {
+      const dur = Math.max(15, Number(t.duracao_min) || 30);
+      let alocado = false;
+      let tentativa = cursor;
+      while (tentativa + dur <= limiteDia) {
+        if (!colide(tentativa, tentativa + dur)) {
+          t.data = hojeIso;
+          t.horario = minParaHHMM(tentativa);
+          ocupados.push([tentativa, tentativa + dur]);
+          cursor = tentativa + dur + 5;
+          reagendadas++;
+          alocado = true;
+          break;
+        }
+        tentativa += 15;
+      }
+      if (!alocado) {
+        t.data = amanhaIso;
+        reagendadas++;
+        movidasAmanha++;
+      }
+    }
+  }
+
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, reagendadas, movidas_amanha: movidasAmanha, modo: modoNorm });
+}));
+
+app.get('/api/rotina/rituais', rotaPortal(async (req, res) => {
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  res.json({
+    success: true,
+    data: {
+      ultimo_checkin: dbUser.rotina_rituais?.ultimo_checkin || null,
+      ultimo_encerramento: dbUser.rotina_rituais?.ultimo_encerramento || null,
+      diario_energia: Array.isArray(dbUser.diario_energia) ? dbUser.diario_energia : []
+    }
+  });
+}));
+
+app.post('/api/rotina/rituais', rotaPortal(async (req, res) => {
+  const { tipo, data, energia, nota, top3_ids, mover_pendencias_amanha, amanha, concluidas, pendentes } = req.body || {};
+  if (tipo !== 'checkin' && tipo !== 'encerramento') {
+    return res.status(400).json({ success: false, message: 'Tipo de ritual inválido.' });
+  }
+  const hojeIso = dataAgendaValida(data) ? data : new Date().toISOString().slice(0, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  if (!dbUser.rotina_rituais || typeof dbUser.rotina_rituais !== 'object') dbUser.rotina_rituais = {};
+  if (!Array.isArray(dbUser.diario_energia)) dbUser.diario_energia = [];
+  const tarefas = Array.isArray(dbUser.prioridades_dia) ? dbUser.prioridades_dia : [];
+
+  let movidas = 0;
+  let registro = null;
+
+  if (tipo === 'checkin') {
+    dbUser.rotina_rituais.ultimo_checkin = hojeIso;
+    if (Array.isArray(top3_ids)) {
+      const ids = new Set(top3_ids.slice(0, 3).map(n => Number(n)));
+      for (const t of tarefas) {
+        if (t.concluida) continue;
+        if (ids.has(t.id)) {
+          t.top3 = true;
+          if (!t.data || t.data < hojeIso) t.data = hojeIso;
+          delete t.adiada_ate;
+        } else if (t.top3) {
+          t.top3 = false;
+        }
+      }
+    }
+  } else {
+    dbUser.rotina_rituais.ultimo_encerramento = hojeIso;
+    if (mover_pendencias_amanha && dataAgendaValida(amanha)) {
+      for (const t of tarefas) {
+        if (!t.concluida && !t.adiada_ate && (!t.data || t.data <= hojeIso)) {
+          t.data = amanha;
+          t.top3 = false;
+          movidas++;
+        }
+      }
+    }
+    const energiaNum = Math.max(1, Math.min(5, Math.round(Number(energia) || 3)));
+    registro = {
+      data: hojeIso,
+      energia: energiaNum,
+      nota: typeof nota === 'string' ? nota.trim().slice(0, 300) : '',
+      concluidas: Math.max(0, Number(concluidas) || 0),
+      pendentes: Math.max(0, Number(pendentes) || 0),
+      registrado_em: new Date().toISOString()
+    };
+    dbUser.diario_energia = dbUser.diario_energia.filter(item => item.data !== hojeIso);
+    dbUser.diario_energia.unshift(registro);
+    dbUser.diario_energia = dbUser.diario_energia.slice(0, 90);
+  }
+
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({
+    success: true,
+    data: {
+      rotina_rituais: dbUser.rotina_rituais,
+      registro,
+      movidas
+    }
+  });
+}));
+
 // --- 2. RASTREADOR DE HÁBITOS (HABIT TRACKER & STREAK) ---
 app.get('/api/rotina/habitos', rotaPortal(async (req, res) => {
   const dbUser = await obterBancoUsuario(req.usuarioId);
