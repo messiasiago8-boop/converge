@@ -399,3 +399,77 @@ body.nx-finance section.grid.lg\:grid-cols-5 #statusGlobalTexto { word-break: no
   .nx-bar-fill::after { animation: none !important; }
   .nx-card-alive:hover, .nx-legend-row:hover { transform: none; }
 }
+
+/* ===================================================================== */
+/* Sistema Global de Loading (Top Bar, Overlay Vidro, Botão Spinner)     */
+/* ===================================================================== */
+#nx-top-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, var(--nx-sage-d), var(--nx-sage), var(--nx-dusk));
+  box-shadow: 0 0 10px rgba(91, 144, 134, .55);
+  transition: width .28s var(--nx-ease), opacity .25s ease;
+}
+#nx-top-loader.is-active { opacity: 1; }
+
+#nx-global-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(241, 237, 227, .48);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease;
+}
+#nx-global-loader.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.nx-loader-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 20px;
+  background: rgba(255, 253, 248, .92);
+  border: 1px solid rgba(91, 144, 134, .28);
+  box-shadow: 0 24px 48px -18px rgba(31, 42, 39, .28);
+  color: var(--nx-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.nx-loader-ring {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 2.5px solid rgba(91, 144, 134, .22);
+  border-top-color: var(--nx-sage-d);
+  border-right-color: var(--nx-sage);
+  animation: nxSpinLoader .7s linear infinite;
+  flex-shrink: 0;
+}
+.nx-btn-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: nxSpinLoader .65s linear infinite;
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+@keyframes nxSpinLoader {
+  to { transform: rotate(360deg); }
+}
