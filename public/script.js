@@ -2202,7 +2202,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('view-estudos-os')?.classList.remove('hidden');
     const breadcrumb = document.getElementById('breadcrumb-topic');
-    if (breadcrumb) breadcrumb.textContent = 'Educação › Central Study OS';
+    if (breadcrumb) breadcrumb.textContent = 'Educação › Estudo Inteligente';
 
     if (state.player && state.isPlayerReady) {
       try { state.player.pauseVideo(); } catch (e) {}

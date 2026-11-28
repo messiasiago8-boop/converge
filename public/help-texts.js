@@ -52,8 +52,8 @@ window.CONVERGE_HELP = {
     dica: 'Use "Travar Minuto" para congelar o tempo atual enquanto escreve sua nota; depois clique no minuto salvo para pular direto àquele trecho.'
   },
   'edu-study-os': {
-    titulo: 'Central Study OS',
-    descricao: 'Ambiente completo de estudos inspirado no Notion: reúne matérias relacionais, caderno em blocos, repetição espaçada (SM-2), provas, leituras, foco e IA.',
+    titulo: 'Estudo Inteligente',
+    descricao: 'Ambiente completo de estudos: reúne matérias relacionais, caderno em blocos, repetição espaçada (SM-2), provas, leituras, foco e IA.',
     dica: 'Alterne pelas 5 abas logo abaixo do cabeçalho para navegar entre Foco, Bases, Caderno, Revisões e Desempenho.'
   },
   'eos-foco': {
