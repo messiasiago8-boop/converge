@@ -243,3 +243,110 @@
 @media (hover: none) {
   #view-estudos-os .group .opacity-0 { opacity: 1; }
 }
+
+
+.eos-navigation {
+  position: sticky;
+  top: .5rem;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(9rem, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: .6rem;
+  border: 1px solid var(--eos-borda);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--nx-paper) 92%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 24px -18px var(--nx-ink);
+}
+
+.eos-navigation-heading {
+  display: grid;
+  gap: .15rem;
+  padding-inline: .65rem;
+  color: var(--nx-ink-soft);
+  font-size: .68rem;
+}
+.eos-navigation-heading span:last-child {
+  color: var(--nx-ink);
+  font-size: .9rem;
+  font-weight: 700;
+}
+.eos-navigation-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .35rem;
+}
+.btn-eos-tab {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  padding: .55rem .75rem;
+  border: 1px solid transparent;
+  border-radius: .9rem;
+  color: var(--nx-ink-soft);
+  background: transparent;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+.btn-eos-tab > span:first-child {
+  color: var(--nx-sage-d);
+  font-size: 1rem;
+}
+.btn-eos-tab:hover { background: var(--eos-destaque); color: var(--nx-ink); }
+.btn-eos-tab.is-active {
+  border-color: var(--eos-borda);
+  background: var(--nx-paper);
+  color: var(--nx-ink);
+  box-shadow: 0 3px 10px -8px var(--nx-ink);
+}
+.eos-tab-count {
+  min-width: 1.3rem;
+  padding: .1rem .35rem;
+  border-radius: 999px;
+  background: var(--eos-destaque);
+  color: var(--nx-sage-d);
+  font-size: .67rem;
+  text-align: center;
+}
+#view-estudos-os [role="tabpanel"]:focus-visible {
+  outline: 2px solid var(--nx-sage-d);
+  outline-offset: 4px;
+}
+
+@media (max-width: 767px) {
+  .eos-navigation {
+    top: .25rem;
+    display: block;
+    margin-inline: -.1rem;
+    padding: .5rem;
+  }
+  .eos-navigation-heading {
+    display: flex;
+    justify-content: space-between;
+    padding: .1rem .35rem .45rem;
+    font-size: .65rem;
+  }
+  .eos-navigation-heading span:last-child { font-size: .75rem; }
+  .eos-navigation-tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: .35rem;
+    padding-bottom: .1rem;
+    scrollbar-width: thin;
+    scroll-snap-type: x mandatory;
+  }
+  .btn-eos-tab {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    padding-inline: .7rem;
+    scroll-snap-align: start;
+    font-size: .74rem;
+  }
+}

@@ -994,15 +994,21 @@
         </div>
 
         <!-- Sub-abas do Study OS -->
-        <div class="flex flex-wrap items-center gap-2" role="tablist" aria-label="Navegação do Study OS">
-          <button type="button" class="btn-eos-tab px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-900 border border-slate-300 shadow-2xs cursor-pointer" data-eos-tab="overview">Visão Geral & Foco</button>
-          <button type="button" class="btn-eos-tab px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-eos-tab="databases">Matérias & Bases</button>
-          <button type="button" class="btn-eos-tab px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-eos-tab="caderno">Caderno em Blocos</button>
-          <button type="button" class="btn-eos-tab px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-eos-tab="srs">Revisões & Flashcards</button>
-          <button type="button" class="btn-eos-tab px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-eos-tab="desempenho">Provas & Leituras</button>
-        </div>
+        <nav class="eos-navigation" aria-label="Seções da Central Study OS">
+          <div class="eos-navigation-heading">
+            <span>Seu espaço de estudos</span>
+            <span id="eos-current-section" aria-live="polite">Visão geral</span>
+          </div>
+          <div class="eos-navigation-tabs" role="tablist" aria-label="Seções de estudo">
+            <button type="button" class="btn-eos-tab is-active" id="eos-tab-overview" role="tab" aria-selected="true" aria-controls="eos-panel-overview" tabindex="0" data-eos-tab="overview"><span aria-hidden="true">⌂</span><span>Visão geral</span></button>
+            <button type="button" class="btn-eos-tab" id="eos-tab-databases" role="tab" aria-selected="false" aria-controls="eos-panel-databases" tabindex="-1" data-eos-tab="databases"><span aria-hidden="true">▦</span><span>Matérias</span></button>
+            <button type="button" class="btn-eos-tab" id="eos-tab-caderno" role="tab" aria-selected="false" aria-controls="eos-panel-caderno" tabindex="-1" data-eos-tab="caderno"><span aria-hidden="true">▤</span><span>Caderno</span></button>
+            <button type="button" class="btn-eos-tab" id="eos-tab-srs" role="tab" aria-selected="false" aria-controls="eos-panel-srs" tabindex="-1" data-eos-tab="srs"><span aria-hidden="true">↻</span><span>Revisões</span><span class="eos-tab-count" id="eos-tab-review-count">0</span></button>
+            <button type="button" class="btn-eos-tab" id="eos-tab-desempenho" role="tab" aria-selected="false" aria-controls="eos-panel-desempenho" tabindex="-1" data-eos-tab="desempenho"><span aria-hidden="true">◷</span><span>Desempenho</span></button>
+          </div>
+        </nav>
 
-        <div id="eos-panel-overview" class="space-y-5">
+        <div id="eos-panel-overview" role="tabpanel" aria-labelledby="eos-tab-overview" tabindex="0" class="space-y-5">
           <div id="eos-kpis-grid" class="eos-resumo" role="group" aria-label="Resumo dos estudos">
             <button type="button" class="eos-metrica" data-eos-atalho="databases">
               <span>Matérias</span><strong id="eos-kpi-materias">0</strong>
@@ -1092,7 +1098,7 @@
           </div>
         </div>
 
-        <div id="eos-panel-databases" class="hidden space-y-5">
+        <div id="eos-panel-databases" role="tabpanel" aria-labelledby="eos-tab-databases" tabindex="0" class="hidden space-y-5">
           <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
               <div>
@@ -1128,7 +1134,7 @@
           </div>
         </div>
 
-        <div id="eos-panel-caderno" class="hidden space-y-4">
+        <div id="eos-panel-caderno" role="tabpanel" aria-labelledby="eos-tab-caderno" tabindex="0" class="hidden space-y-4">
           <div class="eos-caderno-grade">
             <!-- Coluna 1: Hierarquia Infinita de Páginas -->
             <aside class="eos-caderno-paginas bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
@@ -1205,7 +1211,7 @@
           </div>
         </div>
 
-        <div id="eos-panel-srs" class="hidden space-y-5">
+        <div id="eos-panel-srs" role="tabpanel" aria-labelledby="eos-tab-srs" tabindex="0" class="hidden space-y-5">
           <!-- Revisões de Hoje (SM-2) -->
           <div class="eos-fila-revisao bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
@@ -1287,7 +1293,7 @@
           </div>
         </div>
 
-        <div id="eos-panel-desempenho" class="hidden space-y-5">
+        <div id="eos-panel-desempenho" role="tabpanel" aria-labelledby="eos-tab-desempenho" tabindex="0" class="hidden space-y-5">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <!-- Grade Tracker: Provas & Notas -->
             <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">

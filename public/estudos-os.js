@@ -262,16 +262,21 @@
     eosState.subabaAtual = alvo;
 
     validas.forEach(tab => {
+      const ativo = tab === alvo;
       const panel = document.getElementById(`eos-panel-${tab}`);
-      if (panel) panel.classList.toggle('hidden', tab !== alvo);
+      const button = document.getElementById(`eos-tab-${tab}`);
+      panel?.classList.toggle('hidden', !ativo);
+      button?.classList.toggle('is-active', ativo);
+      button?.setAttribute('aria-selected', String(ativo));
+      button?.setAttribute('tabindex', ativo ? '0' : '-1');
     });
 
-    document.querySelectorAll('.btn-eos-tab').forEach(btn => {
-      const ativo = btn.getAttribute('data-eos-tab') === alvo;
-      btn.className = ativo
-        ? 'btn-eos-tab px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-900 border border-slate-300 shadow-2xs cursor-pointer'
-        : 'btn-eos-tab px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer';
-    });
+    const titulo = document.querySelector(`#eos-tab-${alvo} span:nth-child(2)`)?.textContent;
+    const indicador = document.getElementById('eos-current-section');
+    if (indicador && titulo) indicador.textContent = titulo;
+    const pendentes = window.EstudosOS?.obterRevisoesPendentes?.();
+    const contador = document.getElementById('eos-tab-review-count');
+    if (contador && pendentes) contador.textContent = String(pendentes.paginas.length + pendentes.flashcards.length);
   }
 
   function toggleModal(id, abrir) {
@@ -284,6 +289,18 @@
   function inicializarEventos() {
     document.querySelectorAll('.btn-eos-tab').forEach(btn => {
       btn.addEventListener('click', () => irParaSubaba(btn.getAttribute('data-eos-tab')));
+      btn.addEventListener('keydown', event => {
+        const tabs = [...document.querySelectorAll('.btn-eos-tab')];
+        const index = tabs.indexOf(btn);
+        const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+          : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
+            : event.key === 'Home' ? 0
+              : event.key === 'End' ? tabs.length - 1 : -1;
+        if (next < 0) return;
+        event.preventDefault();
+        irParaSubaba(tabs[next].dataset.eosTab);
+        tabs[next].focus();
+      });
     });
 
     document.querySelectorAll('[data-eos-atalho]').forEach(btn => {
