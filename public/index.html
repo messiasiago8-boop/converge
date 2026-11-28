@@ -20,6 +20,11 @@
   <!-- Tema "Sálvia & Areia": paleta calma remapeada sobre o Tailwind -->
   <script src="/tw-theme.js"></script>
   <link rel="stylesheet" href="/theme.css">
+  <!-- KaTeX (LaTeX) e Highlight.js (Código) para o Editor em Blocos -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/atom-one-dark.min.css">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
   <style id="auth-guard-hide">html { visibility: hidden; }</style>
   <script>
     (function validarSessaoAntesDeRenderizar() {
@@ -1052,15 +1057,80 @@
           </div>
         </div>
 
-        <div id="eos-panel-caderno" class="hidden space-y-5">
-          <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-              <div>
-                <h3 class="text-sm font-bold text-slate-900">Páginas & Hierarquia de Estudos</h3>
-                <p class="text-xs text-slate-500">Estrutura pronta para o Editor em Blocos (Toggles, Callouts, LaTeX, Código e Embeds na Fase 2).</p>
+        <div id="eos-panel-caderno" class="hidden space-y-4">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            <!-- Coluna 1: Hierarquia Infinita de Páginas -->
+            <aside class="lg:col-span-3 bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+              <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Páginas & Hierarquia</h3>
+                <button type="button" id="btn-eos-nova-pagina-arvore" class="text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-lg border border-emerald-200 cursor-pointer">+ Raiz</button>
+              </div>
+              <div id="eos-arvore-paginas" class="space-y-1 max-h-[65vh] overflow-y-auto pr-1 text-xs"></div>
+            </aside>
+
+            <!-- Coluna 2: Editor em Blocos -->
+            <div class="lg:col-span-6 bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4 min-h-[420px]">
+              <div id="eos-editor-vazio" class="py-16 text-center space-y-3">
+                <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-700 text-xl">📝</div>
+                <p class="text-sm font-bold text-slate-800">Selecione ou crie uma página para editar</p>
+                <p class="text-xs text-slate-500 max-w-md mx-auto">Cada bloco pode ser arrastado, transformado em Toggle, Callout, LaTeX, Código, Embed ou Bloco Sincronizado.</p>
+              </div>
+
+              <div id="eos-editor-ativo" class="hidden space-y-4">
+                <!-- Cabeçalho da Página -->
+                <div class="space-y-3 pb-3 border-b border-slate-100">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span id="eos-editor-breadcrumb" class="text-[11px] font-medium text-slate-500 truncate">Raiz</span>
+                    <div class="flex items-center gap-2">
+                      <span id="eos-editor-save-status" class="text-[11px] font-semibold text-emerald-700">Salvo ✓</span>
+                      <button type="button" id="btn-eos-salvar-blocos" class="px-3 py-1 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">Salvar</button>
+                    </div>
+                  </div>
+                  <input type="text" id="eos-editor-titulo" class="w-full text-lg font-bold text-slate-900 bg-transparent border border-transparent hover:border-slate-200 focus:border-emerald-500 px-2 py-1 rounded-lg" placeholder="Título da página..." />
+                  <div class="flex flex-wrap items-center gap-2">
+                    <select id="eos-editor-materia" class="px-2.5 py-1 text-xs border border-slate-200 bg-slate-50 rounded-lg"></select>
+                    <select id="eos-editor-status" class="px-2.5 py-1 text-xs border border-slate-200 bg-slate-50 rounded-lg">
+                      <option value="a_estudar">A estudar</option>
+                      <option value="estudando">Estudando</option>
+                      <option value="revisar">Revisar</option>
+                      <option value="dominado">Dominado</option>
+                    </select>
+                    <button type="button" id="btn-eos-criar-subpagina" class="px-2.5 py-1 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg cursor-pointer">+ Subpágina</button>
+                  </div>
+                </div>
+
+                <!-- Barra rápida de adição de blocos -->
+                <div class="flex flex-wrap items-center gap-1.5 pb-2 border-b border-slate-100" aria-label="Adicionar bloco">
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="paragraph">+ Texto</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="h2">+ Título</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="toggle">▸ Toggle</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="callout">💡 Callout</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="latex">∑ LaTeX</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="code">&lt;/&gt; Código</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="embed">🎬 Embed</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="synced">🔄 Sincronizado</button>
+                </div>
+
+                <!-- Lista de Blocos Arrastáveis -->
+                <div id="eos-blocos-container" class="space-y-2.5"></div>
               </div>
             </div>
-            <div id="eos-paginas-list" class="space-y-2.5"></div>
+
+            <!-- Coluna 3: Sumário Automático (TOC) & Blocos Sincronizados -->
+            <aside class="lg:col-span-3 space-y-4">
+              <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-2.5">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 pb-2 border-b border-slate-100">Sumário Automático</h3>
+                <nav id="eos-toc-list" class="space-y-1 text-xs text-slate-600">
+                  <p class="text-[11px] text-slate-400">Adicione blocos de título (H1–H3) para navegar rápido.</p>
+                </nav>
+              </div>
+              <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-2.5">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 pb-2 border-b border-slate-100">Blocos Sincronizados</h3>
+                <div id="eos-synced-disponiveis" class="space-y-1.5 text-xs text-slate-600">
+                  <p class="text-[11px] text-slate-400">Nenhum bloco sincronizado criado ainda.</p>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>
 
@@ -1121,6 +1191,7 @@
               <button type="button" id="btn-fechar-eos-pagina" class="text-slate-400 hover:text-slate-700 text-sm cursor-pointer">✕</button>
             </div>
             <form id="form-eos-pagina" class="space-y-3">
+              <input type="hidden" id="input-eos-pagina-parent" value="" />
               <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1">Título da Página</label>
                 <input type="text" id="input-eos-pagina-titulo" required maxlength="160" placeholder="Ex.: Aula 01 — Limites e Continuidade" class="w-full px-3 py-2 text-xs border border-slate-300 bg-slate-50" />
@@ -2327,6 +2398,7 @@
   <script src="/perfil-portal.js"></script>
   <script src="/revisao-semanal.js"></script>
   <script src="/rotina-ux.js"></script>
+  <script src="/estudos-blocos.js"></script>
   <script src="/estudos-os.js"></script>
   <script src="/groq-ia.js"></script>
   <script src="/theme.js"></script>

@@ -981,6 +981,23 @@ app.delete('/api/estudos-os/paginas/:id', rotaPortal(async (req, res) => {
   res.json({ success: true, message: 'Página removida com sucesso.' });
 }));
 
+app.put('/api/estudos-os/synced-blocks/:syncId', rotaPortal(async (req, res) => {
+  const syncId = String(req.params.syncId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+  if (!syncId) return res.status(400).json({ success: false, message: 'syncId inválido.' });
+
+  const { content, title } = req.body || {};
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const os = garantirEstruturaEstudosOS(dbUser);
+  os.synced_blocks[syncId] = {
+    sync_id: syncId,
+    title: typeof title === 'string' && title.trim() ? title.trim().slice(0, 80) : (os.synced_blocks[syncId]?.title || 'Bloco Sincronizado'),
+    content: typeof content === 'string' ? content : '',
+    atualizado_em: new Date().toISOString()
+  };
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, data: os.synced_blocks[syncId] });
+}));
+
 // ================= ROTAS DE ANOTAÇÕES ================= //
 
 app.get('/api/notas', rotaPortal(async (req, res) => {

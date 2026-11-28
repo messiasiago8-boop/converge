@@ -187,64 +187,9 @@
   }
 
   function renderizarPaginas() {
-    const list = document.getElementById('eos-paginas-list');
-    if (!list) return;
-    const { materias, paginas } = eosState.dados;
-
-    if (paginas.length === 0) {
-      list.innerHTML = `
-        <div class="py-10 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/60">
-          <p class="text-sm font-semibold text-slate-700">Nenhuma página criada</p>
-          <p class="text-xs text-slate-500 mt-1">Clique em <strong>+ Nova Página</strong> para criar sua primeira nota estruturada.</p>
-        </div>
-      `;
-      return;
+    if (window.EstudosBlocos && typeof window.EstudosBlocos.atualizarPainelCaderno === 'function') {
+      window.EstudosBlocos.atualizarPainelCaderno();
     }
-
-    list.innerHTML = paginas.slice().reverse().map(p => {
-      const mat = materias.find(m => m.id === p.materia_id);
-      return `
-        <div class="nx-card-alive p-3.5 rounded-xl bg-slate-50/80 hover:bg-white border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div class="min-w-0 flex-1">
-            <p class="text-sm font-semibold text-slate-900 truncate">${esc(p.titulo)}</p>
-            <p class="text-[11px] text-slate-500 mt-0.5">${mat ? esc(mat.nome) : 'Sem matéria'} · ${Array.isArray(p.blocos) ? p.blocos.length : 0} bloco(s)</p>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <select class="sel-eos-pagina-status px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-white cursor-pointer" data-id="${p.id}">
-              <option value="a_estudar" ${p.status === 'a_estudar' ? 'selected' : ''}>A estudar</option>
-              <option value="estudando" ${p.status === 'estudando' ? 'selected' : ''}>Estudando</option>
-              <option value="revisar" ${p.status === 'revisar' ? 'selected' : ''}>Revisar</option>
-              <option value="dominado" ${p.status === 'dominado' ? 'selected' : ''}>Dominado</option>
-            </select>
-            <button type="button" class="btn-eos-del-pagina text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 text-xs cursor-pointer" data-id="${p.id}" title="Excluir página">✕</button>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    list.querySelectorAll('.sel-eos-pagina-status').forEach(sel => {
-      sel.addEventListener('change', async () => {
-        const id = sel.getAttribute('data-id');
-        await apiEstudos(`/api/estudos-os/paginas/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: sel.value })
-        });
-        await carregar();
-        if (sel.value === 'dominado' && typeof window.nxCelebrate === 'function') {
-          window.nxCelebrate(sel.closest('.nx-card-alive'));
-        }
-      });
-    });
-
-    list.querySelectorAll('.btn-eos-del-pagina').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-id');
-        if (!confirm('Deseja excluir esta página de estudo?')) return;
-        await apiEstudos(`/api/estudos-os/paginas/${id}`, { method: 'DELETE' });
-        await carregar();
-      });
-    });
   }
 
   function renderizarTudo() {
@@ -340,16 +285,22 @@
       e.preventDefault();
       const titulo = document.getElementById('input-eos-pagina-titulo')?.value.trim();
       const materia_id = document.getElementById('select-eos-pagina-materia')?.value || null;
+      const parent_id = document.getElementById('input-eos-pagina-parent')?.value || null;
       const template = document.getElementById('select-eos-pagina-template')?.value || 'aula';
       if (!titulo) return;
-      await apiEstudos('/api/estudos-os/paginas', {
+      const resp = await apiEstudos('/api/estudos-os/paginas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titulo, materia_id, template })
+        body: JSON.stringify({ titulo, materia_id, parent_id, template })
       });
       e.target.reset();
+      const inpParent = document.getElementById('input-eos-pagina-parent');
+      if (inpParent) inpParent.value = '';
       toggleModal('modal-eos-pagina', false);
       await carregar();
+      if (resp?.data?.id && window.EstudosBlocos) {
+        window.EstudosBlocos.abrirPagina(resp.data.id);
+      }
       irParaSubaba('caderno');
     });
   }
