@@ -171,9 +171,14 @@ window.CONVERGE_HELP = {
     dica: 'Use "Usar Modelo" para criar metas estruturadas em 1 clique ou filtre por categoria abaixo dos KPIs.'
   },
   'metas-habitos': {
-    titulo: 'Metas de Hábitos',
-    descricao: 'Rastreador semanal de consistência onde você marca cada dia concluído e acompanha sua sequência ativa (streak 🔥).',
-    dica: 'Toque na inicial do dia para marcar ou desmarcar seu check-in; o anel circular atualiza na hora.'
+    titulo: 'Metas de Hábitos & Força (%)',
+    descricao: 'Rastreador semanal de consistência com Força do Hábito (💪 0%–100% nos últimos 30 dias), sequência ativa (🔥), janela flexível de horário e Modo Play guiado.',
+    dica: 'Errar 1 dia não zera sua Força (%). Clique em ✎ para definir período, duração e janela flexível de qualquer hábito.'
+  },
+  'rotina-play': {
+    titulo: 'Modo Play · Rotinas em Bloco',
+    descricao: 'Agrupa seus hábitos por período (Manhã, Pós-Trabalho ou Noite) e abre uma tela limpa de foco com cronômetro etapa por etapa.',
+    dica: 'Ao clicar em "Concluir & Avançar", o hábito recebe check-in automático no dia de hoje e a próxima etapa já começa.'
   },
 
   /* ==================== REVISÃO, PERFIL, CONFIGURAÇÕES E TUTORIAL ==================== */

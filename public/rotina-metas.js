@@ -467,6 +467,84 @@ function obterDiasSemanaAtual(referencia = new Date()) {
   return dias;
 }
 
+function calcularForcaHabito(diasConcluidos) {
+  const lista = Array.isArray(diasConcluidos) ? diasConcluidos : [];
+  if (lista.length === 0) return 0;
+  const setDias = new Set(lista);
+  const alpha = 0.14;
+  let score = 0;
+  const hoje = new Date();
+  hoje.setHours(12, 0, 0, 0);
+
+  for (let d = 29; d >= 0; d--) {
+    const dt = new Date(hoje);
+    dt.setDate(hoje.getDate() - d);
+    const iso = dataLocalRotina(dt);
+    if (setDias.has(iso)) {
+      score = score + alpha * (1 - score);
+    } else if (d > 0) {
+      // Só reduz pontuação em dias passados; hoje ainda está em aberto
+      score = score * (1 - alpha);
+    }
+  }
+  return Math.max(0, Math.min(100, Math.round(score * 100)));
+}
+
+window.calcularForcaHabito = calcularForcaHabito;
+
+function obterMetaPeriodoHabito(periodo) {
+  const mapa = {
+    manha: { label: 'Manhã', icone: '🌅', classe: 'bg-amber-50 text-amber-800 border-amber-200/80' },
+    pos_trabalho: { label: 'Pós-Trabalho', icone: '🌆', classe: 'bg-indigo-50 text-indigo-800 border-indigo-200/80' },
+    noite: { label: 'Noite', icone: '🌙', classe: 'bg-slate-100 text-slate-700 border-slate-200' },
+    livre: { label: 'Flexível', icone: '✨', classe: 'bg-emerald-50 text-emerald-800 border-emerald-200/70' }
+  };
+  return mapa[periodo] || mapa.manha;
+}
+
+function horarioParaMinutosHabito(hhmm) {
+  if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function abrirModalEditarHabito(habito) {
+  const modalHabito = document.getElementById('modal-habito');
+  if (!modalHabito) return;
+  const idInput = document.getElementById('input-habito-id');
+  const tituloModal = document.getElementById('modal-habito-titulo');
+  const nomeInput = document.getElementById('input-habito-nome');
+  const iconeInput = document.getElementById('input-habito-icone');
+  const periodoSelect = document.getElementById('select-habito-periodo');
+  const duracaoInput = document.getElementById('input-habito-duracao');
+  const idealInput = document.getElementById('input-habito-ideal');
+  const limiteInput = document.getElementById('input-habito-limite');
+
+  if (habito) {
+    if (idInput) idInput.value = String(habito.id);
+    if (tituloModal) tituloModal.textContent = 'Editar Hábito Diário';
+    if (nomeInput) nomeInput.value = habito.nome || '';
+    if (iconeInput) iconeInput.value = habito.icone || '⚡';
+    if (periodoSelect) periodoSelect.value = habito.periodo || 'manha';
+    if (duracaoInput) duracaoInput.value = String(habito.duracao_min || 15);
+    if (idealInput) idealInput.value = habito.horario_ideal || '';
+    if (limiteInput) limiteInput.value = habito.horario_limite || '';
+  } else {
+    if (idInput) idInput.value = '';
+    if (tituloModal) tituloModal.textContent = 'Novo Hábito Diário';
+    if (nomeInput) nomeInput.value = '';
+    if (iconeInput) iconeInput.value = '⚡';
+    if (periodoSelect) periodoSelect.value = 'manha';
+    if (duracaoInput) duracaoInput.value = '15';
+    if (idealInput) idealInput.value = '';
+    if (limiteInput) limiteInput.value = '';
+  }
+
+  modalHabito.classList.remove('hidden');
+  modalHabito.classList.add('flex');
+  if (nomeInput) setTimeout(() => nomeInput.focus(), 40);
+}
+
 function renderizarHabitos() {
   const container = document.getElementById('container-habitos-lista');
   if (!container) return;
@@ -477,8 +555,14 @@ function renderizarHabitos() {
     badgeResumo.textContent = `${total} ${total === 1 ? 'ativo' : 'ativos'}`;
   }
 
+  if (typeof window.atualizarContadoresModoPlay === 'function') {
+    window.atualizarContadoresModoPlay(rotinaState.habitos);
+  }
+
   container.innerHTML = '';
   const diasSemana = obterDiasSemanaAtual();
+  const hojeIso = dataLocalRotina(new Date());
+  const agoraMin = new Date().getHours() * 60 + new Date().getMinutes();
 
   if (rotinaState.habitos.length === 0) {
     container.innerHTML = `
@@ -502,8 +586,29 @@ function renderizarHabitos() {
 
     const concluidos = Array.isArray(habito.dias_concluidos) ? habito.dias_concluidos : [];
     const concluidosSemana = diasSemana.filter(d => concluidos.includes(d.iso)).length;
+    const feitoHoje = concluidos.includes(hojeIso);
+    const forca = calcularForcaHabito(concluidos);
     const habRingCirc = 87.96; // 2 * Math.PI * 14
     const habRingOffset = (habRingCirc * (1 - concluidosSemana / 7)).toFixed(2);
+
+    const metaPeriodo = obterMetaPeriodoHabito(habito.periodo || 'manha');
+    const duracaoMin = Number(habito.duracao_min) || 15;
+    const ideal = habito.horario_ideal || '';
+    const limite = habito.horario_limite || '';
+    const idealMin = horarioParaMinutosHabito(ideal);
+    const limiteMin = horarioParaMinutosHabito(limite);
+    const naJanelaFlex = !feitoHoje && idealMin !== null && limiteMin !== null && agoraMin >= idealMin && agoraMin <= limiteMin;
+
+    let janelaHtml = '';
+    if (ideal && limite) {
+      janelaHtml = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${naJanelaFlex ? 'bg-amber-50 text-amber-800 border-amber-300 font-semibold' : 'bg-white text-slate-500 border-slate-200/80'}" title="Janela flexível: ideal ${ideal}, tolerância até ${limite}">⏰ ${ideal}–${limite}${naJanelaFlex ? ' · agora' : ''}</span>`;
+    } else if (ideal) {
+      janelaHtml = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-white text-slate-500 border border-slate-200/80">⏰ ${ideal}</span>`;
+    }
+
+    const classeForca = forca >= 70
+      ? 'text-emerald-800 bg-emerald-50 border-emerald-200'
+      : (forca >= 40 ? 'text-amber-800 bg-amber-50 border-amber-200' : 'text-slate-500 bg-slate-100 border-slate-200/80');
 
     el.innerHTML = `
       <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -515,12 +620,19 @@ function renderizarHabitos() {
           </svg>
           <span class="absolute text-[9px] font-bold tabular-nums text-emerald-800">${concluidosSemana}/7</span>
         </div>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-semibold text-slate-900 truncate" title="${escapeHTML(habito.nome)}">${escapeHTML(habito.nome)}</p>
-          <p class="text-[11px] text-slate-500">${concluidosSemana === 7 ? 'Semana perfeita concluída! ✨' : `${concluidosSemana} de 7 dias na semana`}</p>
+        <div class="min-w-0 flex-1 space-y-1">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="text-sm shrink-0" aria-hidden="true">${escapeHTML(habito.icone || '⚡')}</span>
+            <p class="text-sm font-semibold text-slate-900 truncate" title="${escapeHTML(habito.nome)}">${escapeHTML(habito.nome)}</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold border ${metaPeriodo.classe}">${metaPeriodo.icone} ${metaPeriodo.label} · ${duracaoMin}m</span>
+            ${janelaHtml}
+            <span class="text-[11px] text-slate-400">${concluidosSemana === 7 ? 'Semana perfeita! ✨' : `${concluidosSemana}/7 na semana`}</span>
+          </div>
         </div>
       </div>
-      <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0">
+      <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-2.5 shrink-0 flex-wrap">
         <div class="flex items-center gap-1.5">
           ${diasSemana.map(d => {
             const checked = concluidos.includes(d.iso);
@@ -543,10 +655,16 @@ function renderizarHabitos() {
         </div>
         
         <div class="flex items-center gap-1.5">
-          <div class="px-2 py-1 rounded-lg font-sans tabular-nums text-[11px] font-bold ${habito.streak > 0 ? 'text-emerald-800 bg-emerald-50 border border-emerald-200' : 'text-slate-400 bg-slate-100 border border-slate-200/70'}">
+          <div class="px-2 py-1 rounded-lg font-sans tabular-nums text-[11px] font-bold border ${classeForca}" title="Força do Hábito (últimos 30 dias): errar 1 dia não zera seu progresso">
+            <span>💪 ${forca}%</span>
+          </div>
+          <div class="px-2 py-1 rounded-lg font-sans tabular-nums text-[11px] font-bold ${habito.streak > 0 ? 'text-emerald-800 bg-emerald-50 border border-emerald-200' : 'text-slate-400 bg-slate-100 border border-slate-200/70'}" title="Sequência atual de dias seguidos">
             <span>🔥 ${habito.streak || 0}d</span>
           </div>
 
+          <button type="button" class="btn-edit-habito text-slate-400 hover:text-emerald-700 p-1.5 rounded-lg hover:bg-emerald-50 text-xs cursor-pointer transition" data-id="${habito.id}" title="Editar hábito, período e janela flexível">
+            ✎
+          </button>
           <button type="button" class="btn-delete-habito text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 text-xs cursor-pointer transition" data-id="${habito.id}" title="Excluir hábito">
             ✕
           </button>
@@ -568,14 +686,34 @@ function renderizarHabitos() {
       });
     });
 
+    el.querySelector('.btn-edit-habito').addEventListener('click', () => {
+      abrirModalEditarHabito(habito);
+    });
+
     el.querySelector('.btn-delete-habito').addEventListener('click', async () => {
-      if (!confirm(`Deseja remover o hábito "${habito.nome}"?`)) return;
+      const confirmado = typeof window.nxConfirmarExclusao === 'function'
+        ? await window.nxConfirmarExclusao({
+            titulo: 'Excluir hábito?',
+            nomeItem: habito.nome,
+            descricao: 'O histórico de check-ins e a força deste hábito serão removidos permanentemente.',
+            textoConfirmar: 'Excluir hábito'
+          })
+        : confirm(`Deseja remover o hábito "${habito.nome}"?`);
+      if (!confirmado) return;
       await excluirHabito(habito.id);
     });
 
     container.appendChild(el);
   });
 }
+
+window.rotinaHabitosHelpers = {
+  obterHabitos: () => Array.isArray(rotinaState.habitos) ? rotinaState.habitos : [],
+  carregarHabitos: () => carregarHabitos(),
+  alternarCheckinHabito: (id, iso) => alternarCheckinHabito(id, iso),
+  calcularForcaHabito,
+  dataLocalRotina: (dt) => dataLocalRotina(dt || new Date())
+};
 
 async function alternarCheckinHabito(id, dataIso) {
   try {
@@ -2108,35 +2246,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Modal Novo Hábito
+  // Modal Novo / Editar Hábito
   const btnNovoHabito = document.getElementById('btn-novo-habito');
   const modalHabito = document.getElementById('modal-habito');
   const formNovoHabito = document.getElementById('form-novo-habito');
 
   if (btnNovoHabito && modalHabito) {
     btnNovoHabito.addEventListener('click', () => {
-      modalHabito.classList.remove('hidden');
-      modalHabito.classList.add('flex');
+      abrirModalEditarHabito(null);
     });
   }
 
   if (formNovoHabito) {
     formNovoHabito.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const idEdit = document.getElementById('input-habito-id')?.value?.trim() || '';
       const nome = document.getElementById('input-habito-nome').value.trim();
       const icone = document.getElementById('input-habito-icone').value.trim() || '⚡';
+      const periodo = document.getElementById('select-habito-periodo')?.value || 'manha';
+      const duracao_min = parseInt(document.getElementById('input-habito-duracao')?.value || '15', 10) || 15;
+      const horario_ideal = document.getElementById('input-habito-ideal')?.value?.trim() || '';
+      const horario_limite = document.getElementById('input-habito-limite')?.value?.trim() || '';
       if (!nome) return;
       const botao = formNovoHabito.querySelector('[type=submit]');
       if (botao.disabled) return;
       botao.disabled = true;
 
       try {
-        await salvarRotina('/api/rotina/habitos', {
-          method: 'POST',
+        const url = idEdit ? `/api/rotina/habitos/${idEdit}` : '/api/rotina/habitos';
+        const method = idEdit ? 'PATCH' : 'POST';
+        await salvarRotina(url, {
+          method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, icone })
+          body: JSON.stringify({ nome, icone, periodo, duracao_min, horario_ideal, horario_limite })
         });
-        document.getElementById('input-habito-nome').value = '';
+        abrirModalEditarHabito(null);
         modalHabito.classList.add('hidden');
         modalHabito.classList.remove('flex');
         await carregarHabitos();

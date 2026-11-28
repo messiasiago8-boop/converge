@@ -1630,10 +1630,19 @@ app.get('/api/rotina/habitos', rotaPortal(async (req, res) => {
 }));
 
 app.post('/api/rotina/habitos', rotaPortal(async (req, res) => {
-  const { nome, icone } = req.body;
+  const { nome, icone, periodo, duracao_min, horario_ideal, horario_limite } = req.body;
   if (typeof nome !== 'string' || !nome.trim()) {
     return res.status(400).json({ success: false, message: 'Nome do hábito é obrigatório.' });
   }
+
+  const periodosValidos = ['manha', 'pos_trabalho', 'noite', 'livre'];
+  const periodoNorm = periodosValidos.includes(periodo) ? periodo : 'manha';
+  const duracaoNorm = Number.isFinite(Number(duracao_min))
+    ? Math.max(1, Math.min(180, Math.round(Number(duracao_min))))
+    : 15;
+  const regexHora = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const idealNorm = typeof horario_ideal === 'string' && regexHora.test(horario_ideal.trim()) ? horario_ideal.trim() : '';
+  const limiteNorm = typeof horario_limite === 'string' && regexHora.test(horario_limite.trim()) ? horario_limite.trim() : '';
 
   const dbUser = await obterBancoUsuario(req.usuarioId);
   if (!Array.isArray(dbUser.habitos)) dbUser.habitos = [];
@@ -1642,6 +1651,10 @@ app.post('/api/rotina/habitos', rotaPortal(async (req, res) => {
     id: dbUser.habitos.length > 0 ? Math.max(...dbUser.habitos.map(h => h.id)) + 1 : 1,
     nome: nome.trim(),
     icone: icone || '⚡',
+    periodo: periodoNorm,
+    duracao_min: duracaoNorm,
+    horario_ideal: idealNorm,
+    horario_limite: limiteNorm,
     dias_concluidos: [], // lista de datas 'YYYY-MM-DD'
     streak: 0,
     criado_em: new Date().toISOString()
@@ -1650,6 +1663,37 @@ app.post('/api/rotina/habitos', rotaPortal(async (req, res) => {
   dbUser.habitos.push(novoHabito);
   await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novoHabito });
+}));
+
+app.patch('/api/rotina/habitos/:id', rotaPortal(async (req, res) => {
+  const idNum = parseInt(req.params.id, 10);
+  const dbUser = await obterBancoUsuario(req.usuarioId);
+  const habito = (dbUser.habitos || []).find(h => h.id === idNum);
+  if (!habito) {
+    return res.status(404).json({ success: false, message: 'Hábito não encontrado.' });
+  }
+
+  const { nome, icone, periodo, duracao_min, horario_ideal, horario_limite } = req.body;
+  if (typeof nome === 'string' && nome.trim()) habito.nome = nome.trim();
+  if (typeof icone === 'string' && icone.trim()) habito.icone = icone.trim();
+
+  const periodosValidos = ['manha', 'pos_trabalho', 'noite', 'livre'];
+  if (periodosValidos.includes(periodo)) habito.periodo = periodo;
+
+  if (duracao_min !== undefined && Number.isFinite(Number(duracao_min))) {
+    habito.duracao_min = Math.max(1, Math.min(180, Math.round(Number(duracao_min))));
+  }
+
+  const regexHora = /^([01]\d|2[0-3]):[0-5]\d$/;
+  if (horario_ideal !== undefined) {
+    habito.horario_ideal = typeof horario_ideal === 'string' && regexHora.test(horario_ideal.trim()) ? horario_ideal.trim() : '';
+  }
+  if (horario_limite !== undefined) {
+    habito.horario_limite = typeof horario_limite === 'string' && regexHora.test(horario_limite.trim()) ? horario_limite.trim() : '';
+  }
+
+  await salvarBancoUsuario(dbUser, req.usuarioId);
+  res.json({ success: true, data: habito });
 }));
 
 app.post('/api/rotina/habitos/:id/checkin', rotaPortal(async (req, res) => {

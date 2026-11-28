@@ -1583,6 +1583,20 @@
               </div>
               <div id="preview-captura-natural" class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 min-h-[18px]"></div>
             </form>
+
+            <!-- Atalho Rápido: Modo Play de Rotinas em Bloco -->
+            <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-800" data-help="rotina-play">▶ Modo Play · Rotinas em Bloco</span>
+                <span class="text-[11px] text-slate-400 hidden sm:inline">Execute seus hábitos em sequência guiada com cronômetro</span>
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" data-play-periodo="manha" class="btn-iniciar-rotina-play px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition cursor-pointer">🌅 Manhã</button>
+                <button type="button" data-play-periodo="pos_trabalho" class="btn-iniciar-rotina-play px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200/80 transition cursor-pointer">🌆 Pós-Trabalho</button>
+                <button type="button" data-play-periodo="noite" class="btn-iniciar-rotina-play px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 transition cursor-pointer">🌙 Noite</button>
+                <button type="button" data-play-periodo="todos" class="btn-iniciar-rotina-play px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-2xs transition cursor-pointer">▶ Pendentes</button>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -2020,6 +2034,23 @@
             </button>
           </div>
 
+          <!-- Barra do Modo Play para Rotinas em Bloco -->
+          <div id="barra-modo-play-habitos" class="p-3.5 rounded-xl bg-slate-50/90 border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center shrink-0 text-xs font-bold shadow-2xs">▶</div>
+              <div>
+                <h4 class="text-xs font-bold text-slate-900" data-help="rotina-play">Modo Play · Rotinas em Bloco</h4>
+                <p class="text-[11px] text-slate-500">Inicie uma sequência guiada com cronômetro e check-in automático por período.</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" data-play-periodo="manha" class="btn-iniciar-rotina-play px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-amber-50 text-slate-800 border border-slate-200 hover:border-amber-300 transition cursor-pointer shadow-2xs">🌅 Manhã <span class="play-count text-slate-400 font-normal"></span></button>
+              <button type="button" data-play-periodo="pos_trabalho" class="btn-iniciar-rotina-play px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-indigo-50 text-slate-800 border border-slate-200 hover:border-indigo-300 transition cursor-pointer shadow-2xs">🌆 Pós-Trabalho <span class="play-count text-slate-400 font-normal"></span></button>
+              <button type="button" data-play-periodo="noite" class="btn-iniciar-rotina-play px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 hover:border-slate-300 transition cursor-pointer shadow-2xs">🌙 Noite <span class="play-count text-slate-400 font-normal"></span></button>
+              <button type="button" data-play-periodo="todos" class="btn-iniciar-rotina-play px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white transition cursor-pointer shadow-2xs">▶ Iniciar Pendentes <span class="play-count text-emerald-100 font-normal"></span></button>
+            </div>
+          </div>
+
           <div id="container-habitos-lista" class="space-y-3">
             <!-- Inserido dinamicamente via JS -->
           </div>
@@ -2221,30 +2252,59 @@
     </div>
   </div>
 
-  <!-- Modal Novo Hábito -->
+  <!-- Modal Novo / Editar Hábito -->
   <div id="modal-habito" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
       <div class="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
         <div class="flex items-center space-x-2">
           <span>⚡</span>
-          <h3 class="text-sm font-bold text-slate-900">Novo Hábito Diário</h3>
+          <h3 id="modal-habito-titulo" class="text-sm font-bold text-slate-900">Novo Hábito Diário</h3>
         </div>
-        <button onclick="document.getElementById('modal-habito').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">✕</button>
+        <button type="button" onclick="document.getElementById('modal-habito').classList.add('hidden');document.getElementById('modal-habito').classList.remove('flex')" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">✕</button>
       </div>
       <form id="form-novo-habito" class="p-5 space-y-4">
+        <input type="hidden" id="input-habito-id" value="" />
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Nome do Hábito</label>
           <input type="text" id="input-habito-nome" placeholder="Ex: Leitura 20 min, Treino, Beber 2L água..." class="w-full text-xs p-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-600" required />
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Ícone</label>
-          <div class="flex items-center gap-2">
-            <input type="text" id="input-habito-icone" value="⚡" maxlength="2" class="w-12 text-center text-sm p-2 border border-slate-300 rounded-xl" />
-            <span class="text-xs text-slate-400">Escolha um emoji para o hábito</span>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Ícone</label>
+            <input type="text" id="input-habito-icone" value="⚡" maxlength="2" class="w-full text-center text-sm p-2 border border-slate-300 rounded-xl" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Bloco / Período</label>
+            <select id="select-habito-periodo" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600">
+              <option value="manha">🌅 Manhã</option>
+              <option value="pos_trabalho">🌆 Pós-Trabalho</option>
+              <option value="noite">🌙 Noite</option>
+              <option value="livre">✨ Flexível</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Duração (min)</label>
+            <input type="number" id="input-habito-duracao" value="15" min="1" max="180" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-600" />
+          </div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-700">⏰ Janela Flexível (opcional)</span>
+            <span class="text-[10px] text-slate-400">Ex: ideal 19:00 até 21:00</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-500 mb-1">Horário Ideal</label>
+              <input type="time" id="input-habito-ideal" class="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-500 mb-1">Tolerância até</label>
+              <input type="time" id="input-habito-limite" class="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white" />
+            </div>
           </div>
         </div>
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-          <button type="button" onclick="document.getElementById('modal-habito').classList.add('hidden')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition cursor-pointer">
+          <button type="button" onclick="document.getElementById('modal-habito').classList.add('hidden');document.getElementById('modal-habito').classList.remove('flex')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition cursor-pointer">
             Cancelar
           </button>
           <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition shadow-xs cursor-pointer">
@@ -2252,6 +2312,67 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Modo "Play" para Rotinas em Bloco -->
+  <div id="modal-rotina-play" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm hidden items-center justify-center p-4 z-[9995]" role="dialog" aria-modal="true" aria-labelledby="play-habito-nome">
+    <div class="bg-[#fffdf8] rounded-3xl border border-slate-200/90 shadow-2xl max-w-md w-full overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-200/80 bg-[#f1ede3]/70 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 min-w-0">
+          <span id="play-periodo-badge" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-700 text-white">🌅 Rotina da Manhã</span>
+          <span id="play-etapa-contador" class="text-xs font-semibold text-slate-600 tabular-nums">Etapa 1 de 3</span>
+        </div>
+        <button type="button" id="btn-play-fechar" class="w-8 h-8 rounded-full hover:bg-slate-200/70 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer" title="Fechar Modo Play (Esc)">✕</button>
+      </div>
+
+      <!-- Conteúdo Ativo -->
+      <div id="play-conteudo-ativo" class="p-6 flex flex-col items-center text-center space-y-5">
+        <div class="space-y-1">
+          <div id="play-habito-icone" class="text-3xl leading-none">⚡</div>
+          <h3 id="play-habito-nome" class="text-lg font-bold text-slate-900 tracking-tight">Nome do Hábito</h3>
+          <p id="play-habito-meta" class="text-xs text-slate-500">15 min · Janela flexível</p>
+        </div>
+
+        <!-- Cronômetro Circular SVG -->
+        <div class="relative w-44 h-44 flex items-center justify-center">
+          <svg viewBox="0 0 140 140" class="w-44 h-44 -rotate-90" aria-hidden="true">
+            <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(31, 42, 39, 0.09)" stroke-width="8" />
+            <circle id="play-ring-fg" cx="70" cy="70" r="60" fill="none" stroke="#5b9086" stroke-width="8" stroke-linecap="round" stroke-dasharray="376.99" stroke-dashoffset="0" style="transition: stroke-dashoffset 0.5s linear, stroke 0.3s ease;" />
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span id="play-timer-texto" class="text-3xl font-extrabold text-slate-900 tabular-nums tracking-tight">15:00</span>
+            <span id="play-timer-status" class="text-[11px] font-semibold text-emerald-700 mt-0.5">Em foco</span>
+            <button type="button" id="btn-play-mais-5" class="mt-2 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer">+5 min</button>
+          </div>
+        </div>
+
+        <!-- Controles -->
+        <div class="w-full space-y-2.5">
+          <button type="button" id="btn-play-concluir" class="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-700 hover:bg-emerald-800 shadow-sm transition cursor-pointer flex items-center justify-center gap-2">
+            <span>✓ Concluir &amp; Avançar</span>
+          </button>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="btn-play-pausar" class="py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition cursor-pointer">⏸ Pausar</button>
+            <button type="button" id="btn-play-pular" class="py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 transition cursor-pointer">⏭ Pular etapa</button>
+          </div>
+        </div>
+
+        <!-- Fila de etapas -->
+        <div id="play-fila-etapas" class="w-full pt-3 border-t border-slate-200/70 flex flex-wrap items-center justify-center gap-1.5 text-[11px]"></div>
+      </div>
+
+      <!-- Tela de Conclusão -->
+      <div id="play-conteudo-concluido" class="hidden p-7 text-center space-y-4">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-3xl">🎉</div>
+        <div class="space-y-1">
+          <h3 class="text-lg font-bold text-slate-900">Rotina Concluída!</h3>
+          <p id="play-resumo-final" class="text-xs text-slate-600">Você finalizou todas as etapas deste bloco.</p>
+        </div>
+        <button type="button" id="btn-play-concluir-fechar" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition cursor-pointer">
+          Voltar para o Painel
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2771,6 +2892,7 @@
   <script src="/revisao-semanal.js"></script>
   <script src="/rotina-ux.js"></script>
   <script src="/rotina-planejamento.js"></script>
+  <script src="/rotina-play.js"></script>
   <script src="/estudos-blocos.js"></script>
   <script src="/estudos-views.js"></script>
   <script src="/estudos-desempenho.js"></script>
