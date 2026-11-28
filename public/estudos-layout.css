@@ -196,3 +196,50 @@
     grid-template-rows: auto;
   }
 }
+
+@media (max-width: 767px) {
+  #view-estudos-os {
+    padding: .75rem;
+    container-type: normal;
+  }
+
+  #view-estudos-os .eos-hero { padding: 1rem; gap: .85rem; }
+  .eos-hero-actions { width: 100%; }
+  .eos-hero-actions button { flex: 1 1 7rem; }
+  #view-estudos-os [role="tablist"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #view-estudos-os :is(button, select, summary) { min-height: 44px; }
+  #view-estudos-os :is(input, select, textarea) {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  #view-estudos-os :is(.grid > *, .eos-caderno-grade > *, .flex > .flex-1) { min-width: 0; }
+  #view-estudos-os :is(.rounded-2xl.p-5, .rounded-2xl.p-4) { padding: .85rem; }
+  #view-estudos-os :is(.eos-formulario-grade, .eos-filtros) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #view-estudos-os .eos-filtros[hidden] { display: none; }
+  #view-estudos-os .eos-pomodoro > div:last-child { flex: 1 1 12rem; }
+  .eos-pomodoro button { flex: 1; }
+  #view-estudos-os .eos-caderno-grade { gap: .75rem; }
+  #eos-arvore-paginas { max-height: 32vh; }
+  #eos-editor-ativo :is(pre, iframe, img) { max-width: 100%; }
+  #eos-editor-ativo pre { overflow-x: auto; }
+  #view-estudos-os :is(.eos-ferramentas, .eos-filtros) { padding: .55rem; }
+  #eos-revisoes-hoje-list .shrink-0 { flex-wrap: wrap; }
+  #view-estudos-os [id^="modal-eos-"] > div {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (hover: none) {
+  #view-estudos-os .group .opacity-0 { opacity: 1; }
+}
