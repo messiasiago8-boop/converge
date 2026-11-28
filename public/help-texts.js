@@ -167,8 +167,13 @@ window.CONVERGE_HELP = {
   /* ==================== METAS & HÁBITOS ==================== */
   'metas-geral': {
     titulo: 'Painel de Metas & Objetivos',
-    descricao: 'Acompanhe objetivos financeiros, numéricos (com botões +1/+5/+10), de estudos e pessoais com Indicador de Ritmo (Pace), Calculadora de Esforço Diário/Mensal e contagem regressiva.',
+    descricao: 'Acompanhe objetivos financeiros, numéricos (+1/+5/+10), por hábito da rotina, de estudos e projetos com marcos ponderados, Indicador de Ritmo (Pace) e Calculadora de Esforço.',
     dica: 'Metas com prazo mostram se você está 🟢 No Ritmo, 🟡 Atenção ou 🔴 Em Risco e calculam exatamente quanto falta por dia/semana/mês.'
+  },
+  'metas-pilares': {
+    titulo: 'Equilíbrio dos Pilares da Vida',
+    descricao: 'Gráfico de radar que mostra a média de progresso entre Carreira & Estudos, Financeiro, Saúde & Energia e Vida Pessoal para evitar foco excessivo em uma única área.',
+    dica: 'Ao criar uma nova meta, escolha o Pilar da Vida correspondente para equilibrar seu radar.'
   },
   'metas-habitos': {
     titulo: 'Metas de Hábitos & Força (%)',

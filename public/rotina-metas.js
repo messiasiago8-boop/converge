@@ -723,6 +723,9 @@ async function alternarCheckinHabito(id, dataIso) {
       body: JSON.stringify({ data: dataIso })
     });
     await carregarHabitos();
+    if (Array.isArray(rotinaState.metas) && rotinaState.metas.some(m => m.tipo === 'habito')) {
+      await carregarMetas();
+    }
   } catch (e) {
     avisarFalhaRotina(e);
   }
@@ -1249,6 +1252,14 @@ function calcularEsforcoMeta(meta, diffDias) {
       : `📐 Faltam ${falta} aulas → ${porSem} aula(s)/semana`;
   }
 
+  if (meta.tipo === 'habito') {
+    const falta = Math.max(0, Number(meta.valor_alvo || 0) - Number(meta.valor_atual || 0));
+    if (falta <= 0) return '';
+    return dias <= 14
+      ? `📐 Faltam ${falta} check-in(s) em ${dias}d`
+      : `📐 Faltam ${falta} check-in(s) → ${Math.ceil(falta / semanas)}/semana`;
+  }
+
   if (meta.tipo === 'pessoal' && Array.isArray(meta.checklist) && meta.checklist.length > 0) {
     const falta = meta.checklist.filter(s => !s.concluido).length;
     if (falta <= 0) return '';
@@ -1263,11 +1274,84 @@ function calcularEsforcoMeta(meta, diffDias) {
 window.calcularRitmoMeta = calcularRitmoMeta;
 window.calcularEsforcoMeta = calcularEsforcoMeta;
 
+const PILARES_META = [
+  { id: 'carreira', label: 'Carreira & Estudos', icone: '🎓', cor: '#5b9086' },
+  { id: 'financeiro', label: 'Financeiro', icone: '💰', cor: '#cfa468' },
+  { id: 'saude', label: 'Saúde & Energia', icone: '💪', cor: '#7e8ab4' },
+  { id: 'pessoal', label: 'Vida Pessoal', icone: '🌿', cor: '#cc9170' }
+];
+
+function renderizarRadarPilares() {
+  const svg = document.getElementById('svg-metas-radar');
+  const lista = document.getElementById('lista-metas-pilares');
+  if (!svg || !lista) return;
+
+  const metas = Array.isArray(rotinaState.metas) ? rotinaState.metas : [];
+  const stats = PILARES_META.map(p => {
+    const doPilar = metas.filter(m => (m.pilar || 'pessoal') === p.id);
+    const media = doPilar.length > 0
+      ? Math.round(doPilar.reduce((acc, m) => acc + Math.min(100, Math.max(0, Number(m.progresso || 0))), 0) / doPilar.length)
+      : 0;
+    return { ...p, total: doPilar.length, media };
+  });
+
+  const cx = 110;
+  const cy = 100;
+  const rMax = 68;
+  const angulos = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+
+  const pt = (r, a) => `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`;
+  const aneis = [0.25, 0.5, 0.75, 1].map(f => {
+    const pts = angulos.map(a => pt(rMax * f, a)).join(' ');
+    return `<polygon points="${pts}" fill="none" stroke="rgba(31,42,39,0.1)" stroke-width="1" />`;
+  }).join('');
+
+  const eixos = angulos.map(a => `<line x1="${cx}" y1="${cy}" x2="${(cx + rMax * Math.cos(a)).toFixed(1)}" y2="${(cy + rMax * Math.sin(a)).toFixed(1)}" stroke="rgba(31,42,39,0.12)" stroke-width="1" />`).join('');
+
+  const polyPts = stats.map((s, i) => {
+    const r = Math.max(6, (s.media / 100) * rMax);
+    return pt(r, angulos[i]);
+  }).join(' ');
+
+  const labelsPos = [
+    { x: cx, y: 18, anchor: 'middle', txt: '🎓 Carreira' },
+    { x: cx + rMax + 10, y: cy + 3, anchor: 'start', txt: '💰 Finanças' },
+    { x: cx, y: cy + rMax + 18, anchor: 'middle', txt: '💪 Saúde' },
+    { x: cx - rMax - 10, y: cy + 3, anchor: 'end', txt: '🌿 Pessoal' }
+  ];
+
+  const labelsSvg = labelsPos.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="${l.anchor}" font-size="9.5" font-weight="700" fill="#334155">${l.txt}</text>`).join('');
+
+  svg.innerHTML = `
+    ${aneis}
+    ${eixos}
+    <polygon points="${polyPts}" fill="rgba(91, 144, 134, 0.25)" stroke="#437268" stroke-width="2" />
+    ${stats.map((s, i) => {
+      const r = Math.max(6, (s.media / 100) * rMax);
+      const x = (cx + r * Math.cos(angulos[i])).toFixed(1);
+      const y = (cy + r * Math.sin(angulos[i])).toFixed(1);
+      return `<circle cx="${x}" cy="${y}" r="3.5" fill="#437268" stroke="#fff" stroke-width="1.5" />`;
+    }).join('')}
+    ${labelsSvg}
+  `;
+
+  lista.innerHTML = stats.map(s => `
+    <div class="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex items-center justify-between gap-2">
+      <div class="min-w-0">
+        <p class="text-[11px] font-bold text-slate-800 truncate">${s.icone} ${s.label}</p>
+        <p class="text-[10px] text-slate-500">${s.total} ${s.total === 1 ? 'meta' : 'metas'}</p>
+      </div>
+      <span class="text-xs font-extrabold tabular-nums text-emerald-800 shrink-0">${s.media}%</span>
+    </div>
+  `).join('');
+}
+
 function renderizarMetas() {
   const container = document.getElementById('grid-cards-metas');
   if (!container) return;
 
   atualizarKpisResumoMetas();
+  renderizarRadarPilares();
 
   container.innerHTML = '';
 
@@ -1344,6 +1428,9 @@ function renderizarMetas() {
     if (meta.tipo === 'financeira') tipoLabel = 'Financeiro';
     else if (meta.tipo === 'estudos') tipoLabel = 'Estudos';
     else if (meta.tipo === 'numerica') tipoLabel = 'Numérica';
+    else if (meta.tipo === 'habito') tipoLabel = 'Por Hábito';
+
+    const pilarObj = PILARES_META.find(p => p.id === (meta.pilar || 'pessoal')) || PILARES_META[3];
 
     const ritmo = calcularRitmoMeta(meta);
     const seloRitmo = `<span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${ritmo.classe}">${ritmo.label}</span>`;
@@ -1355,6 +1442,9 @@ function renderizarMetas() {
           <div class="flex flex-wrap items-center gap-1.5 min-w-0">
             <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-emerald-200 bg-emerald-50 text-emerald-800">
               ${tipoLabel}
+            </span>
+            <span class="text-[9px] font-semibold px-2 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-600">
+              ${pilarObj.icone} ${pilarObj.label}
             </span>
             ${seloRitmo}
           </div>
@@ -1438,6 +1528,22 @@ function renderizarMetas() {
           </div>
         ` : ''}
 
+        <!-- 1C. Conteúdo Interativo: Meta por Hábito -->
+        ${meta.tipo === 'habito' ? `
+          <div class="mt-3.5 p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-600 font-medium truncate">${escapeHTML(meta.habito_icone || '⚡')} ${escapeHTML(meta.habito_nome || 'Hábito vinculado')}</span>
+              <span class="font-bold text-slate-900 font-sans tabular-nums shrink-0">${meta.valor_atual || 0} / ${meta.valor_alvo || 30}</span>
+            </div>
+            <p class="text-[10px] text-slate-400">Cada check-in no hábito abaixo soma automaticamente aqui.</p>
+          </div>
+          <div class="mt-2.5 flex justify-end">
+            <button type="button" onclick="document.getElementById('secao-metas-habitos')?.scrollIntoView({ behavior: 'smooth' })" class="px-3 py-1 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-md border border-emerald-200 transition cursor-pointer">
+              Ir para Hábitos ↓
+            </button>
+          </div>
+        ` : ''}
+
         <!-- 2. Conteúdo Interativo: Meta de Estudos -->
         ${meta.tipo === 'estudos' ? `
           <div class="mt-3.5 p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
@@ -1462,9 +1568,12 @@ function renderizarMetas() {
               <span class="font-sans tabular-nums">${meta.checklist.filter(s => s.concluido).length}/${meta.checklist.length}</span>
             </div>
             ${meta.checklist.map((step, idx) => `
-              <label class="flex items-center gap-2 p-1.5 rounded-md bg-slate-50 border border-slate-200/80 text-xs cursor-pointer hover:bg-white transition">
-                <input type="checkbox" class="chk-step-meta rounded accent-emerald-600" data-meta-id="${meta.id}" data-step-idx="${idx}" ${step.concluido ? 'checked' : ''}>
-                <span class="text-[11px] truncate ${step.concluido ? 'line-through text-slate-400' : 'text-slate-700'}">${escapeHTML(step.texto)}</span>
+              <label class="flex items-center justify-between gap-2 p-1.5 rounded-md bg-slate-50 border border-slate-200/80 text-xs cursor-pointer hover:bg-white transition">
+                <div class="flex items-center gap-2 min-w-0">
+                  <input type="checkbox" class="chk-step-meta rounded accent-emerald-600 shrink-0" data-meta-id="${meta.id}" data-step-idx="${idx}" ${step.concluido ? 'checked' : ''}>
+                  <span class="text-[11px] truncate ${step.concluido ? 'line-through text-slate-400' : 'text-slate-700'}">${escapeHTML(step.texto)}</span>
+                </div>
+                ${Number(step.peso) > 0 ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">${step.peso}%</span>` : ''}
               </label>
             `).join('')}
           </div>
@@ -2519,15 +2628,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalMeta = document.getElementById('modal-meta');
   const formNovaMeta = document.getElementById('form-nova-meta');
   const selectMetaTipo = document.getElementById('select-meta-tipo');
+  const selectMetaPilar = document.getElementById('select-meta-pilar');
   const campoMetaValores = document.getElementById('campo-meta-valores');
   const campoMetaNumerica = document.getElementById('campo-meta-numerica');
+  const campoMetaHabito = document.getElementById('campo-meta-habito');
   const campoMetaChecklist = document.getElementById('campo-meta-checklist');
   const selectMetaProjeto = document.getElementById('select-meta-projeto');
+  const selectMetaHabito = document.getElementById('select-meta-habito');
   const statusMeta = document.getElementById('status-meta-form');
   const valoresMeta = [document.getElementById('input-meta-valor-atual'), document.getElementById('input-meta-valor-alvo')];
   selectMetaProjeto.addEventListener('change', () => {
     valoresMeta.forEach(campo => { campo.disabled = Boolean(selectMetaProjeto.value); });
   });
+
+  function preencherHabitosVinculaveis() {
+    if (!selectMetaHabito) return;
+    selectMetaHabito.replaceChildren(new Option('Selecione um hábito...', ''));
+    const lista = Array.isArray(rotinaState.habitos) ? rotinaState.habitos : [];
+    for (const h of lista) {
+      selectMetaHabito.add(new Option(`${h.icone || '⚡'} ${h.nome}`, h.id));
+    }
+  }
 
   async function carregarProjetosVinculaveis() {
     selectMetaProjeto.replaceChildren(new Option('Meta independente', ''));
@@ -2548,8 +2669,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const tipo = selectMetaTipo.value;
       campoMetaValores?.classList.toggle('hidden', tipo !== 'financeira');
       campoMetaNumerica?.classList.toggle('hidden', tipo !== 'numerica');
+      campoMetaHabito?.classList.toggle('hidden', tipo !== 'habito');
       campoMetaChecklist?.classList.toggle('hidden', tipo !== 'pessoal');
+      if (selectMetaPilar) {
+        selectMetaPilar.value = tipo === 'financeira' ? 'financeiro' : (tipo === 'estudos' ? 'carreira' : (tipo === 'habito' ? 'saude' : 'pessoal'));
+      }
       if (tipo === 'financeira') carregarProjetosVinculaveis();
+      if (tipo === 'habito') preencherHabitosVinculaveis();
     });
   }
 
@@ -2560,8 +2686,10 @@ document.addEventListener('DOMContentLoaded', () => {
       statusMeta.textContent = '';
       selectMetaProjeto.dispatchEvent(new Event('change'));
       if (selectMetaTipo) selectMetaTipo.value = 'pessoal';
+      if (selectMetaPilar) selectMetaPilar.value = 'pessoal';
       campoMetaValores?.classList.add('hidden');
       campoMetaNumerica?.classList.add('hidden');
+      campoMetaHabito?.classList.add('hidden');
       campoMetaChecklist?.classList.remove('hidden');
       modalMeta.classList.remove('hidden');
       modalMeta.classList.add('flex');
@@ -2573,26 +2701,34 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const titulo = document.getElementById('input-meta-titulo').value.trim();
       const tipo = document.getElementById('select-meta-tipo').value;
+      const pilar = selectMetaPilar?.value || 'pessoal';
       const valor_atual = tipo === 'numerica'
         ? Number(document.getElementById('input-meta-num-atual')?.value || 0)
         : Number(document.getElementById('input-meta-valor-atual')?.value || 0);
       const valor_alvo = tipo === 'numerica'
         ? Number(document.getElementById('input-meta-num-alvo')?.value || 100)
-        : Number(document.getElementById('input-meta-valor-alvo')?.value || 100);
+        : (tipo === 'habito'
+          ? Number(document.getElementById('input-meta-habito-alvo')?.value || 30)
+          : Number(document.getElementById('input-meta-valor-alvo')?.value || 100));
       const unidade = document.getElementById('input-meta-unidade')?.value?.trim() || 'un';
+      const habito_id = tipo === 'habito' ? (selectMetaHabito?.value || '') : '';
       const prazo = document.getElementById('input-meta-prazo')?.value || '';
       const rawChecklist = document.getElementById('textarea-meta-checklist')?.value || '';
 
-      const checklist = rawChecklist.split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(texto => ({
-        texto,
-        concluido: false
-      }));
+      const checklist = rawChecklist.split(/[\n,]/).map(s => s.trim()).filter(Boolean).map(linha => {
+        const partes = linha.split('|');
+        const texto = partes[0].trim();
+        const pesoNum = partes[1] ? parseInt(partes[1].trim(), 10) : 0;
+        return Number.isFinite(pesoNum) && pesoNum > 0
+          ? { texto, peso: pesoNum, concluido: false }
+          : { texto, concluido: false };
+      }).filter(s => s.texto);
 
       try {
         await salvarRotina('/api/metas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ titulo, tipo, valor_atual, valor_alvo, unidade, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
+          body: JSON.stringify({ titulo, tipo, pilar, valor_atual, valor_alvo, unidade, habito_id, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
         });
         document.getElementById('input-meta-titulo').value = '';
         modalMeta.classList.add('hidden');

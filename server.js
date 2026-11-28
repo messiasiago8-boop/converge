@@ -2097,6 +2097,17 @@ app.get('/api/metas', rotaPortal(async (req, res) => {
         console.warn('[Metas]', error.message);
       }
     }
+    const habitosUser = Array.isArray(dbUser.habitos) ? dbUser.habitos : [];
+    const calcularProgressoChecklist = (lista) => {
+      const temPesos = lista.some(s => Number(s.peso) > 0);
+      if (!temPesos) {
+        return Math.round((lista.filter(s => s.concluido).length / lista.length) * 100);
+      }
+      const totalPeso = lista.reduce((acc, s) => acc + (Number(s.peso) > 0 ? Number(s.peso) : 1), 0);
+      const feitoPeso = lista.filter(s => s.concluido).reduce((acc, s) => acc + (Number(s.peso) > 0 ? Number(s.peso) : 1), 0);
+      return totalPeso > 0 ? Math.round((feitoPeso / totalPeso) * 100) : 0;
+    };
+
     metas = metas.map(meta => {
       const m = { ...meta };
       let progresso = Number(m.progresso || 0);
@@ -2113,14 +2124,25 @@ app.get('/api/metas', rotaPortal(async (req, res) => {
         progresso = totalAulas > 0 ? Math.round((aulasConcluidas / totalAulas) * 100) : 0;
         m.valor_atual = aulasConcluidas;
         m.valor_alvo = totalAulas;
+      } else if (m.tipo === 'habito' && m.habito_id) {
+        const hab = habitosUser.find(h => h.id === Number(m.habito_id));
+        m.habito_status = hab ? 'vinculado' : 'removido';
+        if (hab) {
+          m.habito_nome = hab.nome;
+          m.habito_icone = hab.icone || '⚡';
+          const dias = Array.isArray(hab.dias_concluidos) ? hab.dias_concluidos : [];
+          m.valor_atual = dias.length;
+          m.valor_alvo = Number(m.valor_alvo) > 0 ? Number(m.valor_alvo) : 30;
+          progresso = m.valor_alvo > 0 ? Math.round((m.valor_atual / m.valor_alvo) * 100) : 0;
+        }
       } else if (m.tipo === 'pessoal' && Array.isArray(m.checklist) && m.checklist.length > 0) {
-        const totalSteps = m.checklist.length;
-        const doneSteps = m.checklist.filter(s => s.concluido).length;
-        progresso = Math.round((doneSteps / totalSteps) * 100);
+        progresso = calcularProgressoChecklist(m.checklist);
       }
 
+      const pilarPadrao = m.tipo === 'financeira' ? 'financeiro' : (m.tipo === 'estudos' ? 'carreira' : (m.tipo === 'habito' ? 'saude' : 'pessoal'));
       return {
         ...m,
+        pilar: m.pilar || pilarPadrao,
         progresso: Math.min(100, Math.max(0, progresso))
       };
     });
@@ -2132,7 +2154,7 @@ app.get('/api/metas', rotaPortal(async (req, res) => {
 }));
 
 app.post('/api/metas', rotaPortal(async (req, res) => {
-  const { titulo, tipo, valor_alvo, valor_atual, unidade, prazo, checklist, projeto_id, sugestao_semana } = req.body;
+  const { titulo, tipo, pilar, valor_alvo, valor_atual, unidade, habito_id, prazo, checklist, projeto_id, sugestao_semana } = req.body;
   if (!titulo || !titulo.trim()) {
     return res.status(400).json({ success: false, message: 'Título da meta é obrigatório.' });
   }
@@ -2154,31 +2176,60 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
     return res.status(409).json({ success: false, message: 'Já existe uma meta sugerida para este período ou a data é inválida.' });
   }
 
-  const tiposValidos = ['pessoal', 'financeira', 'estudos', 'numerica'];
+  const tiposValidos = ['pessoal', 'financeira', 'estudos', 'numerica', 'habito'];
   const tipoNorm = tiposValidos.includes(tipo) ? tipo : 'pessoal';
+  const pilaresValidos = ['carreira', 'financeiro', 'saude', 'pessoal'];
+  const pilarPadrao = tipoNorm === 'financeira' ? 'financeiro' : (tipoNorm === 'estudos' ? 'carreira' : (tipoNorm === 'habito' ? 'saude' : 'pessoal'));
+  const pilarNorm = pilaresValidos.includes(pilar) ? pilar : pilarPadrao;
   const unidadeLimpa = typeof unidade === 'string' && unidade.trim() ? unidade.trim().slice(0, 24) : 'un';
+
+  let habitoIdNorm = null;
+  let valorInicialHabito = 0;
+  if (tipoNorm === 'habito' && habito_id) {
+    const hab = (dbUser.habitos || []).find(h => h.id === Number(habito_id));
+    if (!hab) return res.status(404).json({ success: false, message: 'Hábito vinculado não encontrado.' });
+    habitoIdNorm = hab.id;
+    valorInicialHabito = Array.isArray(hab.dias_concluidos) ? hab.dias_concluidos.length : 0;
+  }
+
+  const checklistLimpo = Array.isArray(checklist)
+    ? checklist.map(s => ({
+        texto: String(s.texto || '').trim(),
+        concluido: !!s.concluido,
+        ...(Number(s.peso) > 0 ? { peso: Math.min(100, Math.round(Number(s.peso))) } : {})
+      })).filter(s => s.texto)
+    : [];
 
   const novaMeta = {
     id: dbUser.metas.length > 0 ? Math.max(...dbUser.metas.map(m => m.id)) + 1 : 1,
     titulo: titulo.trim(),
-    tipo: tipoNorm, // 'financeira' | 'estudos' | 'pessoal' | 'numerica'
+    tipo: tipoNorm, // 'financeira' | 'estudos' | 'pessoal' | 'numerica' | 'habito'
+    pilar: pilarNorm,
     ...(tipoNorm === 'numerica' ? { unidade: unidadeLimpa } : {}),
+    ...(habitoIdNorm ? { habito_id: habitoIdNorm } : {}),
     ...(sugestao_semana ? { sugestao_semana } : {}),
     ...(projetoId ? { projeto_id: projetoId } : {}),
-    valor_alvo: Number(valor_alvo) > 0 ? Number(valor_alvo) : 100,
-    valor_atual: Math.max(0, Number(valor_atual) || 0),
+    valor_alvo: Number(valor_alvo) > 0 ? Number(valor_alvo) : (tipoNorm === 'habito' ? 30 : 100),
+    valor_atual: habitoIdNorm ? valorInicialHabito : Math.max(0, Number(valor_atual) || 0),
     progresso: 0,
     prazo: prazo || '',
-    checklist: Array.isArray(checklist) ? checklist : [],
+    checklist: checklistLimpo,
     criado_em: new Date().toISOString()
   };
 
   // Cálculo inicial de progresso
-  if ((novaMeta.tipo === 'financeira' || novaMeta.tipo === 'numerica') && novaMeta.valor_alvo > 0) {
+  if ((novaMeta.tipo === 'financeira' || novaMeta.tipo === 'numerica' || novaMeta.tipo === 'habito') && novaMeta.valor_alvo > 0) {
     novaMeta.progresso = Math.min(100, Math.round((novaMeta.valor_atual / novaMeta.valor_alvo) * 100));
   } else if (novaMeta.tipo === 'pessoal' && novaMeta.checklist.length > 0) {
-    const done = novaMeta.checklist.filter(s => s.concluido).length;
-    novaMeta.progresso = Math.round((done / novaMeta.checklist.length) * 100);
+    const temPesos = novaMeta.checklist.some(s => Number(s.peso) > 0);
+    if (temPesos) {
+      const tot = novaMeta.checklist.reduce((a, s) => a + (Number(s.peso) || 1), 0);
+      const doneP = novaMeta.checklist.filter(s => s.concluido).reduce((a, s) => a + (Number(s.peso) || 1), 0);
+      novaMeta.progresso = tot > 0 ? Math.round((doneP / tot) * 100) : 0;
+    } else {
+      const done = novaMeta.checklist.filter(s => s.concluido).length;
+      novaMeta.progresso = Math.round((done / novaMeta.checklist.length) * 100);
+    }
   }
 
   dbUser.metas.push(novaMeta);
@@ -2216,8 +2267,15 @@ app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   if (Array.isArray(checklist)) {
     meta.checklist = checklist;
     if (meta.checklist.length > 0) {
-      const done = meta.checklist.filter(s => s.concluido).length;
-      meta.progresso = Math.round((done / meta.checklist.length) * 100);
+      const temPesos = meta.checklist.some(s => Number(s.peso) > 0);
+      if (temPesos) {
+        const totalPeso = meta.checklist.reduce((acc, s) => acc + (Number(s.peso) > 0 ? Number(s.peso) : 1), 0);
+        const feitoPeso = meta.checklist.filter(s => s.concluido).reduce((acc, s) => acc + (Number(s.peso) > 0 ? Number(s.peso) : 1), 0);
+        meta.progresso = totalPeso > 0 ? Math.min(100, Math.round((feitoPeso / totalPeso) * 100)) : 0;
+      } else {
+        const done = meta.checklist.filter(s => s.concluido).length;
+        meta.progresso = Math.round((done / meta.checklist.length) * 100);
+      }
     }
   }
   if (meta.progresso > progressoAnterior) {
