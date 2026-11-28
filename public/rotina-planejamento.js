@@ -185,16 +185,118 @@
   }
 
   /* ---------------- 3. INBOX & TIMELINE COM LACUNAS (GAPS) ---------------- */
-  async function agendarTarefaEmHorario(tarefaId, hhmm) {
+  async function agendarTarefaEmHorario(tarefaId, hhmm, dataIso = null, duracaoMin = null) {
     if (typeof salvarRotina !== 'function') return;
-    const hoje = dataIsoOffset(0);
+    const payload = {
+      data: dataIso || dataIsoOffset(0),
+      horario: hhmm
+    };
+    if (duracaoMin && Number.isFinite(Number(duracaoMin))) {
+      payload.duracao_min = Number(duracaoMin);
+    }
     await salvarRotina(`/api/rotina/prioridades/${tarefaId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: hoje, horario: hhmm })
+      body: JSON.stringify(payload)
     });
     if (typeof carregarPrioridades === 'function') await carregarPrioridades();
     if (typeof carregarAgendaHoje === 'function') await carregarAgendaHoje();
+    if (typeof window.mostrarToast === 'function') {
+      window.mostrarToast(`Tarefa agendada para ${hhmm}!`, 'success');
+    }
+  }
+
+  async function concluirTarefaDaTimeline(tarefaId) {
+    if (typeof salvarRotina !== 'function') return;
+    await salvarRotina(`/api/rotina/prioridades/${tarefaId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ concluida: true })
+    });
+    if (typeof carregarPrioridades === 'function') await carregarPrioridades();
+    if (typeof carregarAgendaHoje === 'function') await carregarAgendaHoje();
+    if (typeof window.mostrarToast === 'function') {
+      window.mostrarToast('Tarefa concluída na Linha do Tempo! ✓', 'success');
+    }
+  }
+
+  async function desagendarTarefaDaTimeline(tarefaId) {
+    if (typeof salvarRotina !== 'function') return;
+    await salvarRotina(`/api/rotina/prioridades/${tarefaId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ horario: null })
+    });
+    if (typeof carregarPrioridades === 'function') await carregarPrioridades();
+    if (typeof carregarAgendaHoje === 'function') await carregarAgendaHoje();
+    if (typeof window.mostrarToast === 'function') {
+      window.mostrarToast('Tarefa movida de volta para a Inbox.', 'info');
+    }
+  }
+
+  function calcularLacunasLivresHoje() {
+    const hoje = dataIsoOffset(0);
+    const ocupados = [];
+    (rotinaState.agendaHoje || []).forEach(it => {
+      const ini = paraMinutos(it.horario);
+      if (ini !== null) ocupados.push([ini, ini + (Number(it.duracao_min) || 45)]);
+    });
+    (rotinaState.prioridades || []).forEach(p => {
+      if (!p.concluida && p.horario && (!p.data || p.data === hoje)) {
+        const ini = paraMinutos(p.horario);
+        if (ini !== null) ocupados.push([ini, ini + (Number(p.duracao_min) || 30)]);
+      }
+    });
+    const agoraMin = new Date().getHours() * 60 + new Date().getMinutes();
+    const candidatos = ['08:00', '09:00', '10:30', '14:00', '16:00', '19:00', '20:30'];
+    const livres = candidatos.filter(hhmm => {
+      const m = paraMinutos(hhmm);
+      if (m === null || m < agoraMin - 10) return false;
+      return !ocupados.some(([a, b]) => m < b && (m + 30) > a);
+    });
+    return livres.length > 0 ? livres.slice(0, 4) : ['09:00', '14:00', '19:00'];
+  }
+
+  function abrirModalAgendarTarefa(tarefa) {
+    const modal = document.getElementById('modal-agendar-tarefa');
+    if (!modal || !tarefa) return;
+    const idEl = document.getElementById('input-agendar-task-id');
+    const nomeEl = document.getElementById('agendar-tarefa-nome');
+    const dataEl = document.getElementById('input-agendar-data');
+    const horaEl = document.getElementById('input-agendar-horario');
+    const durEl = document.getElementById('select-agendar-duracao');
+    const chipsEl = document.getElementById('agendar-chips-horarios');
+
+    const livres = calcularLacunasLivresHoje();
+    if (idEl) idEl.value = String(tarefa.id);
+    if (nomeEl) nomeEl.textContent = tarefa.texto || 'Tarefa';
+    if (dataEl) dataEl.value = tarefa.data || dataIsoOffset(0);
+    if (horaEl) horaEl.value = livres[0] || '14:00';
+    if (durEl) {
+      const d = String(tarefa.duracao_min || 30);
+      durEl.value = [...durEl.options].some(o => o.value === d) ? d : '30';
+    }
+    if (chipsEl) {
+      chipsEl.innerHTML = livres.map(h => {
+        const noPico = estaNoPico(paraMinutos(h));
+        return `<button type="button" class="btn-chip-hora-agendar px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition cursor-pointer ${noPico ? 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100' : 'bg-white border-slate-200 text-slate-700 hover:bg-emerald-50 hover:border-emerald-300'}" data-hora="${h}">⏰ ${h}${noPico ? ' ⚡' : ''}</button>`;
+      }).join('');
+      chipsEl.querySelectorAll('.btn-chip-hora-agendar').forEach(ch => {
+        ch.addEventListener('click', () => {
+          if (horaEl) horaEl.value = ch.getAttribute('data-hora');
+        });
+      });
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function fecharModalAgendarTarefa() {
+    const modal = document.getElementById('modal-agendar-tarefa');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
   }
 
   function preencherLacuna(hhmm) {
@@ -212,7 +314,10 @@
     const badge = document.getElementById('badge-inbox-count');
     if (!box || typeof rotinaState === 'undefined') return;
 
-    const semHora = (rotinaState.prioridades || []).filter(p => !p.concluida && !p.horario);
+    const pesoEnergia = { alto: 0, medio: 1, baixo: 2 };
+    const semHora = (rotinaState.prioridades || [])
+      .filter(p => !p.concluida && !p.horario)
+      .sort((a, b) => (pesoEnergia[a.energia || 'medio'] ?? 1) - (pesoEnergia[b.energia || 'medio'] ?? 1));
     if (badge) badge.textContent = String(semHora.length);
 
     if (!semHora.length) {
@@ -229,14 +334,14 @@
     box.innerHTML = semHora.map(t => {
       const en = ENERGIA_TAG[t.energia || 'medio'] || ENERGIA_TAG.medio;
       return `
-        <div class="inbox-tb-card p-2.5 rounded-lg bg-white border border-slate-200 hover:border-emerald-300 shadow-2xs cursor-grab transition space-y-1.5" draggable="true" data-task-id="${t.id}">
+        <div class="inbox-tb-card p-2.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-300 shadow-2xs cursor-grab transition space-y-2" draggable="true" data-task-id="${t.id}">
           <p class="text-xs font-semibold text-slate-900 line-clamp-2">${esc(t.texto)}</p>
-          <div class="flex items-center justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-1.5 flex-wrap">
             <div class="flex items-center gap-1">
               <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">${formatarDuracao(t.duracao_min || 30)}</span>
               <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border ${en.cls}">${en.label}</span>
             </div>
-            <button type="button" class="btn-tb-agendar px-2 py-0.5 rounded-md text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-task-id="${t.id}">⏰ Agendar</button>
+            <button type="button" class="btn-tb-agendar px-2.5 py-1 rounded-lg text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer" data-task-id="${t.id}">⏰ Agendar</button>
           </div>
         </div>
       `;
@@ -254,11 +359,10 @@
     });
 
     box.querySelectorAll('.btn-tb-agendar').forEach(btn => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', () => {
         const id = parseInt(btn.getAttribute('data-task-id'), 10);
-        const hora = prompt('Para qual horário hoje deseja agendar esta tarefa? (Ex: 14:30)', '14:00');
-        if (!hora || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(hora.trim())) return;
-        await agendarTarefaEmHorario(id, hora.trim());
+        const tarefa = (rotinaState.prioridades || []).find(p => p.id === id);
+        if (tarefa) abrirModalAgendarTarefa(tarefa);
       });
     });
   }
@@ -287,6 +391,7 @@
         const ini = paraMinutos(p.horario);
         if (ini !== null) {
           blocos.push({
+            taskId: p.id,
             titulo: p.texto,
             inicio: ini,
             duracao: Number(p.duracao_min) || 30,
@@ -339,12 +444,18 @@
               <span class="w-2.5 h-2.5 rounded-full mt-3 ${b.energia === 'alto' ? 'bg-amber-500' : 'bg-emerald-600'}"></span>
               <span class="flex-1 w-px bg-slate-200"></span>
             </div>
-            <div class="flex-1 min-w-0 mb-1.5 p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex items-center justify-between gap-2">
-              <div class="min-w-0">
+            <div class="flex-1 min-w-0 mb-1.5 p-3 rounded-xl border border-slate-200 bg-white shadow-2xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
+              <div class="min-w-0 flex-1">
                 <p class="text-xs font-bold text-slate-900 truncate">${esc(b.titulo)}</p>
                 <p class="text-[10px] text-slate-500">${esc(b.origem)} · ${minParaHHMM(b.inicio)} – ${minParaHHMM(fim)} (${formatarDuracao(b.duracao)})</p>
               </div>
-              ${badgeEnergia}
+              <div class="flex items-center gap-1.5 shrink-0">
+                ${badgeEnergia}
+                ${b.taskId ? `
+                  <button type="button" class="btn-tl-concluir w-7 h-7 rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 text-xs font-bold transition cursor-pointer flex items-center justify-center" data-task-id="${b.taskId}" title="Concluir tarefa">✓</button>
+                  <button type="button" class="btn-tl-desagendar w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-200 text-slate-500 hover:text-slate-800 border border-slate-200 text-xs transition cursor-pointer flex items-center justify-center" data-task-id="${b.taskId}" title="Mover de volta para Inbox (sem horário)">📥</button>
+                ` : ''}
+              </div>
             </div>
           </div>
         `;
@@ -380,6 +491,20 @@
 
     container.querySelectorAll('.btn-preencher-lacuna').forEach(btn => {
       btn.addEventListener('click', () => preencherLacuna(btn.getAttribute('data-gap-hora')));
+    });
+
+    container.querySelectorAll('.btn-tl-concluir').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        await concluirTarefaDaTimeline(parseInt(btn.getAttribute('data-task-id'), 10));
+      });
+    });
+
+    container.querySelectorAll('.btn-tl-desagendar').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        await desagendarTarefaDaTimeline(parseInt(btn.getAttribute('data-task-id'), 10));
+      });
     });
 
     container.querySelectorAll('.gap-drop-zone').forEach(zone => {
@@ -475,22 +600,62 @@
       const p = parseCapturaNatural(inpNat.value);
       if (!p.titulo) return;
 
-      await salvarRotina('/api/rotina/prioridades', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          texto: p.titulo,
-          top3: false,
-          data: p.data,
-          horario: p.horario,
-          duracao_min: p.duracao_min,
-          energia: p.energia
-        })
-      });
-      inpNat.value = '';
-      if (prevNat) prevNat.innerHTML = '';
-      if (typeof carregarPrioridades === 'function') await carregarPrioridades();
-      if (typeof carregarAgendaHoje === 'function') await carregarAgendaHoje();
+      const form = e.currentTarget;
+      const btnSubmit = form.querySelector('[type="submit"]');
+      if (btnSubmit?.disabled) return;
+      if (btnSubmit) btnSubmit.disabled = true;
+
+      try {
+        await salvarRotina('/api/rotina/prioridades', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            texto: p.titulo,
+            top3: false,
+            data: p.data,
+            horario: p.horario,
+            duracao_min: p.duracao_min,
+            energia: p.energia
+          })
+        });
+        inpNat.value = '';
+        if (prevNat) prevNat.innerHTML = '';
+        if (typeof carregarPrioridades === 'function') await carregarPrioridades();
+        if (typeof carregarAgendaHoje === 'function') await carregarAgendaHoje();
+        if (typeof window.mostrarToast === 'function') {
+          window.mostrarToast(p.horario ? `Agendado para ${p.horario} (${p.data})!` : 'Adicionado à Inbox!', 'success');
+        }
+      } catch (err) {
+        if (typeof window.mostrarToast === 'function') {
+          window.mostrarToast(err.message || 'Erro ao agendar tarefa.', 'error');
+        }
+      } finally {
+        if (btnSubmit) btnSubmit.disabled = false;
+      }
+    });
+
+    // Modal Agendar Tarefa (sem prompt nativo)
+    document.getElementById('btn-agendar-fechar')?.addEventListener('click', fecharModalAgendarTarefa);
+    document.getElementById('btn-agendar-cancelar')?.addEventListener('click', fecharModalAgendarTarefa);
+    document.getElementById('form-agendar-tarefa')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = parseInt(document.getElementById('input-agendar-task-id')?.value || '0', 10);
+      const dataIso = document.getElementById('input-agendar-data')?.value || dataIsoOffset(0);
+      const hora = document.getElementById('input-agendar-horario')?.value || '';
+      const dur = parseInt(document.getElementById('select-agendar-duracao')?.value || '30', 10);
+      const btnSalvar = document.getElementById('btn-agendar-salvar');
+      if (!id || !hora) return;
+      if (btnSalvar) btnSalvar.disabled = true;
+      try {
+        await agendarTarefaEmHorario(id, hora, dataIso, dur);
+        fecharModalAgendarTarefa();
+      } catch (err) {
+        if (typeof window.mostrarToast === 'function') {
+          window.mostrarToast(err.message || 'Erro ao agendar tarefa.', 'error');
+        }
+      } finally {
+        if (btnSalvar) btnSalvar.disabled = false;
+      }
     });
 
     // Envolve renderizações existentes sem quebrar nada

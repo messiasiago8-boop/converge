@@ -1449,13 +1449,13 @@
       </section>
 
       <!-- ================= VISÃO 5: NOVO PILAR - ROTINA & AGENDA ================= -->
-      <section id="view-rotina" class="hidden p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <section id="view-rotina" class="hidden p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5 sm:space-y-6">
         
-        <!-- Topo da Rotina: KPIs Compactos + Pomodoro 25/5 min + Sub-abas -->
-        <div class="bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-          <div class="flex flex-wrap items-center gap-3">
+        <!-- Topo da Rotina: KPIs Compactos + Sub-abas -->
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+          <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 w-full lg:w-auto">
             <!-- Indicador Prioridades Concluídas -->
-            <div class="rx-kpi flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-800">
+            <div class="rx-kpi flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 min-w-0">
               <div class="relative w-10 h-10 shrink-0">
                 <svg viewBox="0 0 36 36" class="w-10 h-10 -rotate-90" aria-hidden="true">
                   <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" stroke-width="3.5" class="text-slate-200" />
@@ -1500,11 +1500,11 @@
             <!-- Indicador Hábitos Concluídos Hoje (Removido) -->
 
             <!-- Botão de Notificações / Alertas Automáticos -->
-            <button id="btn-toggle-notificacoes" type="button" onclick="window.ConvergeNotifications.solicitarPermissao()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:border-emerald-300 transition cursor-pointer shadow-2xs" title="Ativar Notificações de Compromissos">
-              <svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button id="btn-toggle-notificacoes" type="button" onclick="window.ConvergeNotifications.solicitarPermissao()" class="flex items-center justify-center sm:justify-start gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:border-emerald-300 transition cursor-pointer shadow-2xs min-w-0" title="Ativar Notificações de Compromissos">
+              <svg class="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
-              <span class="text-[11px] font-semibold text-slate-700">Ativar Alertas</span>
+              <span class="text-[11px] font-semibold text-slate-700 truncate">Ativar Alertas</span>
             </button>
 
             <!-- Botão de Histórico de Tarefas (oculto no topo, acessível pelo menu lateral) -->
@@ -1518,17 +1518,17 @@
             </button>
           </div>
 
-          <!-- Sub-abas: Hoje vs Agenda (Controle Segmentado Executivo) -->
-          <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shrink-0">
-            <button id="btn-subaba-hoje" type="button" class="px-4 py-1.5 rounded-md text-xs font-bold bg-white text-slate-900 shadow-2xs transition cursor-pointer flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <!-- Sub-abas: Hoje vs Checklist vs Agenda (Responsivo no Mobile) -->
+          <div class="grid grid-cols-3 sm:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 w-full lg:w-auto shrink-0">
+            <button id="btn-subaba-hoje" type="button" class="px-2 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-2xs transition cursor-pointer flex items-center justify-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
               <span>Hoje</span>
             </button>
-            <button id="btn-subaba-checklist" type="button" class="px-4 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer">Checklist</button>
-            <button id="btn-subaba-agenda" type="button" class="px-4 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button id="btn-subaba-checklist" type="button" class="px-2 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer text-center">Checklist</button>
+            <button id="btn-subaba-agenda" type="button" class="px-2 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition cursor-pointer flex items-center justify-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span>Agenda</span>
@@ -1537,26 +1537,69 @@
         </div>
 
         <!-- CONTEÚDO SUB-ABA A: HOJE (Execução Diária) -->
-        <div id="subview-rotina-hoje" class="space-y-6">
-          <!-- CARD 0: Planejamento Realista (Capacidade do Dia + Captura em Linguagem Natural) -->
-          <div id="card-rotina-planejamento" class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
+        <div id="subview-rotina-hoje" class="space-y-5">
+          <!-- FAIXA DE COMANDO RÁPIDO: Rituais do Dia + Modo Play + Reagendar Atrasadas -->
+          <div id="card-rotina-acoes-rapidas" class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start xl:items-center">
+              <!-- Rituais -->
+              <div class="xl:col-span-5 space-y-2">
+                <span class="block text-[11px] font-bold uppercase tracking-wider text-slate-500" data-help="rotina-rituais">Rituais do Dia</span>
+                <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+                  <button type="button" id="btn-abrir-checkin-matinal" class="px-3 py-2 sm:py-1.5 rounded-xl text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition cursor-pointer flex items-center justify-center gap-1.5">
+                    <span>🌅 Check-in Matinal</span>
+                    <span id="badge-checkin-feito" class="hidden text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-bold">✓</span>
+                  </button>
+                  <button type="button" id="btn-abrir-encerramento-dia" class="px-3 py-2 sm:py-1.5 rounded-xl text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 transition cursor-pointer flex items-center justify-center gap-1.5">
+                    <span>🌙 Encerrar Dia</span>
+                    <span id="badge-encerramento-feito" class="hidden text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-bold">✓</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Modo Play -->
+              <div class="xl:col-span-7 xl:border-l xl:border-slate-100 xl:pl-4 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500" data-help="rotina-play">▶ Modo Play · Rotinas em Bloco</span>
+                  <span class="text-[11px] text-slate-400 hidden sm:inline">Cronômetro guiado por período</span>
+                </div>
+                <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5">
+                  <button type="button" data-play-periodo="manha" class="btn-iniciar-rotina-play px-2.5 py-2 sm:py-1.5 rounded-xl text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition cursor-pointer text-center">🌅 Manhã</button>
+                  <button type="button" data-play-periodo="pos_trabalho" class="btn-iniciar-rotina-play px-2.5 py-2 sm:py-1.5 rounded-xl text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200/80 transition cursor-pointer text-center">🌆 Pós-Trabalho</button>
+                  <button type="button" data-play-periodo="noite" class="btn-iniciar-rotina-play px-2.5 py-2 sm:py-1.5 rounded-xl text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 transition cursor-pointer text-center">🌙 Noite</button>
+                  <button type="button" data-play-periodo="todos" class="btn-iniciar-rotina-play px-2.5 py-2 sm:py-1.5 rounded-xl text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-2xs transition cursor-pointer text-center">▶ Pendentes</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Barra Reagendar Atrasadas (aparece automaticamente quando há atrasadas) -->
+            <div id="barra-reagendar-atrasadas" class="hidden flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl bg-rose-50/90 border border-rose-200">
+              <span id="txt-qtd-atrasadas" class="text-[11px] font-bold text-rose-800" data-help="rotina-reagendar">⚠️ 0 atrasadas</span>
+              <div class="grid grid-cols-2 sm:flex items-center gap-2">
+                <button type="button" id="btn-reagendar-hoje-livres" class="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 transition cursor-pointer text-center">⚡ Encaixar hoje</button>
+                <button type="button" id="btn-reagendar-amanha" class="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-rose-600 hover:bg-rose-700 text-white transition cursor-pointer text-center">📅 Mover p/ amanhã</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD 0: Planejamento Realista (Capacidade do Dia + Pico de Energia + Captura Rápida) -->
+          <div id="card-rotina-planejamento" class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0 text-emerald-700 text-sm">⚡</div>
                 <div>
-                  <h3 data-help="rotina-capacidade" class="text-sm font-bold text-slate-900">Capacidade do Dia & Captura Rápida</h3>
+                  <h3 data-help="rotina-capacidade" class="text-sm font-bold text-slate-900">Capacidade do Dia &amp; Captura Rápida</h3>
                   <p class="text-[11px] text-slate-500">Controle sua carga horária real e digite tarefas em linguagem natural.</p>
                 </div>
               </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <span id="badge-capacidade-status" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 tabular-nums">0h / 8h · Equilibrado</span>
-                <select id="select-capacidade-horas" class="px-2 py-1 text-[11px] font-semibold border border-slate-200 bg-slate-50 rounded-lg cursor-pointer" title="Horas disponíveis no dia">
+              <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
+                <span id="badge-capacidade-status" class="col-span-2 sm:col-span-1 text-center text-[11px] font-bold px-2.5 py-1.5 sm:py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 tabular-nums">0h / 8h · Equilibrado</span>
+                <select id="select-capacidade-horas" class="w-full sm:w-auto px-2.5 py-1.5 sm:py-1 text-[11px] font-semibold border border-slate-200 bg-slate-50 rounded-lg cursor-pointer" title="Horas disponíveis no dia">
                   <option value="6">Meta: 6h</option>
                   <option value="8" selected>Meta: 8h</option>
                   <option value="10">Meta: 10h</option>
                   <option value="12">Meta: 12h</option>
                 </select>
-                <select id="select-pico-energia" class="px-2 py-1 text-[11px] font-semibold border border-amber-200 bg-amber-50/70 text-amber-900 rounded-lg cursor-pointer" title="Período em que você tem mais foco e energia">
+                <select id="select-pico-energia" class="w-full sm:w-auto px-2.5 py-1.5 sm:py-1 text-[11px] font-semibold border border-amber-200 bg-amber-50/70 text-amber-900 rounded-lg cursor-pointer" title="Período em que você tem mais foco e energia">
                   <option value="manha" selected>🌅 Pico: Manhã</option>
                   <option value="tarde">☀️ Pico: Tarde</option>
                   <option value="noite">🌙 Pico: Noite</option>
@@ -1579,52 +1622,16 @@
                 <input
                   type="text"
                   id="input-captura-natural"
-                  placeholder='Digite ex.: "Revisar redação hoje 19h 45m #alto" ou "Treinar amanhã 07:30 1h"'
-                  class="flex-1 text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white text-slate-900"
+                  placeholder='Ex.: "Revisar redação hoje 19h 45m #alto"'
+                  class="flex-1 min-w-0 text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white text-slate-900"
                   required
                 />
-                <button type="submit" class="px-4 py-2.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs cursor-pointer shrink-0">
+                <button type="submit" class="w-full sm:w-auto px-4 py-2.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs cursor-pointer shrink-0">
                   + Agendar Rápido
                 </button>
               </div>
               <div id="preview-captura-natural" class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 min-h-[18px]"></div>
             </form>
-
-            <!-- Atalho Rápido: Modo Play de Rotinas em Bloco -->
-            <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-slate-800" data-help="rotina-play">▶ Modo Play · Rotinas em Bloco</span>
-                <span class="text-[11px] text-slate-400 hidden sm:inline">Execute seus hábitos em sequência guiada com cronômetro</span>
-              </div>
-              <div class="flex flex-wrap items-center gap-1.5">
-                <button type="button" data-play-periodo="manha" class="btn-iniciar-rotina-play px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition cursor-pointer">🌅 Manhã</button>
-                <button type="button" data-play-periodo="pos_trabalho" class="btn-iniciar-rotina-play px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200/80 transition cursor-pointer">🌆 Pós-Trabalho</button>
-                <button type="button" data-play-periodo="noite" class="btn-iniciar-rotina-play px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 transition cursor-pointer">🌙 Noite</button>
-                <button type="button" data-play-periodo="todos" class="btn-iniciar-rotina-play px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white shadow-2xs transition cursor-pointer">▶ Pendentes</button>
-              </div>
-            </div>
-
-            <!-- Rituais do Dia & Reagendar Atrasadas (Fase 3) -->
-            <div class="pt-3 border-t border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs font-bold text-slate-800" data-help="rotina-rituais">Rituais do Dia</span>
-                <button type="button" id="btn-abrir-checkin-matinal" class="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 transition cursor-pointer flex items-center gap-1.5">
-                  <span>🌅 Check-in Matinal</span>
-                  <span id="badge-checkin-feito" class="hidden text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-bold">✓</span>
-                </button>
-                <button type="button" id="btn-abrir-encerramento-dia" class="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 transition cursor-pointer flex items-center gap-1.5">
-                  <span>🌙 Encerrar Dia</span>
-                  <span id="badge-encerramento-feito" class="hidden text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-bold">✓</span>
-                </button>
-              </div>
-
-              <!-- Barra Reagendar Atrasadas (aparece automaticamente quando há atrasadas) -->
-              <div id="barra-reagendar-atrasadas" class="hidden flex-wrap items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-50/90 border border-rose-200">
-                <span id="txt-qtd-atrasadas" class="text-[11px] font-bold text-rose-800" data-help="rotina-reagendar">⚠️ 0 atrasadas</span>
-                <button type="button" id="btn-reagendar-hoje-livres" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 transition cursor-pointer">⚡ Encaixar hoje</button>
-                <button type="button" id="btn-reagendar-amanha" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-600 hover:bg-rose-700 text-white transition cursor-pointer">📅 Mover p/ amanhã</button>
-              </div>
-            </div>
           </div>
 
           <div>
@@ -1681,16 +1688,16 @@
             </div>
 
             <!-- Linha do Tempo Dinâmica + Inbox Time Blocking -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              <div id="container-agenda-hoje-timeline" class="lg:col-span-8 space-y-2">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
+              <div id="container-agenda-hoje-timeline" class="lg:col-span-8 space-y-2 min-w-0">
                 <!-- Inserido dinamicamente via JS -->
               </div>
-              <aside class="lg:col-span-4 p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+              <aside class="lg:col-span-4 p-3.5 sm:p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-3 min-w-0">
                 <div class="flex items-center justify-between pb-2 border-b border-slate-200/70">
                   <h4 data-help="rotina-timeblock" class="text-xs font-bold text-slate-800">📥 Sem Horário (Inbox)</h4>
                   <span id="badge-inbox-count" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600">0</span>
                 </div>
-                <p class="text-[11px] text-slate-500">Arraste para uma lacuna da linha do tempo ou toque em <strong>Agendar</strong>.</p>
+                <p class="text-[11px] text-slate-500"><span class="hidden lg:inline">Arraste para uma lacuna da linha do tempo ou toque</span><span class="lg:hidden">Toque</span> em <strong>⏰ Agendar</strong>.</p>
                 <div id="container-inbox-timeblock" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
               </aside>
             </div>
@@ -1723,30 +1730,30 @@
                   <button type="button" id="checklist-dia-hoje" class="rotina-dia">Hoje</button>
                 </div>
                 <form id="form-quick-task" class="mt-3 space-y-2">
-                  <div class="flex gap-2">
+                  <div class="flex flex-col sm:flex-row gap-2">
                     <input
                       type="text"
                       id="input-quick-task-text" aria-label="Nova tarefa"
                       placeholder="+ Nova tarefa do checklist..."
-                      class="flex-1 text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800"
+                      class="flex-1 min-w-0 text-xs px-3 py-2.5 sm:py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800"
                       required
                     />
-                    <button type="submit" class="px-3.5 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs shrink-0 cursor-pointer">
+                    <button type="submit" class="w-full sm:w-auto px-3.5 py-2.5 sm:py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs shrink-0 cursor-pointer">
                       Adicionar
                     </button>
                   </div>
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-wrap sm:flex-nowrap items-center gap-2">
                     <input
                       type="date"
                       id="input-quick-task-date"
                       aria-label="Data da nova tarefa" title="Data programada"
-                      class="flex-1 text-[11px] px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-700 cursor-pointer"
+                      class="flex-1 min-w-0 text-[11px] px-2.5 py-2 sm:py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-700 cursor-pointer"
                     />
                     <input
                       type="time"
                       id="input-quick-task-time"
                       aria-label="Horário da nova tarefa (opcional)" title="Horário programado"
-                      class="w-28 text-[11px] px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-700 cursor-pointer"
+                      class="w-32 sm:w-28 text-[11px] px-2.5 py-2 sm:py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-700 cursor-pointer"
                     />
                   </div>
                 </form>
@@ -1775,24 +1782,24 @@
                   <p class="text-[11px] text-slate-500">Filtre por compromissos pessoais, vencimentos de contas e estudos.</p>
                 </div>
               </div>
-              <div class="flex items-center gap-2.5">
+              <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <div class="flex bg-slate-100 p-0.5 rounded-lg text-xs font-semibold border border-slate-200">
-                  <button id="btn-agenda-view-semana" type="button" class="px-3 py-1 rounded-md bg-white text-slate-900 shadow-2xs cursor-pointer">
+                  <button id="btn-agenda-view-semana" type="button" class="px-3 py-1.5 sm:py-1 rounded-md bg-white text-slate-900 shadow-2xs cursor-pointer">
                     Semana
                   </button>
-                  <button id="btn-agenda-view-mes" type="button" class="px-3 py-1 rounded-md text-slate-500 hover:text-slate-800 transition cursor-pointer">
+                  <button id="btn-agenda-view-mes" type="button" class="px-3 py-1.5 sm:py-1 rounded-md text-slate-500 hover:text-slate-800 transition cursor-pointer">
                     Mês
                   </button>
                 </div>
-                <button id="btn-novo-compromisso" type="button" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs cursor-pointer">
+                <button id="btn-novo-compromisso" type="button" class="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs cursor-pointer text-center">
                   + Compromisso
                 </button>
               </div>
             </div>
 
-            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-700">
+            <div class="flex flex-wrap items-center gap-2.5 pt-3 text-xs text-slate-700">
               <label for="data-navegacao-agenda" class="font-semibold">Ir para data</label>
-              <input type="date" id="data-navegacao-agenda" class="rounded-lg border border-slate-300 bg-white px-2 py-1.5" />
+              <input type="date" id="data-navegacao-agenda" class="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5" />
               <span id="status-agenda" role="status"></span>
             </div>
             <!-- Filtros de Categoria da Agenda -->
@@ -2511,6 +2518,54 @@
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
           <button type="button" id="btn-encerramento-cancelar" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition cursor-pointer">Cancelar</button>
           <button type="submit" id="btn-encerramento-salvar" class="px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition cursor-pointer">✓ Concluir Encerramento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Agendar Tarefa (Time Blocking sem prompt nativo) -->
+  <div id="modal-agendar-tarefa" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4 z-[9995]" role="dialog" aria-modal="true" aria-labelledby="agendar-tarefa-titulo">
+    <div class="bg-[#fffdf8] rounded-3xl border border-slate-200/90 shadow-2xl max-w-md w-full overflow-hidden max-h-[90dvh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-200/80 bg-[#f1ede3]/70 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-base">⏰</span>
+          <div class="min-w-0">
+            <h3 id="agendar-tarefa-titulo" class="text-sm font-bold text-slate-900">Agendar na Linha do Tempo</h3>
+            <p id="agendar-tarefa-nome" class="text-[11px] text-slate-600 truncate">Selecione data, horário e duração</p>
+          </div>
+        </div>
+        <button type="button" id="btn-agendar-fechar" class="w-8 h-8 rounded-full hover:bg-slate-200/70 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer shrink-0">✕</button>
+      </div>
+      <form id="form-agendar-tarefa" class="p-5 space-y-4 overflow-y-auto">
+        <input type="hidden" id="input-agendar-task-id" value="" />
+        <div id="agendar-sugestoes-lacunas" class="space-y-1.5">
+          <span class="block text-[11px] font-bold text-slate-700">Sugestões rápidas de horário hoje</span>
+          <div id="agendar-chips-horarios" class="flex flex-wrap gap-1.5"></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Data</label>
+            <input type="date" id="input-agendar-data" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white" required />
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Horário</label>
+            <input type="time" id="input-agendar-horario" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white" required />
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Duração</label>
+            <select id="select-agendar-duracao" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white">
+              <option value="15">15 min</option>
+              <option value="30" selected>30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">1 hora</option>
+              <option value="90">1h 30m</option>
+              <option value="120">2 horas</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" id="btn-agendar-cancelar" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition cursor-pointer">Cancelar</button>
+          <button type="submit" id="btn-agendar-salvar" class="px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition cursor-pointer">✓ Confirmar Horário</button>
         </div>
       </form>
     </div>
