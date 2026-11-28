@@ -1412,11 +1412,15 @@ app.get('/api/rotina/prioridades', rotaPortal(async (req, res) => {
   res.json({ success: true, data: dbUser.prioridades_dia || [] });
 }));
 
-function adicionarPrioridade(dados, texto, top3 = false, data = null, horario = null) {
+function adicionarPrioridade(dados, texto, top3 = false, data = null, horario = null, duracaoMin = null, energia = null) {
   const maioresIds = [dados.prioridades_dia, dados.historico_tarefas || []].map(lista =>
     lista.reduce((maior, item) => Math.max(maior, item.id), 0));
   const dataLimpa = typeof data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.trim()) ? data.trim() : null;
   const horarioLimpo = typeof horario === 'string' && /^\d{2}:\d{2}$/.test(horario.trim()) ? horario.trim() : null;
+  const durLimpa = duracaoMin !== null && duracaoMin !== undefined && !isNaN(Number(duracaoMin))
+    ? Math.max(5, Math.min(480, Math.round(Number(duracaoMin))))
+    : 30;
+  const energiaLimpa = ['alto', 'medio', 'baixo'].includes(energia) ? energia : 'medio';
   const tarefa = {
     id: Math.max(...maioresIds) + 1,
     texto,
@@ -1424,6 +1428,8 @@ function adicionarPrioridade(dados, texto, top3 = false, data = null, horario = 
     top3,
     data: dataLimpa,
     horario: horarioLimpo,
+    duracao_min: durLimpa,
+    energia: energiaLimpa,
     criado_em: new Date().toISOString()
   };
   dados.prioridades_dia.push(tarefa);
@@ -1431,20 +1437,20 @@ function adicionarPrioridade(dados, texto, top3 = false, data = null, horario = 
 }
 
 app.post('/api/rotina/prioridades', rotaPortal(async (req, res) => {
-  const { texto, top3, data, horario } = req.body;
+  const { texto, top3, data, horario, duracao_min, energia } = req.body;
   if (typeof texto !== 'string' || !texto.trim()) {
     return res.status(400).json({ success: false, message: 'Texto da tarefa é obrigatório.' });
   }
 
   const dbUser = await obterBancoUsuario(req.usuarioId);
-  const novaTarefa = adicionarPrioridade(dbUser, texto.trim(), !!top3, data, horario);
+  const novaTarefa = adicionarPrioridade(dbUser, texto.trim(), !!top3, data, horario, duracao_min, energia);
   await salvarBancoUsuario(dbUser, req.usuarioId);
   res.status(201).json({ success: true, data: novaTarefa });
 }));
 
 app.patch('/api/rotina/prioridades/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const { concluida, top3, texto, adiar_ate, data } = req.body;
+  const { concluida, top3, texto, adiar_ate, data, horario, duracao_min, energia } = req.body;
   const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const tarefa = (dbUser.prioridades_dia || []).find(t => t.id === idNum);
@@ -1481,6 +1487,13 @@ app.patch('/api/rotina/prioridades/:id', rotaPortal(async (req, res) => {
     tarefa.adiada_ate = adiar_ate;
     tarefa.top3 = false;
   }
+  if (dataAgendaValida(data) && adiar_ate === undefined) tarefa.data = data;
+  if (horario === null || horario === '') tarefa.horario = null;
+  else if (typeof horario === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(horario.trim())) tarefa.horario = horario.trim();
+  if (duracao_min !== undefined && !isNaN(Number(duracao_min))) {
+    tarefa.duracao_min = Math.max(5, Math.min(480, Math.round(Number(duracao_min))));
+  }
+  if (['alto', 'medio', 'baixo'].includes(energia)) tarefa.energia = energia;
 
   await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, data: tarefa });
@@ -1719,7 +1732,7 @@ function dataAgendaValida(valor) {
 }
 
 app.post('/api/agenda/compromissos', rotaPortal(async (req, res) => {
-  const { titulo, data, horario = '09:00', categoria, local } = req.body;
+  const { titulo, data, horario = '09:00', categoria, local, duracao_min, energia } = req.body;
   if (typeof titulo !== 'string' || !titulo.trim() || !dataAgendaValida(data) ||
       typeof horario !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(horario)) {
     return res.status(400).json({ success: false, message: 'Informe um título, uma data e um horário válidos.' });
@@ -1733,6 +1746,8 @@ app.post('/api/agenda/compromissos', rotaPortal(async (req, res) => {
     titulo: titulo.trim(),
     data,
     horario,
+    duracao_min: duracao_min !== undefined && !isNaN(Number(duracao_min)) ? Math.max(5, Math.min(480, Math.round(Number(duracao_min)))) : 60,
+    energia: ['alto', 'medio', 'baixo'].includes(energia) ? energia : 'medio',
     categoria: categoria || 'pessoal', // 'pessoal' | 'financas' | 'estudos' | 'trabalho'
     local: local || '',
     criado_em: new Date().toISOString()

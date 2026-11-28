@@ -140,8 +140,18 @@ window.CONVERGE_HELP = {
   },
   'rotina-timeline': {
     titulo: 'Linha do Tempo de Hoje',
-    descricao: 'Consolida em ordem cronológica compromissos da agenda, vencimentos financeiros e aulas programadas para hoje, com marcador do horário atual.',
-    dica: 'O próximo compromisso recebe um indicador pulsante para você não perder a hora.'
+    descricao: 'Consolida em ordem cronológica compromissos da agenda, tarefas com horário e lacunas livres do dia, com botão "+ Preencher" direto nos espaços vagos.',
+    dica: 'Arraste tarefas da coluna Sem Horário (Inbox) para uma lacuna livre para fazer Time Blocking.'
+  },
+  'rotina-capacidade': {
+    titulo: 'Capacidade do Dia & Captura Natural',
+    descricao: 'Soma a duração estimada de tudo que você planejou para hoje e alerta em Mel ou Argila se o dia ficar sobrecarregado. A captura rápida entende data, hora, duração e energia no texto.',
+    dica: 'Experimente digitar: "Estudar matemática hoje 19h 45m #alto" e clique em Agendar Rápido.'
+  },
+  'rotina-timeblock': {
+    titulo: 'Inbox & Time Blocking',
+    descricao: 'Lista suas tarefas pendentes que ainda não têm horário marcado para que você possa reservá-las em blocos reais na agenda de hoje.',
+    dica: 'No PC arraste o card para uma lacuna da Timeline; no celular toque no botão "⏰ Agendar".'
   },
   'rotina-checklist': {
     titulo: 'Checklist do Dia',
