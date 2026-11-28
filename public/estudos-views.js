@@ -70,6 +70,8 @@
 
   function alternarDbView(view) {
     evState.dbView = view;
+    const filtros = document.getElementById('eos-filtros-paginas');
+    if (filtros) filtros.hidden = view === 'galeria';
     const map = {
       galeria: 'eos-materias-grid',
       tabela: 'eos-view-tabela',

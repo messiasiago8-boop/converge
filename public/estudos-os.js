@@ -286,6 +286,13 @@
       btn.addEventListener('click', () => irParaSubaba(btn.getAttribute('data-eos-tab')));
     });
 
+    document.querySelectorAll('[data-eos-atalho]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        irParaSubaba(btn.dataset.eosAtalho);
+        document.querySelector(`[data-eos-tab="${btn.dataset.eosAtalho}"]`)?.focus();
+      });
+    });
+
     document.getElementById('btn-eos-ir-videos')?.addEventListener('click', () => {
       if (typeof window.navIrParaLms === 'function') window.navIrParaLms();
     });

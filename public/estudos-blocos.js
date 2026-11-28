@@ -129,7 +129,7 @@
     const { paginas, materias } = getDados();
 
     if (!paginas.length) {
-      container.innerHTML = '<p class="text-[11px] text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">Nenhuma página ainda. Clique em <strong>+ Raiz</strong>.</p>';
+      container.innerHTML = '<p class="text-[11px] text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">Nenhuma página ainda. Clique em <strong>+ Página</strong>.</p>';
       return;
     }
 

@@ -20,6 +20,7 @@
   <!-- Tema "Sálvia & Areia": paleta calma remapeada sobre o Tailwind -->
   <script src="/tw-theme.js"></script>
   <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="/estudos-layout.css">
   <!-- KaTeX (LaTeX) e Highlight.js (Código) para o Editor em Blocos -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css">
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
@@ -964,31 +965,30 @@
       <!-- ================= VISÃO 3B: CENTRAL STUDY OS (EDUCAÇÃO AVANÇADA) ================= -->
       <section id="view-estudos-os" class="hidden p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
         <!-- Cabeçalho Study OS -->
-        <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="eos-hero">
           <div class="flex items-center gap-3.5">
-            <div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center shrink-0 text-emerald-700">
+            <div class="eos-hero-icon" aria-hidden="true">
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h2 class="text-lg font-bold text-slate-900 tracking-tight">Central Study OS</h2>
-                <span class="nx-status-pulse" title="Sincronizado"></span>
+                <h2>Central Study OS</h2>
               </div>
-              <p class="text-xs text-slate-500 mt-0.5">Matérias relacionais, caderno em blocos, repetição espaçada e acompanhamento de desempenho.</p>
+              <p>Organize suas matérias, estude com foco e acompanhe seu progresso.</p>
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="eos-hero-actions">
             <button type="button" id="btn-eos-ir-videos" class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-white rounded-lg border border-slate-200 transition cursor-pointer">
-              🎬 Catálogo de Vídeos
+              Catálogo de vídeos
             </button>
             <button type="button" id="btn-eos-nova-materia" class="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition cursor-pointer">
-              + Nova Matéria
+              + Nova matéria
             </button>
             <button type="button" id="btn-eos-nova-pagina" class="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs cursor-pointer">
-              + Nova Página
+              + Nova página
             </button>
           </div>
         </div>
@@ -1002,32 +1002,78 @@
           <button type="button" class="btn-eos-tab px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-100 hover:bg-white border border-transparent hover:border-slate-200 transition cursor-pointer" data-eos-tab="desempenho">Provas & Leituras</button>
         </div>
 
-        <!-- KPIs Rápidos -->
-        <div id="eos-kpis-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Matérias Ativas</span>
-            <p id="eos-kpi-materias" class="text-2xl font-bold text-slate-900 font-serif mt-1">0</p>
-            <span class="text-[11px] text-slate-500">Disciplinas cadastradas</span>
-          </div>
-          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Páginas & Notas</span>
-            <p id="eos-kpi-paginas" class="text-2xl font-bold text-emerald-800 font-serif mt-1">0</p>
-            <span class="text-[11px] text-slate-500">Tópicos estruturados</span>
-          </div>
-          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Revisões Hoje</span>
-            <p id="eos-kpi-revisoes" class="text-2xl font-bold text-amber-700 font-serif mt-1">0</p>
-            <span class="text-[11px] text-slate-500">Ciclo SRS pendente</span>
-          </div>
-          <div class="nx-card-alive bg-white border border-slate-200/90 rounded-xl p-4 shadow-xs">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Provas & Leituras</span>
-            <p id="eos-kpi-provas" class="text-2xl font-bold text-indigo-700 font-serif mt-1">0</p>
-            <span class="text-[11px] text-slate-500">Avaliações e livros</span>
-          </div>
-        </div>
-
-        <!-- Conteúdo dinâmico das sub-abas -->
         <div id="eos-panel-overview" class="space-y-5">
+          <div id="eos-kpis-grid" class="eos-resumo" role="group" aria-label="Resumo dos estudos">
+            <button type="button" class="eos-metrica" data-eos-atalho="databases">
+              <span>Matérias</span><strong id="eos-kpi-materias">0</strong>
+            </button>
+            <button type="button" class="eos-metrica" data-eos-atalho="caderno">
+              <span>Páginas do caderno</span><strong id="eos-kpi-paginas">0</strong>
+            </button>
+            <button type="button" class="eos-metrica" data-eos-atalho="srs">
+              <span>Revisões pendentes</span><strong id="eos-kpi-revisoes">0</strong>
+            </button>
+            <button type="button" class="eos-metrica" data-eos-atalho="desempenho">
+              <span>Provas e leituras</span><strong id="eos-kpi-provas">0</strong>
+            </button>
+          </div>
+          <!-- Ambiente de Foco + Assistente IA Study OS -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <!-- Ambiente de Foco (Pomodoro + Playlist) -->
+            <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900">🎧 Ambiente de Foco</h3>
+                  <p class="text-[11px] text-slate-500">Pomodoro por matéria + playlist Lo-fi / Spotify / YouTube.</p>
+                </div>
+                <span id="eos-foco-sessoes-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">0 sessões</span>
+              </div>
+              <div class="eos-pomodoro">
+                <div>
+                  <span id="eos-pomo-modo" class="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Foco · 25 min</span>
+                  <p id="eos-pomo-display" class="font-mono eos-tempo">25:00</p>
+                </div>
+                <div class="space-y-2">
+                  <select id="select-eos-pomo-materia" aria-label="Matéria da sessão de foco" class="w-full px-2.5 py-1 text-xs border border-slate-200 bg-white rounded-lg">
+                    <option value="">Foco geral</option>
+                  </select>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" id="btn-eos-pomo-toggle" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">▶ Iniciar</button>
+                    <button type="button" id="btn-eos-pomo-reset" class="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg cursor-pointer">Resetar</button>
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="flex gap-2">
+                  <input type="url" id="input-eos-playlist-url" aria-label="Link do Spotify ou YouTube" placeholder="Cole link de playlist Spotify ou vídeo Lo-fi do YouTube..." class="flex-1 px-3 py-1.5 text-xs border border-slate-200 bg-slate-50 rounded-lg" />
+                  <button type="button" id="btn-eos-playlist-carregar" class="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg cursor-pointer">Tocar</button>
+                </div>
+                <div id="eos-playlist-embed" class="text-xs text-slate-400"></div>
+              </div>
+            </div>
+
+            <!-- Assistente Study OS (Groq IA) -->
+            <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
+              <div class="pb-2 border-b border-slate-100">
+                <h3 class="text-sm font-bold text-slate-900">⚡ Assistente de estudos</h3>
+                <p class="text-[11px] text-slate-500">Faça perguntas, organize suas notas ou crie flashcards.</p>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <button type="button" class="btn-eos-ia-modo px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-700 text-white cursor-pointer" data-ia-modo="perguntar">🔍 Perguntar (Q&A)</button>
+                <button type="button" class="btn-eos-ia-modo px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer" data-ia-modo="estruturar">🧩 Estruturar Notas</button>
+                <button type="button" class="btn-eos-ia-modo px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer" data-ia-modo="gerar_questoes">⚡ Gerar Flashcards</button>
+              </div>
+              <form id="form-eos-ia" class="space-y-2">
+                <textarea id="input-eos-ia-prompt" aria-label="Mensagem para o assistente de estudos" rows="3" required placeholder="Ex.: Quais tópicos eu estudei esta semana mas ainda não revisei?" class="w-full px-3 py-2 text-xs border border-slate-200 bg-slate-50 rounded-xl resize-y"></textarea>
+                <div class="flex items-center justify-between">
+                  <span id="eos-ia-status" class="text-[11px] text-slate-500"></span>
+                  <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">Enviar</button>
+                </div>
+              </form>
+              <div id="eos-ia-resultado" class="hidden p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 space-y-2 max-h-56 overflow-y-auto"></div>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-3">
               <div class="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -1044,70 +1090,13 @@
               <div id="eos-overview-paginas" class="space-y-2 text-xs text-slate-600"></div>
             </div>
           </div>
-
-          <!-- Ambiente de Foco + Assistente IA Study OS -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <!-- Ambiente de Foco (Pomodoro + Playlist) -->
-            <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
-              <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div>
-                  <h3 class="text-sm font-bold text-slate-900">🎧 Ambiente de Foco</h3>
-                  <p class="text-[11px] text-slate-500">Pomodoro por matéria + playlist Lo-fi / Spotify / YouTube.</p>
-                </div>
-                <span id="eos-foco-sessoes-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">0 sessões</span>
-              </div>
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
-                <div>
-                  <span id="eos-pomo-modo" class="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Foco · 25 min</span>
-                  <p id="eos-pomo-display" class="text-3xl font-bold font-mono text-slate-900 mt-1">25:00</p>
-                </div>
-                <div class="space-y-2">
-                  <select id="select-eos-pomo-materia" class="w-full px-2.5 py-1 text-xs border border-slate-200 bg-white rounded-lg">
-                    <option value="">Foco geral</option>
-                  </select>
-                  <div class="flex items-center gap-1.5">
-                    <button type="button" id="btn-eos-pomo-toggle" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">▶ Iniciar</button>
-                    <button type="button" id="btn-eos-pomo-reset" class="px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg cursor-pointer">Resetar</button>
-                  </div>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <div class="flex gap-2">
-                  <input type="url" id="input-eos-playlist-url" placeholder="Cole link de playlist Spotify ou vídeo Lo-fi do YouTube..." class="flex-1 px-3 py-1.5 text-xs border border-slate-200 bg-slate-50 rounded-lg" />
-                  <button type="button" id="btn-eos-playlist-carregar" class="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg cursor-pointer">Tocar</button>
-                </div>
-                <div id="eos-playlist-embed" class="text-xs text-slate-400"></div>
-              </div>
-            </div>
-
-            <!-- Assistente Study OS (Groq IA) -->
-            <div class="nx-card-alive bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
-              <div class="pb-2 border-b border-slate-100">
-                <h3 class="text-sm font-bold text-slate-900">⚡ IA de Estudos (Groq)</h3>
-                <p class="text-[11px] text-slate-500">Estruture notas, gere questões de Active Recall ou faça busca semântica (Q&A).</p>
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                <button type="button" class="btn-eos-ia-modo px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-700 text-white cursor-pointer" data-ia-modo="perguntar">🔍 Perguntar (Q&A)</button>
-                <button type="button" class="btn-eos-ia-modo px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer" data-ia-modo="estruturar">🧩 Estruturar Notas</button>
-                <button type="button" class="btn-eos-ia-modo px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 cursor-pointer" data-ia-modo="gerar_questoes">⚡ Gerar Flashcards</button>
-              </div>
-              <form id="form-eos-ia" class="space-y-2">
-                <textarea id="input-eos-ia-prompt" rows="3" required placeholder="Ex.: Quais tópicos eu estudei esta semana mas ainda não revisei?" class="w-full px-3 py-2 text-xs border border-slate-200 bg-slate-50 rounded-xl resize-y"></textarea>
-                <div class="flex items-center justify-between">
-                  <span id="eos-ia-status" class="text-[11px] text-slate-500"></span>
-                  <button type="submit" class="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">Executar com IA</button>
-                </div>
-              </form>
-              <div id="eos-ia-resultado" class="hidden p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 space-y-2 max-h-56 overflow-y-auto"></div>
-            </div>
-          </div>
         </div>
 
         <div id="eos-panel-databases" class="hidden space-y-5">
           <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
               <div>
-                <h3 class="text-sm font-bold text-slate-900">Bases Relacionais & Visualizações</h3>
+                <h3 class="text-sm font-bold text-slate-900">Biblioteca de estudos</h3>
                 <p class="text-xs text-slate-500">Alterne entre Galeria de Matérias, Tabela, Kanban e Calendário de Revisões.</p>
               </div>
               <div class="flex flex-wrap items-center gap-1.5">
@@ -1118,11 +1107,12 @@
               </div>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
+            <div id="eos-filtros-paginas" class="eos-filtros" hidden>
+              <label for="eos-filtro-materia" class="eos-legenda">Filtrar páginas</label>
               <select id="eos-filtro-materia" class="px-3 py-1.5 text-xs border border-slate-200 bg-slate-50 rounded-lg">
                 <option value="">Todas as matérias</option>
               </select>
-              <select id="eos-filtro-status" class="px-3 py-1.5 text-xs border border-slate-200 bg-slate-50 rounded-lg">
+              <select id="eos-filtro-status" aria-label="Status da página" class="px-3 py-1.5 text-xs border border-slate-200 bg-slate-50 rounded-lg">
                 <option value="">Todos os status</option>
                 <option value="a_estudar">A estudar</option>
                 <option value="estudando">Estudando</option>
@@ -1139,18 +1129,18 @@
         </div>
 
         <div id="eos-panel-caderno" class="hidden space-y-4">
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div class="eos-caderno-grade">
             <!-- Coluna 1: Hierarquia Infinita de Páginas -->
-            <aside class="lg:col-span-3 bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
+            <aside class="eos-caderno-paginas bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-3">
               <div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Páginas & Hierarquia</h3>
-                <button type="button" id="btn-eos-nova-pagina-arvore" class="text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-lg border border-emerald-200 cursor-pointer">+ Raiz</button>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Páginas</h3>
+                <button type="button" id="btn-eos-nova-pagina-arvore" class="text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-lg border border-emerald-200 cursor-pointer">+ Página</button>
               </div>
               <div id="eos-arvore-paginas" class="space-y-1 max-h-[65vh] overflow-y-auto pr-1 text-xs"></div>
             </aside>
 
             <!-- Coluna 2: Editor em Blocos -->
-            <div class="lg:col-span-6 bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4 min-h-[420px]">
+            <div class="eos-caderno-editor bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4 min-h-[420px]">
               <div id="eos-editor-vazio" class="py-16 text-center space-y-3">
                 <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-emerald-700 text-xl">📝</div>
                 <p class="text-sm font-bold text-slate-800">Selecione ou crie uma página para editar</p>
@@ -1163,14 +1153,14 @@
                   <div class="flex flex-wrap items-center justify-between gap-2">
                     <span id="eos-editor-breadcrumb" class="text-[11px] font-medium text-slate-500 truncate">Raiz</span>
                     <div class="flex items-center gap-2">
-                      <span id="eos-editor-save-status" class="text-[11px] font-semibold text-emerald-700">Salvo ✓</span>
+                      <span id="eos-editor-save-status" role="status" class="text-[11px] font-semibold text-emerald-700">Salvo ✓</span>
                       <button type="button" id="btn-eos-salvar-blocos" class="px-3 py-1 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">Salvar</button>
                     </div>
                   </div>
-                  <input type="text" id="eos-editor-titulo" class="w-full text-lg font-bold text-slate-900 bg-transparent border border-transparent hover:border-slate-200 focus:border-emerald-500 px-2 py-1 rounded-lg" placeholder="Título da página..." />
+                  <input type="text" id="eos-editor-titulo" aria-label="Título da página" class="w-full text-lg font-bold text-slate-900 bg-transparent border border-transparent hover:border-slate-200 focus:border-emerald-500 px-2 py-1 rounded-lg" placeholder="Título da página..." />
                   <div class="flex flex-wrap items-center gap-2">
-                    <select id="eos-editor-materia" class="px-2.5 py-1 text-xs border border-slate-200 bg-slate-50 rounded-lg"></select>
-                    <select id="eos-editor-status" class="px-2.5 py-1 text-xs border border-slate-200 bg-slate-50 rounded-lg">
+                    <select id="eos-editor-materia" aria-label="Matéria da página" class="px-2.5 py-1 text-xs border border-slate-200 bg-slate-50 rounded-lg"></select>
+                    <select id="eos-editor-status" aria-label="Status da página" class="px-2.5 py-1 text-xs border border-slate-200 bg-slate-50 rounded-lg">
                       <option value="a_estudar">A estudar</option>
                       <option value="estudando">Estudando</option>
                       <option value="revisar">Revisar</option>
@@ -1181,14 +1171,14 @@
                 </div>
 
                 <!-- Barra rápida de adição de blocos -->
-                <div class="flex flex-wrap items-center gap-1.5 pb-2 border-b border-slate-100" aria-label="Adicionar bloco">
+                <div class="eos-ferramentas" role="group" aria-label="Adicionar bloco">
                   <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="paragraph">+ Texto</button>
                   <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="h2">+ Título</button>
-                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="toggle">▸ Toggle</button>
-                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="callout">💡 Callout</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="toggle">▸ Recolhível</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="callout">💡 Destaque</button>
                   <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="latex">∑ LaTeX</button>
                   <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="code">&lt;/&gt; Código</button>
-                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="embed">🎬 Embed</button>
+                  <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="embed">🎬 Incorporar</button>
                   <button type="button" class="btn-eos-add-bloco px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 border border-slate-200 cursor-pointer" data-bloco-tipo="synced">🔄 Sincronizado</button>
                 </div>
 
@@ -1197,10 +1187,10 @@
               </div>
             </div>
 
-            <!-- Coluna 3: Sumário Automático (TOC) & Blocos Sincronizados -->
-            <aside class="lg:col-span-3 space-y-4">
+            <!-- Coluna 3: Sumário (TOC) & Blocos Sincronizados -->
+            <aside class="eos-caderno-apoio space-y-4">
               <div class="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-2.5">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 pb-2 border-b border-slate-100">Sumário Automático</h3>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 pb-2 border-b border-slate-100">Sumário</h3>
                 <nav id="eos-toc-list" class="space-y-1 text-xs text-slate-600">
                   <p class="text-[11px] text-slate-400">Adicione blocos de título (H1–H3) para navegar rápido.</p>
                 </nav>
@@ -1217,14 +1207,14 @@
 
         <div id="eos-panel-srs" class="hidden space-y-5">
           <!-- Revisões de Hoje (SM-2) -->
-          <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
+          <div class="eos-fila-revisao bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
               <div>
                 <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <span>🔁 Revisões de Hoje (SM-2)</span>
+                  <span>Revisões de hoje</span>
                   <span id="eos-srs-hoje-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">0 pendentes</span>
                 </h3>
-                <p class="text-xs text-slate-500">Páginas e flashcards com revisão vencida ou programada para hoje.</p>
+                <p class="text-xs text-slate-500">Avalie o que você lembra para agendar a próxima revisão.</p>
               </div>
             </div>
             <div id="eos-revisoes-hoje-list" class="space-y-2.5"></div>
@@ -1235,7 +1225,7 @@
             <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
               <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
-                  <h3 class="text-sm font-bold text-slate-900">⚡ Flashcards (Active Recall)</h3>
+                  <h3 class="text-sm font-bold text-slate-900">Flashcards</h3>
                   <p class="text-xs text-slate-500">Cartões frente/verso com repetição espaçada.</p>
                 </div>
                 <button type="button" id="btn-eos-novo-flashcard" class="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">+ Flashcard</button>
@@ -1246,18 +1236,18 @@
             <!-- Banco de Erros -->
             <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
               <div class="pb-3 border-b border-slate-100">
-                <h3 class="text-sm font-bold text-slate-900">🎯 Banco de Erros</h3>
+                <h3 class="text-sm font-bold text-slate-900">Banco de erros</h3>
                 <p class="text-xs text-slate-500">Registre questões erradas em simulados e acompanhe sua taxa de acerto.</p>
               </div>
-              <form id="form-eos-erro" class="space-y-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <input type="text" id="input-eos-erro-enunciado" required maxlength="800" placeholder="Enunciado ou resumo da questão errada..." class="w-full px-3 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
+              <form id="form-eos-erro" class="eos-formulario space-y-2.5">
+                <input type="text" id="input-eos-erro-enunciado" aria-label="Questão" required maxlength="800" placeholder="Enunciado ou resumo da questão errada..." class="w-full px-3 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <select id="select-eos-erro-materia" class="px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg">
+                  <select id="select-eos-erro-materia" aria-label="Matéria" class="px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg">
                     <option value="">Sem matéria</option>
                   </select>
-                  <input type="text" id="input-eos-erro-motivo" maxlength="200" placeholder="Motivo (ex.: falta de atenção, fórmula)" class="px-3 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
+                  <input type="text" id="input-eos-erro-motivo" aria-label="Motivo do erro" maxlength="200" placeholder="Motivo (ex.: falta de atenção, fórmula)" class="px-3 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
                 </div>
-                <textarea id="input-eos-erro-resolucao" rows="2" maxlength="1200" placeholder="Resolução correta / como não errar de novo..." class="w-full px-3 py-1.5 text-xs border border-slate-300 bg-white rounded-lg resize-none"></textarea>
+                <textarea id="input-eos-erro-resolucao" aria-label="Resolução" rows="2" maxlength="1200" placeholder="Resolução correta / como não errar de novo..." class="w-full px-3 py-1.5 text-xs border border-slate-300 bg-white rounded-lg resize-none"></textarea>
                 <div class="flex justify-end">
                   <button type="submit" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">Registrar Erro</button>
                 </div>
@@ -1298,35 +1288,38 @@
         </div>
 
         <div id="eos-panel-desempenho" class="hidden space-y-5">
-          <!-- Gráficos Nativos (Chart.js) -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-3">
-              <h3 class="text-sm font-bold text-slate-900">📊 Foco por Matéria (Minutos)</h3>
-              <div class="h-52"><canvas id="eosChartHoras"></canvas></div>
-            </div>
-            <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-3">
-              <h3 class="text-sm font-bold text-slate-900">🎯 Domínio dos Tópicos</h3>
-              <div class="h-52"><canvas id="eosChartDominio"></canvas></div>
-            </div>
-          </div>
-
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <!-- Grade Tracker: Provas & Notas -->
             <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
               <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
-                  <h3 class="text-sm font-bold text-slate-900">📝 Rastreador de Provas & Notas</h3>
-                  <p class="text-xs text-slate-500">Média ponderada e contagem regressiva até o exame.</p>
+                  <h3 class="text-sm font-bold text-slate-900">Provas e notas</h3>
+                  <p class="text-xs text-slate-500">Acompanhe datas de prova e a média ponderada.</p>
                 </div>
                 <span id="eos-media-ponderada-badge" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">Média: —</span>
               </div>
-              <form id="form-eos-prova" class="grid grid-cols-1 sm:grid-cols-12 gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <input type="text" id="input-eos-prova-titulo" required placeholder="Nome da prova/simulado" class="sm:col-span-5 px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
-                <select id="select-eos-prova-materia" class="sm:col-span-3 px-2 py-1.5 text-xs border border-slate-300 bg-white rounded-lg"><option value="">Matéria</option></select>
-                <input type="date" id="input-eos-prova-data" class="sm:col-span-4 px-2 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
-                <input type="number" step="0.1" min="0" max="100" id="input-eos-prova-nota" placeholder="Nota (opcional)" class="sm:col-span-4 px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
-                <input type="number" step="0.5" min="0.5" value="1" id="input-eos-prova-peso" placeholder="Peso" class="sm:col-span-3 px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
-                <button type="submit" class="sm:col-span-5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">+ Adicionar Prova</button>
+              <form id="form-eos-prova" class="eos-formulario eos-formulario-grade">
+                <div class="eos-campo eos-linha-inteira">
+                  <label for="input-eos-prova-titulo">Nome da prova</label>
+                  <input type="text" id="input-eos-prova-titulo" required placeholder="Nome da prova/simulado" class="px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
+                </div>
+                <div class="eos-campo">
+                  <label for="select-eos-prova-materia">Matéria</label>
+                  <select id="select-eos-prova-materia" class="px-2 py-1.5 text-xs border border-slate-300 bg-white rounded-lg"><option value="">Matéria</option></select>
+                </div>
+                <div class="eos-campo">
+                  <label for="input-eos-prova-data">Data da prova</label>
+                  <input type="date" id="input-eos-prova-data" class="px-2 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
+                </div>
+                <div class="eos-campo">
+                  <label for="input-eos-prova-nota">Nota (opcional)</label>
+                  <input type="number" step="0.1" min="0" max="100" id="input-eos-prova-nota" placeholder="Nota (opcional)" class="px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
+                </div>
+                <div class="eos-campo">
+                  <label for="input-eos-prova-peso">Peso</label>
+                  <input type="number" step="0.5" min="0.5" value="1" id="input-eos-prova-peso" placeholder="Peso" class="px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
+                </div>
+                <button type="submit" class="eos-linha-inteira px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">+ Adicionar Prova</button>
               </form>
               <div id="eos-provas-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
             </div>
@@ -1334,22 +1327,49 @@
             <!-- Reading Tracker: Controle de Leituras -->
             <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-4">
               <div class="pb-3 border-b border-slate-100">
-                <h3 class="text-sm font-bold text-slate-900">📚 Controle de Leituras (Livros & PDFs)</h3>
+                <h3 class="text-sm font-bold text-slate-900">Leituras e fichamentos</h3>
                 <p class="text-xs text-slate-500">Acompanhe páginas lidas e gere fichamentos direto no Caderno.</p>
               </div>
-              <form id="form-eos-leitura" class="grid grid-cols-1 sm:grid-cols-12 gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <input type="text" id="input-eos-leitura-titulo" required placeholder="Título do livro, artigo ou PDF" class="sm:col-span-6 px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
-                <input type="text" id="input-eos-leitura-autor" placeholder="Autor" class="sm:col-span-3 px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
-                <select id="select-eos-leitura-tipo" class="sm:col-span-3 px-2 py-1.5 text-xs border border-slate-300 bg-white rounded-lg">
-                  <option value="livro">Livro</option>
-                  <option value="pdf">PDF</option>
-                  <option value="artigo">Artigo</option>
-                </select>
-                <select id="select-eos-leitura-materia" class="sm:col-span-5 px-2 py-1.5 text-xs border border-slate-300 bg-white rounded-lg"><option value="">Matéria</option></select>
-                <input type="number" min="1" value="100" id="input-eos-leitura-total" placeholder="Total págs." class="sm:col-span-3 px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
-                <button type="submit" class="sm:col-span-4 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">+ Nova Leitura</button>
+              <form id="form-eos-leitura" class="eos-formulario eos-formulario-grade">
+                <div class="eos-campo eos-linha-inteira">
+                  <label for="input-eos-leitura-titulo">Título da leitura</label>
+                  <input type="text" id="input-eos-leitura-titulo" required placeholder="Título do livro, artigo ou PDF" class="px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
+                </div>
+                <div class="eos-campo">
+                  <label for="input-eos-leitura-autor">Autor</label>
+                  <input type="text" id="input-eos-leitura-autor" placeholder="Autor" class="px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
+                </div>
+                <div class="eos-campo">
+                  <label for="select-eos-leitura-tipo">Formato</label>
+                  <select id="select-eos-leitura-tipo" class="px-2 py-1.5 text-xs border border-slate-300 bg-white rounded-lg">
+                    <option value="livro">Livro</option>
+                    <option value="pdf">PDF</option>
+                    <option value="artigo">Artigo</option>
+                  </select>
+                </div>
+                <div class="eos-campo">
+                  <label for="select-eos-leitura-materia">Matéria</label>
+                  <select id="select-eos-leitura-materia" class="px-2 py-1.5 text-xs border border-slate-300 bg-white rounded-lg"><option value="">Matéria</option></select>
+                </div>
+                <div class="eos-campo">
+                  <label for="input-eos-leitura-total">Total de páginas</label>
+                  <input type="number" min="1" value="100" id="input-eos-leitura-total" placeholder="Total págs." class="px-2.5 py-1.5 text-xs border border-slate-300 bg-white rounded-lg" />
+                </div>
+                <button type="submit" class="eos-linha-inteira px-3 py-1.5 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer">+ Nova Leitura</button>
               </form>
               <div id="eos-leituras-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1"></div>
+            </div>
+          </div>
+
+          <!-- Gráficos Nativos (Chart.js) -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-3">
+              <h3 class="text-sm font-bold text-slate-900">Minutos de foco por matéria</h3>
+              <div class="h-52"><canvas id="eosChartHoras"></canvas></div>
+            </div>
+            <div class="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs space-y-3">
+              <h3 class="text-sm font-bold text-slate-900">Domínio dos tópicos</h3>
+              <div class="h-52"><canvas id="eosChartDominio"></canvas></div>
             </div>
           </div>
         </div>

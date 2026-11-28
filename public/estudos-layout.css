@@ -1,0 +1,198 @@
+#view-estudos-os {
+  container: study-os / inline-size;
+  --eos-borda: color-mix(in srgb, var(--nx-ink) 15%, transparent);
+  --eos-superficie: color-mix(in srgb, var(--nx-sand) 45%, var(--nx-paper));
+  --eos-destaque: color-mix(in srgb, var(--nx-sage) 13%, var(--nx-paper));
+}
+
+.eos-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: clamp(1rem, 4cqi, 2rem);
+  border: 1px solid var(--eos-borda);
+  border-radius: 1.95rem;
+  background: linear-gradient(115deg, var(--eos-destaque), var(--nx-paper) 80%);
+  box-shadow: var(--nx-card-shadow);
+}
+
+.eos-hero h2 {
+  color: var(--nx-ink);
+  font-size: clamp(1.5rem, 4cqi, 2.3rem);
+  line-height: 1.12;
+}
+
+.eos-hero p {
+  margin-block-start: .35rem;
+  color: var(--nx-ink-soft);
+  font-size: .875rem;
+}
+
+.eos-hero-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  flex: none;
+  border-radius: .9rem;
+  background: var(--nx-sage-d);
+  color: var(--nx-paper);
+}
+
+.eos-hero-actions,
+.eos-filtros,
+.eos-ferramentas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+}
+
+.eos-filtros[hidden] { display: none; }
+
+.eos-fila-revisao {
+  border-block-start: 3px solid var(--nx-sage) !important;
+}
+
+.eos-resumo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.eos-metrica {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .85rem 1rem;
+  text-align: start;
+  color: var(--nx-ink);
+  background: var(--nx-paper);
+  border: 1px solid var(--eos-borda);
+  border-radius: 1.15rem;
+  box-shadow: var(--nx-card-shadow);
+  cursor: pointer;
+}
+
+.eos-metrica span {
+  color: var(--nx-ink-soft);
+  font-size: .75rem;
+  font-weight: 650;
+}
+
+.eos-metrica strong {
+  color: var(--nx-sage-d);
+  font: 600 1.7rem/1 'Fraunces', Georgia, serif;
+}
+
+.eos-metrica:hover,
+.eos-metrica:focus-visible {
+  background: var(--eos-destaque);
+  border-color: var(--nx-sage);
+}
+
+#view-estudos-os :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--nx-sage-d);
+  outline-offset: 2px;
+}
+
+#view-estudos-os :is(h3, .eos-legenda) {
+  color: var(--nx-ink);
+  font-weight: 700;
+}
+
+#view-estudos-os h3 {
+  font-size: 1rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.eos-pomodoro,
+.eos-filtros,
+.eos-formulario,
+.eos-ferramentas {
+  padding: .85rem;
+  border: 1px solid var(--eos-borda);
+  border-radius: 1rem;
+  background: var(--eos-superficie);
+}
+
+.eos-pomodoro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .85rem;
+  background: var(--eos-destaque);
+}
+
+.eos-tempo {
+  color: var(--nx-ink);
+  font-size: clamp(2.15rem, 6cqi, 3.25rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.eos-legenda,
+.eos-campo label {
+  font-size: .75rem;
+}
+
+.eos-caderno-grade,
+.eos-formulario-grade {
+  display: grid;
+  gap: 1rem;
+}
+
+.eos-caderno-grade {
+  align-items: start;
+  grid-template-areas: 'paginas' 'editor' 'apoio';
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.eos-caderno-paginas { grid-area: paginas; }
+.eos-caderno-editor { grid-area: editor; min-inline-size: 0; }
+.eos-caderno-apoio { grid-area: apoio; min-inline-size: 0; }
+
+.eos-formulario-grade {
+  gap: .65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.eos-campo {
+  display: grid;
+  gap: .25rem;
+  min-inline-size: 0;
+}
+
+.eos-campo label {
+  color: var(--nx-ink);
+  font-weight: 600;
+}
+
+.eos-campo :is(input, select) {
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+
+.eos-linha-inteira { grid-column: 1 / -1; }
+
+@container study-os (min-width: 670px) {
+  .eos-resumo { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .eos-caderno-grade {
+    grid-template-areas: 'paginas editor' 'apoio editor';
+    grid-template-columns: minmax(10rem, 1fr) minmax(0, 3fr);
+    grid-template-rows: auto 1fr;
+  }
+}
+
+@container study-os (min-width: 1080px) {
+  .eos-caderno-grade {
+    grid-template-areas: 'paginas editor apoio';
+    grid-template-columns: minmax(11rem, 1fr) minmax(0, 3fr) minmax(11rem, 1fr);
+    grid-template-rows: auto;
+  }
+}
