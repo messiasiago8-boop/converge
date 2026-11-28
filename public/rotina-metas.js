@@ -921,8 +921,63 @@ function renderizarAgendaSemanal() {
       abrirNovoCompromisso(dia.iso);
     });
 
-    container.appendChild(card);
+    if (isConcluida && gridGaleria) {
+      gridGaleria.appendChild(card);
+    } else {
+      container.appendChild(card);
+    }
   });
+}
+
+function abrirModalHistoricoMeta(meta) {
+  const modal = document.getElementById('modal-meta-historico');
+  if (!modal || !meta) return;
+  const tit = document.getElementById('meta-hist-titulo');
+  const idEl = document.getElementById('input-meta-hist-id');
+  const woopBox = document.getElementById('meta-hist-woop-box');
+  const lista = document.getElementById('meta-hist-lista');
+  const notaEl = document.getElementById('input-meta-hist-nota');
+
+  if (tit) tit.textContent = meta.titulo;
+  if (idEl) idEl.value = String(meta.id);
+  if (notaEl) notaEl.value = '';
+
+  if (woopBox) {
+    if (meta.proposito || meta.woop_obstaculo || meta.woop_plano) {
+      woopBox.innerHTML = `
+        <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1">
+          ${meta.proposito ? `<p class="text-slate-800"><strong>💡 Por que importa:</strong> ${escapeHTML(meta.proposito)}</p>` : ''}
+          ${meta.woop_obstaculo ? `<p class="text-slate-700"><strong>🧱 Obstáculo (Se):</strong> ${escapeHTML(meta.woop_obstaculo)}</p>` : ''}
+          ${meta.woop_plano ? `<p class="text-emerald-900"><strong>🛡️ Plano (Então):</strong> ${escapeHTML(meta.woop_plano)}</p>` : ''}
+        </div>
+      `;
+    } else {
+      woopBox.innerHTML = `<p class="text-[11px] text-slate-400">Nenhum propósito ou plano Se–Então cadastrado nesta meta.</p>`;
+    }
+  }
+
+  if (lista) {
+    const avancos = Array.isArray(meta.avancos) ? [...meta.avancos].reverse() : [];
+    if (avancos.length === 0) {
+      lista.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center border border-dashed border-slate-200 rounded-xl">Nenhum avanço registrado ainda. Faça progresso ou adicione uma nota acima!</p>`;
+    } else {
+      lista.innerHTML = avancos.map(a => {
+        const dt = a.data ? new Date(a.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+        return `
+          <div class="p-2.5 rounded-xl bg-white border border-slate-200 text-xs space-y-0.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-emerald-800">${a.de ?? 0}% → ${a.para ?? 0}%</span>
+              <span class="text-[10px] text-slate-400">${dt}</span>
+            </div>
+            ${a.nota ? `<p class="text-slate-700">${escapeHTML(a.nota)}</p>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
 }
 
 function renderizarAgendaMensal() {
@@ -1375,6 +1430,22 @@ function renderizarMetas() {
     return matchTipo && matchCiclo;
   });
 
+  const metasAtivasFiltradas = metasFiltradas.filter(m => Number(m.progresso || 0) < 100);
+  const metasConcluidasFiltradas = metasFiltradas.filter(m => Number(m.progresso || 0) >= 100);
+
+  const secaoGaleria = document.getElementById('secao-metas-concluidas');
+  const gridGaleria = document.getElementById('grid-metas-concluidas');
+  const badgeGaleria = document.getElementById('badge-metas-concluidas-galeria');
+  if (secaoGaleria && gridGaleria) {
+    if (metasConcluidasFiltradas.length > 0) {
+      secaoGaleria.classList.remove('hidden');
+      if (badgeGaleria) badgeGaleria.textContent = String(metasConcluidasFiltradas.length);
+      gridGaleria.innerHTML = '';
+    } else {
+      secaoGaleria.classList.add('hidden');
+    }
+  }
+
   if (metasFiltradas.length === 0) {
     container.innerHTML = `
       <div class="col-span-full py-10 px-6 text-center border border-dashed border-slate-200 rounded-xl bg-white shadow-xs space-y-5">
@@ -1421,6 +1492,15 @@ function renderizarMetas() {
     });
 
     return;
+  }
+
+  if (metasAtivasFiltradas.length === 0 && metasConcluidasFiltradas.length > 0) {
+    container.innerHTML = `
+      <div class="col-span-full py-6 px-5 text-center border border-emerald-200 rounded-xl bg-emerald-50/60">
+        <p class="text-sm font-bold text-emerald-900">🏆 Todas as metas desta seleção foram concluídas!</p>
+        <p class="text-xs text-emerald-800/80 mt-0.5">Confira suas conquistas na Galeria de Metas Concluídas logo abaixo ou crie uma nova meta.</p>
+      </div>
+    `;
   }
 
   metasFiltradas.forEach(meta => {
@@ -1605,25 +1685,43 @@ function renderizarMetas() {
           </div>
         ` : ''}
 
-        <!-- 4. Próxima Ação + Semáforo de Confiança (Metas Ativas) -->
-        ${!isConcluida ? `
-          <div class="mt-3.5 pt-3 border-t border-slate-100 space-y-2">
+        <!-- 4. Propósito & Plano Se-Então (WOOP) quando preenchido -->
+        ${(meta.proposito || meta.woop_obstaculo || meta.woop_plano) ? `
+          <details class="mt-3 p-2.5 rounded-lg bg-[#f9f6ee] border border-amber-200/70 text-[11px] space-y-1">
+            <summary class="font-bold text-amber-950 cursor-pointer select-none">💡 Propósito &amp; Plano Se–Então (WOOP)</summary>
+            ${meta.proposito ? `<p class="text-slate-700 pt-1"><strong>Por quê:</strong> ${escapeHTML(meta.proposito)}</p>` : ''}
+            ${meta.woop_obstaculo ? `<p class="text-slate-600"><strong>Se:</strong> ${escapeHTML(meta.woop_obstaculo)}</p>` : ''}
+            ${meta.woop_plano ? `<p class="text-emerald-900"><strong>Então:</strong> ${escapeHTML(meta.woop_plano)}</p>` : ''}
+          </details>
+        ` : ''}
+
+        <!-- 5. Próxima Ação + Semáforo de Confiança + Histórico -->
+        <div class="mt-3.5 pt-3 border-t border-slate-100 space-y-2">
+          ${!isConcluida ? `
             <div class="flex items-center justify-between gap-2 text-[11px]">
               <span class="text-slate-500 truncate" title="${escapeHTML(proximaAcao)}">👉 <strong class="text-slate-700">Próxima:</strong> ${escapeHTML(proximaAcao)}</span>
               <button type="button" class="btn-meta-enviar-agenda px-2 py-1 rounded-md text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer shrink-0" title="Criar tarefa na Agenda/Inbox de Hoje">
                 ⚡ Enviar p/ Agenda
               </button>
             </div>
-            <div class="flex items-center justify-between gap-2">
+          ` : ''}
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            ${!isConcluida ? `
               <button type="button" class="btn-meta-confianca px-2 py-0.5 rounded-md text-[10px] font-bold border transition cursor-pointer ${conf.cls}" title="Clique para alternar seu nível de confiança (aparece na Revisão Semanal)">
                 ${conf.label}
               </button>
-              <span class="text-[10px] text-slate-400">${pilarObj.label}</span>
-            </div>
+            ` : `<span class="text-[10px] font-bold text-emerald-800">🏆 Conquista desbloqueada</span>`}
+            <button type="button" class="btn-meta-historico px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-600 hover:text-emerald-800 bg-slate-50 hover:bg-emerald-50 border border-slate-200 transition cursor-pointer">
+              📜 Histórico${Array.isArray(meta.avancos) && meta.avancos.length ? ` (${meta.avancos.length})` : ''}
+            </button>
           </div>
-        ` : ''}
+        </div>
       </div>
     `;
+
+    card.querySelector('.btn-meta-historico')?.addEventListener('click', () => {
+      abrirModalHistoricoMeta(meta);
+    });
 
     card.querySelector('.btn-meta-confianca')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
@@ -1726,8 +1824,63 @@ function renderizarMetas() {
       });
     });
 
-    container.appendChild(card);
+    if (isConcluida && gridGaleria) {
+      gridGaleria.appendChild(card);
+    } else {
+      container.appendChild(card);
+    }
   });
+}
+
+function abrirModalHistoricoMeta(meta) {
+  const modal = document.getElementById('modal-meta-historico');
+  if (!modal || !meta) return;
+  const tit = document.getElementById('meta-hist-titulo');
+  const idEl = document.getElementById('input-meta-hist-id');
+  const woopBox = document.getElementById('meta-hist-woop-box');
+  const lista = document.getElementById('meta-hist-lista');
+  const notaEl = document.getElementById('input-meta-hist-nota');
+
+  if (tit) tit.textContent = meta.titulo;
+  if (idEl) idEl.value = String(meta.id);
+  if (notaEl) notaEl.value = '';
+
+  if (woopBox) {
+    if (meta.proposito || meta.woop_obstaculo || meta.woop_plano) {
+      woopBox.innerHTML = `
+        <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1">
+          ${meta.proposito ? `<p class="text-slate-800"><strong>💡 Por que importa:</strong> ${escapeHTML(meta.proposito)}</p>` : ''}
+          ${meta.woop_obstaculo ? `<p class="text-slate-700"><strong>🧱 Obstáculo (Se):</strong> ${escapeHTML(meta.woop_obstaculo)}</p>` : ''}
+          ${meta.woop_plano ? `<p class="text-emerald-900"><strong>🛡️ Plano (Então):</strong> ${escapeHTML(meta.woop_plano)}</p>` : ''}
+        </div>
+      `;
+    } else {
+      woopBox.innerHTML = `<p class="text-[11px] text-slate-400">Nenhum propósito ou plano Se–Então cadastrado nesta meta.</p>`;
+    }
+  }
+
+  if (lista) {
+    const avancos = Array.isArray(meta.avancos) ? [...meta.avancos].reverse() : [];
+    if (avancos.length === 0) {
+      lista.innerHTML = `<p class="text-xs text-slate-400 py-3 text-center border border-dashed border-slate-200 rounded-xl">Nenhum avanço registrado ainda. Faça progresso ou adicione uma nota acima!</p>`;
+    } else {
+      lista.innerHTML = avancos.map(a => {
+        const dt = a.data ? new Date(a.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+        return `
+          <div class="p-2.5 rounded-xl bg-white border border-slate-200 text-xs space-y-0.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-emerald-800">${a.de ?? 0}% → ${a.para ?? 0}%</span>
+              <span class="text-[10px] text-slate-400">${dt}</span>
+            </div>
+            ${a.nota ? `<p class="text-slate-700">${escapeHTML(a.nota)}</p>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
 }
 
 function abrirModalAporte(id, nome, valorAtual) {
@@ -2796,6 +2949,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const pilar = selectMetaPilar?.value || 'pessoal';
       const ciclo = document.getElementById('select-meta-ciclo')?.value || 'Q1';
       const proxima_acao = document.getElementById('input-meta-proxima-acao')?.value?.trim() || '';
+      const proposito = document.getElementById('input-meta-proposito')?.value?.trim() || '';
+      const woop_obstaculo = document.getElementById('input-meta-woop-obstaculo')?.value?.trim() || '';
+      const woop_plano = document.getElementById('input-meta-woop-plano')?.value?.trim() || '';
       const valor_atual = tipo === 'numerica'
         ? Number(document.getElementById('input-meta-num-atual')?.value || 0)
         : Number(document.getElementById('input-meta-valor-atual')?.value || 0);
@@ -2822,7 +2978,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await salvarRotina('/api/metas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ titulo, tipo, pilar, ciclo, proxima_acao, valor_atual, valor_alvo, unidade, habito_id, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
+          body: JSON.stringify({ titulo, tipo, pilar, ciclo, proxima_acao, proposito, woop_obstaculo, woop_plano, valor_atual, valor_alvo, unidade, habito_id, prazo, checklist, projeto_id: tipo === 'financeira' ? selectMetaProjeto.value : '' })
         });
         document.getElementById('input-meta-titulo').value = '';
         modalMeta.classList.add('hidden');
@@ -2838,6 +2994,30 @@ document.addEventListener('DOMContentLoaded', () => {
   if (selectFiltroCicloMeta) {
     selectFiltroCicloMeta.addEventListener('change', renderizarMetas);
   }
+
+  // Modal Linha do Tempo & WOOP da Meta
+  const modalMetaHist = document.getElementById('modal-meta-historico');
+  document.getElementById('btn-meta-hist-fechar')?.addEventListener('click', () => {
+    modalMetaHist?.classList.add('hidden');
+    modalMetaHist?.classList.remove('flex');
+  });
+  document.getElementById('form-meta-hist-nota')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = Number(document.getElementById('input-meta-hist-id')?.value || 0);
+    const nota = document.getElementById('input-meta-hist-nota')?.value?.trim() || '';
+    if (!id || !nota) return;
+    try {
+      const resp = await salvarRotina(`/api/metas/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nota })
+      });
+      await carregarMetas();
+      if (resp?.data) abrirModalHistoricoMeta(resp.data);
+    } catch (err) {
+      avisarFalhaRotina(err);
+    }
+  });
 
   // Botão "Usar Modelo"
   const btnMetasModelos = document.getElementById('btn-metas-modelos');

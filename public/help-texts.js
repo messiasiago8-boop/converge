@@ -175,6 +175,11 @@ window.CONVERGE_HELP = {
     descricao: 'Gráfico de radar que mostra a média de progresso entre Carreira & Estudos, Financeiro, Saúde & Energia e Vida Pessoal para evitar foco excessivo em uma única área.',
     dica: 'Ao criar uma nova meta, escolha o Pilar da Vida correspondente para equilibrar seu radar.'
   },
+  'metas-galeria': {
+    titulo: 'Galeria de Metas Concluídas',
+    descricao: 'Reúne todas as metas que atingiram 100% de conclusão em um espaço dedicado de conquistas, mantendo o painel principal focado no que está ativo.',
+    dica: 'Clique em "📜 Histórico" em qualquer meta para ver a linha do tempo de avanços e o plano Se–Então (WOOP).'
+  },
   'metas-habitos': {
     titulo: 'Metas de Hábitos & Força (%)',
     descricao: 'Rastreador semanal de consistência com Força do Hábito (💪 0%–100% nos últimos 30 dias), sequência ativa (🔥), janela flexível de horário e Modo Play guiado.',

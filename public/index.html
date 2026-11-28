@@ -1943,10 +1943,10 @@
         </section>
       </section>
 
-      <section id="view-metas" class="hidden p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <section id="view-metas" class="hidden p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5 sm:space-y-6">
         
         <!-- Topo de Metas -->
-        <div class="bg-white border border-slate-200/90 rounded-xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <div class="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-center shrink-0">
               <svg class="w-5 h-5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1959,15 +1959,15 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-2.5">
-            <button id="btn-metas-modelos" type="button" class="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition shadow-2xs flex items-center gap-1.5 cursor-pointer">
-              <svg class="w-3.5 h-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto">
+            <button id="btn-metas-modelos" type="button" class="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer">
+              <svg class="w-3.5 h-3.5 text-emerald-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
               </svg>
               <span>Usar Modelo</span>
             </button>
-            <button id="btn-nova-meta" type="button" class="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs flex items-center gap-1.5 cursor-pointer">
-              <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button id="btn-nova-meta" type="button" class="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
+              <svg class="w-3.5 h-3.5 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
               </svg>
               <span>Nova Meta</span>
@@ -2075,9 +2075,24 @@
         <!-- Alerta de Foco (3 a 5 metas ativas) -->
         <div id="alerta-foco-metas" class="hidden px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium"></div>
 
-        <!-- Grade de Cards de Metas -->
-        <div id="grid-cards-metas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Grade de Cards de Metas Ativas -->
+        <div id="grid-cards-metas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           <!-- Inserido dinamicamente via JS -->
+        </div>
+
+        <!-- Galeria de Metas Concluídas -->
+        <div id="secao-metas-concluidas" class="hidden bg-gradient-to-br from-[#f0f9f5] to-white border border-emerald-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+          <div class="flex items-center justify-between gap-2 pb-3 border-b border-emerald-200/60">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🏆</span>
+              <div>
+                <h3 class="text-sm font-bold text-emerald-950" data-help="metas-galeria">Galeria de Metas Concluídas</h3>
+                <p class="text-[11px] text-emerald-800/75">Objetivos 100% alcançados para reforçar sua evolução.</p>
+              </div>
+            </div>
+            <span id="badge-metas-concluidas-galeria" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-700 text-white tabular-nums">0</span>
+          </div>
+          <div id="grid-metas-concluidas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </div>
 
         <!-- Seção: Metas de Hábitos & Consistência -->
@@ -2797,6 +2812,23 @@
           <label class="block text-xs font-semibold text-slate-700 mb-1">Próxima Ação Concreta (Opcional)</label>
           <input type="text" id="input-meta-proxima-acao" maxlength="160" placeholder="Ex: Fazer simulado de 20 questões hoje, Separar R$ 300..." class="w-full text-xs p-2.5 border border-slate-300 rounded-lg" />
         </div>
+        <details class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+          <summary class="text-xs font-bold text-slate-700 cursor-pointer select-none">💡 Propósito &amp; Plano Se–Então (WOOP · Opcional)</summary>
+          <div class="space-y-2.5 pt-2">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Por que isso importa?</label>
+              <input type="text" id="input-meta-proposito" maxlength="240" placeholder="Ex: Ter tranquilidade financeira e liberdade de escolha..." class="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Principal obstáculo previsto (Se...)</label>
+              <input type="text" id="input-meta-woop-obstaculo" maxlength="160" placeholder="Ex: Se eu chegar cansado do trabalho..." class="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Resposta automática (Então farei...)</label>
+              <input type="text" id="input-meta-woop-plano" maxlength="200" placeholder="Ex: Então estudo apenas 15 minutos em vez de pular o dia." class="w-full text-xs p-2 border border-slate-300 rounded-lg bg-white" />
+            </div>
+          </div>
+        </details>
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
           <button type="button" onclick="document.getElementById('modal-meta').classList.add('hidden')" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition cursor-pointer">
             Cancelar
@@ -2806,6 +2838,31 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Linha do Tempo & WOOP da Meta -->
+  <div id="modal-meta-historico" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4 z-[9995]" role="dialog" aria-modal="true" aria-labelledby="meta-hist-titulo">
+    <div class="bg-[#fffdf8] rounded-3xl border border-slate-200/90 shadow-2xl max-w-lg w-full overflow-hidden max-h-[90dvh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-200/80 bg-[#f1ede3]/70 flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <h3 id="meta-hist-titulo" class="text-sm font-bold text-slate-900 truncate">Linha do Tempo &amp; Propósito</h3>
+          <p class="text-[11px] text-slate-500">Registre uma nota de evolução ou revise seu plano Se–Então.</p>
+        </div>
+        <button type="button" id="btn-meta-hist-fechar" class="w-8 h-8 rounded-full hover:bg-slate-200/70 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer shrink-0">✕</button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-4">
+        <div id="meta-hist-woop-box" class="space-y-2"></div>
+        <form id="form-meta-hist-nota" class="flex gap-2">
+          <input type="hidden" id="input-meta-hist-id" value="" />
+          <input type="text" id="input-meta-hist-nota" maxlength="200" placeholder="Registrar nota ou conquista de hoje..." class="flex-1 min-w-0 text-xs px-3 py-2 border border-slate-300 rounded-xl bg-white" required />
+          <button type="submit" class="px-3.5 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition cursor-pointer shrink-0">+ Nota</button>
+        </form>
+        <div class="space-y-1.5">
+          <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Histórico de Avanços</h4>
+          <div id="meta-hist-lista" class="space-y-2 max-h-56 overflow-y-auto"></div>
+        </div>
+      </div>
     </div>
   </div>
 

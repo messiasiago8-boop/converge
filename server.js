@@ -2154,7 +2154,7 @@ app.get('/api/metas', rotaPortal(async (req, res) => {
 }));
 
 app.post('/api/metas', rotaPortal(async (req, res) => {
-  const { titulo, tipo, pilar, ciclo, proxima_acao, confianca, valor_alvo, valor_atual, unidade, habito_id, prazo, checklist, projeto_id, sugestao_semana } = req.body;
+  const { titulo, tipo, pilar, ciclo, proxima_acao, confianca, proposito, woop_obstaculo, woop_plano, valor_alvo, valor_atual, unidade, habito_id, prazo, checklist, projeto_id, sugestao_semana } = req.body;
   if (!titulo || !titulo.trim()) {
     return res.status(400).json({ success: false, message: 'Título da meta é obrigatório.' });
   }
@@ -2206,6 +2206,9 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
   const confiancasValidas = ['alta', 'media', 'baixa'];
   const confiancaNorm = confiancasValidas.includes(confianca) ? confianca : 'alta';
   const proxAcaoLimpa = typeof proxima_acao === 'string' ? proxima_acao.trim().slice(0, 160) : '';
+  const propositoLimpo = typeof proposito === 'string' ? proposito.trim().slice(0, 240) : '';
+  const woopObsLimpo = typeof woop_obstaculo === 'string' ? woop_obstaculo.trim().slice(0, 160) : '';
+  const woopPlanoLimpo = typeof woop_plano === 'string' ? woop_plano.trim().slice(0, 200) : '';
 
   const novaMeta = {
     id: dbUser.metas.length > 0 ? Math.max(...dbUser.metas.map(m => m.id)) + 1 : 1,
@@ -2215,6 +2218,9 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
     ciclo: cicloNorm,
     confianca: confiancaNorm,
     ...(proxAcaoLimpa ? { proxima_acao: proxAcaoLimpa } : {}),
+    ...(propositoLimpo ? { proposito: propositoLimpo } : {}),
+    ...(woopObsLimpo ? { woop_obstaculo: woopObsLimpo } : {}),
+    ...(woopPlanoLimpo ? { woop_plano: woopPlanoLimpo } : {}),
     ...(tipoNorm === 'numerica' ? { unidade: unidadeLimpa } : {}),
     ...(habitoIdNorm ? { habito_id: habitoIdNorm } : {}),
     ...(sugestao_semana ? { sugestao_semana } : {}),
@@ -2249,7 +2255,7 @@ app.post('/api/metas', rotaPortal(async (req, res) => {
 
 app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   const idNum = parseInt(req.params.id, 10);
-  const { titulo, valor_atual, delta, checklist, prazo, ciclo, proxima_acao, confianca } = req.body;
+  const { titulo, valor_atual, delta, checklist, prazo, ciclo, proxima_acao, confianca, proposito, woop_obstaculo, woop_plano, nota } = req.body;
   const dbUser = await obterBancoUsuario(req.usuarioId);
 
   const meta = (dbUser.metas || []).find(m => m.id === idNum);
@@ -2263,6 +2269,9 @@ app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
   if (['Q1', 'Q2', 'Q3', 'Q4', 'anual'].includes(ciclo)) meta.ciclo = ciclo;
   if (['alta', 'media', 'baixa'].includes(confianca)) meta.confianca = confianca;
   if (proxima_acao !== undefined) meta.proxima_acao = String(proxima_acao || '').trim().slice(0, 160);
+  if (proposito !== undefined) meta.proposito = String(proposito || '').trim().slice(0, 240);
+  if (woop_obstaculo !== undefined) meta.woop_obstaculo = String(woop_obstaculo || '').trim().slice(0, 160);
+  if (woop_plano !== undefined) meta.woop_plano = String(woop_plano || '').trim().slice(0, 200);
   if (meta.projeto_id && (valor_atual !== undefined || delta !== undefined)) {
     return res.status(409).json({ success: false, message: 'Registre o aporte no projeto financeiro vinculado.' });
   }
@@ -2291,9 +2300,12 @@ app.patch('/api/metas/:id', rotaPortal(async (req, res) => {
       }
     }
   }
-  if (meta.progresso > progressoAnterior) {
+  if (meta.progresso > progressoAnterior || (typeof nota === 'string' && nota.trim())) {
     meta.avancos = [...(meta.avancos || []).slice(-49), {
-      data: new Date().toISOString(), de: progressoAnterior, para: meta.progresso
+      data: new Date().toISOString(),
+      de: progressoAnterior,
+      para: meta.progresso,
+      ...(typeof nota === 'string' && nota.trim() ? { nota: nota.trim().slice(0, 200) } : {})
     }];
   }
 
