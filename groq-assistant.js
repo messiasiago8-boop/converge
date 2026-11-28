@@ -202,16 +202,32 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'criar_tarefa_rotina',
-      description: 'Adiciona uma nova tarefa no Checklist do Dia (com data e horário) ou nas prioridades Top 3 da Rotina.',
+      description: 'Adiciona uma nova tarefa no Checklist do Dia, Inbox (sem horário) ou prioridades Top 3 da Rotina, com duração estimada e nível de energia/foco.',
       parameters: {
         type: 'object',
         properties: {
           texto: { type: 'string', description: 'Descrição da tarefa' },
           data: { type: 'string', description: 'Data YYYY-MM-DD (padrão hoje)' },
-          horario: { type: 'string', description: 'Horário HH:MM (ex: 09:00, 19:30)' },
-          top3: { type: 'boolean', description: 'true para prioridade máxima Top 3, false para Checklist do Dia' }
+          horario: { type: 'string', description: 'Horário HH:MM (ex: 09:00, 19:30). Omitir para enviar à Inbox (Sem Horário).' },
+          duracao_min: { type: 'number', description: 'Duração estimada em minutos (padrão 30)' },
+          energia: { type: 'string', enum: ['alto', 'medio', 'baixo'], description: 'Nível de foco/energia exigido' },
+          top3: { type: 'boolean', description: 'true para prioridade máxima Top 3, false para Checklist/Timeline' }
         },
         required: ['texto']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'reagendar_tarefas_atrasadas',
+      description: 'Reagenda todas as tarefas atrasadas do usuário em 1 clique: encaixando nos horários livres restantes de hoje ou movendo para amanhã.',
+      parameters: {
+        type: 'object',
+        properties: {
+          modo: { type: 'string', enum: ['amanha', 'hoje_livres'], description: 'amanha=move tudo para amanhã; hoje_livres=encaixa nos horários livres restantes de hoje até 22h' }
+        },
+        required: ['modo']
       }
     }
   },
@@ -267,12 +283,16 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'gerenciar_habito',
-      description: 'Cria um hábito semanal, marca o check-in de hoje ou exclui um hábito existente.',
+      description: 'Cria um hábito com período (Manhã/Pós-Trabalho/Noite/Flexível), duração e janela flexível, marca o check-in de hoje ou exclui um hábito existente.',
       parameters: {
         type: 'object',
         properties: {
           acao: { type: 'string', enum: ['criar', 'checkin_hoje', 'excluir'] },
-          nome_ou_id: { type: 'string', description: 'Nome do hábito (ou ID para check-in/excluir)' }
+          nome_ou_id: { type: 'string', description: 'Nome do hábito (ou ID para check-in/excluir)' },
+          periodo: { type: 'string', enum: ['manha', 'pos_trabalho', 'noite', 'livre'], description: 'Bloco para o Modo Play' },
+          duracao_min: { type: 'number', description: 'Duração em minutos (padrão 15)' },
+          horario_ideal: { type: 'string', description: 'Horário ideal HH:MM (opcional)' },
+          horario_limite: { type: 'string', description: 'Horário limite de tolerância HH:MM (opcional)' }
         },
         required: ['acao', 'nome_ou_id']
       }
@@ -284,7 +304,7 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'consultar_metas',
-      description: 'Lista todas as metas e objetivos cadastrados pelo usuário com progresso atual.',
+      description: 'Lista todas as metas e objetivos cadastrados pelo usuário com progresso, pilar, ciclo, confiança e próxima ação.',
       parameters: { type: 'object', properties: {} }
     }
   },
@@ -292,16 +312,25 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'gerenciar_meta',
-      description: 'Cria, atualiza o valor/progresso, conclui ou exclui uma meta no módulo Metas.',
+      description: 'Cria, atualiza progresso/delta numérico, define confiança (alta/media/baixa), próxima ação, propósito/WOOP, conclui ou exclui uma meta.',
       parameters: {
         type: 'object',
         properties: {
           acao: { type: 'string', enum: ['criar', 'atualizar', 'concluir', 'excluir'] },
           titulo_ou_id: { type: 'string', description: 'Título da meta (ou ID para atualizar/concluir/excluir)' },
-          categoria: { type: 'string', enum: ['financeira', 'estudos', 'pessoal'] },
+          categoria: { type: 'string', enum: ['financeira', 'estudos', 'pessoal', 'numerica', 'habito'], description: 'Tipo da meta' },
+          pilar: { type: 'string', enum: ['carreira', 'financeiro', 'saude', 'pessoal'], description: 'Pilar da Vida' },
+          ciclo: { type: 'string', enum: ['Q1', 'Q2', 'Q3', 'Q4', 'anual'], description: 'Ciclo trimestral ou anual' },
+          unidade: { type: 'string', description: 'Unidade para metas numéricas (ex: questões, livros, km)' },
           valor_alvo: { type: 'number', description: 'Valor objetivo numérico' },
           valor_atual: { type: 'number', description: 'Progresso/valor atual acumulado' },
-          prazo: { type: 'string', description: 'Data limite YYYY-MM-DD (opcional)' }
+          delta: { type: 'number', description: 'Incremento rápido para somar em metas numéricas (ex: +5)' },
+          prazo: { type: 'string', description: 'Data limite YYYY-MM-DD (opcional)' },
+          proxima_acao: { type: 'string', description: 'Próxima ação concreta da meta' },
+          confianca: { type: 'string', enum: ['alta', 'media', 'baixa'], description: 'Semáforo de confiança' },
+          proposito: { type: 'string', description: 'Por que essa meta importa' },
+          woop_obstaculo: { type: 'string', description: 'Obstáculo previsto (Plano Se...)' },
+          woop_plano: { type: 'string', description: 'Resposta automática (Plano Então...)' }
         },
         required: ['acao', 'titulo_ou_id']
       }
@@ -589,13 +618,39 @@ async function executarFerramenta(nome, args, ctx) {
   if (nome === 'criar_tarefa_rotina') {
     const dbUser = await obterBancoUsuario(usuarioId);
     const dataAlvo = args.data || hoje;
-    const nova = adicionarPrioridade(dbUser, String(args.texto || '').trim(), Boolean(args.top3), dataAlvo, args.horario || null);
+    const nova = adicionarPrioridade(
+      dbUser,
+      String(args.texto || '').trim(),
+      Boolean(args.top3),
+      dataAlvo,
+      args.horario || null,
+      args.duracao_min || 30,
+      args.energia || 'medio'
+    );
     await salvarBancoUsuario(dbUser, usuarioId);
     return {
       ok: true,
       modulo: 'rotina',
-      resumoAcao: `Tarefa criada (${nova.top3 ? 'Top 3' : 'Checklist'}): "${nova.texto}"${nova.horario ? ' às ' + nova.horario : ''}`,
+      resumoAcao: `Tarefa criada (${nova.top3 ? 'Top 3' : (nova.horario ? 'Timeline' : 'Inbox')}): "${nova.texto}"${nova.horario ? ' às ' + nova.horario : ''} (${nova.duracao_min}m)`,
       dados: nova
+    };
+  }
+
+  if (nome === 'reagendar_tarefas_atrasadas') {
+    const dbUser = await obterBancoUsuario(usuarioId);
+    const tarefas = Array.isArray(dbUser.prioridades_dia) ? dbUser.prioridades_dia : [];
+    const amanhaDt = new Date(`${hoje}T12:00:00`);
+    amanhaDt.setDate(amanhaDt.getDate() + 1);
+    const amanhaIso = amanhaDt.toISOString().slice(0, 10);
+    const atrasadas = tarefas.filter(t => !t.concluida && !t.adiada_ate && t.data && t.data < hoje);
+    for (const t of atrasadas) {
+      t.data = args.modo === 'hoje_livres' ? hoje : amanhaIso;
+    }
+    await salvarBancoUsuario(dbUser, usuarioId);
+    return {
+      ok: true,
+      modulo: 'rotina',
+      resumoAcao: `${atrasadas.length} tarefa(s) atrasada(s) reagendada(s) (${args.modo === 'hoje_livres' ? 'para hoje' : 'para amanhã'}).`
     };
   }
 
@@ -651,10 +706,21 @@ async function executarFerramenta(nome, args, ctx) {
     const dbUser = await obterBancoUsuario(usuarioId);
     if (!Array.isArray(dbUser.habitos)) dbUser.habitos = [];
     if (args.acao === 'criar') {
-      const novo = { id: dbUser.habitos.length ? Math.max(...dbUser.habitos.map(h => h.id || 0)) + 1 : 1, nome: String(args.nome_ou_id).trim(), dias_concluidos: [], criado_em: new Date().toISOString() };
+      const novo = {
+        id: dbUser.habitos.length ? Math.max(...dbUser.habitos.map(h => h.id || 0)) + 1 : 1,
+        nome: String(args.nome_ou_id).trim(),
+        icone: '⚡',
+        periodo: ['manha', 'pos_trabalho', 'noite', 'livre'].includes(args.periodo) ? args.periodo : 'manha',
+        duracao_min: Number(args.duracao_min) > 0 ? Math.min(180, Math.round(Number(args.duracao_min))) : 15,
+        horario_ideal: args.horario_ideal || '',
+        horario_limite: args.horario_limite || '',
+        dias_concluidos: [],
+        streak: 0,
+        criado_em: new Date().toISOString()
+      };
       dbUser.habitos.push(novo);
       await salvarBancoUsuario(dbUser, usuarioId);
-      return { ok: true, modulo: 'rotina', resumoAcao: `Hábito criado: "${novo.nome}"` };
+      return { ok: true, modulo: 'rotina', resumoAcao: `Hábito criado: "${novo.nome}" (${novo.periodo}, ${novo.duracao_min}m)` };
     }
     const termo = normalizarTexto(args.nome_ou_id);
     const idx = dbUser.habitos.findIndex(h => String(h.id) === String(args.nome_ou_id) || normalizarTexto(h.nome).includes(termo));
@@ -682,31 +748,60 @@ async function executarFerramenta(nome, args, ctx) {
     const dbUser = await obterBancoUsuario(usuarioId);
     if (!Array.isArray(dbUser.metas)) dbUser.metas = [];
     if (args.acao === 'criar') {
+      const tipoMeta = ['financeira', 'estudos', 'pessoal', 'numerica', 'habito'].includes(args.categoria) ? args.categoria : 'pessoal';
+      const valAlvo = Number(args.valor_alvo) || 100;
+      const valAtual = Number(args.valor_atual) || 0;
       const nova = {
         id: dbUser.metas.length ? Math.max(...dbUser.metas.map(m => m.id || 0)) + 1 : 1,
         titulo: String(args.titulo_ou_id).trim(),
-        tipo: args.categoria || 'pessoal',
-        categoria: args.categoria || 'pessoal',
-        valor_alvo: Number(args.valor_alvo) || 100,
-        valor_atual: Number(args.valor_atual) || 0,
+        tipo: tipoMeta,
+        categoria: tipoMeta,
+        pilar: ['carreira', 'financeiro', 'saude', 'pessoal'].includes(args.pilar) ? args.pilar : (tipoMeta === 'financeira' ? 'financeiro' : (tipoMeta === 'estudos' ? 'carreira' : 'pessoal')),
+        ciclo: ['Q1', 'Q2', 'Q3', 'Q4', 'anual'].includes(args.ciclo) ? args.ciclo : `Q${Math.floor(new Date().getMonth() / 3) + 1}`,
+        confianca: ['alta', 'media', 'baixa'].includes(args.confianca) ? args.confianca : 'alta',
+        ...(tipoMeta === 'numerica' ? { unidade: String(args.unidade || 'un').slice(0, 24) } : {}),
+        ...(args.proxima_acao ? { proxima_acao: String(args.proxima_acao).slice(0, 160) } : {}),
+        ...(args.proposito ? { proposito: String(args.proposito).slice(0, 240) } : {}),
+        ...(args.woop_obstaculo ? { woop_obstaculo: String(args.woop_obstaculo).slice(0, 160) } : {}),
+        ...(args.woop_plano ? { woop_plano: String(args.woop_plano).slice(0, 200) } : {}),
+        valor_alvo: valAlvo,
+        valor_atual: valAtual,
+        progresso: valAlvo > 0 ? Math.min(100, Math.round((valAtual / valAlvo) * 100)) : 0,
         prazo: args.prazo || '',
         concluida: false,
         criado_em: new Date().toISOString()
       };
       dbUser.metas.push(nova);
       await salvarBancoUsuario(dbUser, usuarioId);
-      return { ok: true, modulo: 'metas', resumoAcao: `Meta criada: "${nova.titulo}"` };
+      return { ok: true, modulo: 'metas', resumoAcao: `Meta criada: "${nova.titulo}" (${nova.tipo}, ${nova.ciclo})` };
     }
     const termo = normalizarTexto(args.titulo_ou_id);
     const idx = dbUser.metas.findIndex(m => String(m.id) === String(args.titulo_ou_id) || normalizarTexto(m.titulo).includes(termo));
     if (idx === -1) return { ok: false, error: `Meta "${args.titulo_ou_id}" não encontrada.` };
     const meta = dbUser.metas[idx];
     if (args.acao === 'atualizar') {
-      if (args.valor_atual !== undefined) meta.valor_atual = Number(args.valor_atual);
+      const progAnt = Number(meta.progresso || 0);
+      if (args.delta !== undefined && !isNaN(Number(args.delta))) {
+        meta.valor_atual = Math.max(0, Number(meta.valor_atual || 0) + Number(args.delta));
+      } else if (args.valor_atual !== undefined) {
+        meta.valor_atual = Math.max(0, Number(args.valor_atual));
+      }
       if (args.valor_alvo !== undefined) meta.valor_alvo = Number(args.valor_alvo);
+      if (meta.valor_alvo > 0) meta.progresso = Math.min(100, Math.round((Number(meta.valor_atual || 0) / Number(meta.valor_alvo)) * 100));
       if (args.prazo !== undefined) meta.prazo = args.prazo;
+      if (['carreira', 'financeiro', 'saude', 'pessoal'].includes(args.pilar)) meta.pilar = args.pilar;
+      if (['Q1', 'Q2', 'Q3', 'Q4', 'anual'].includes(args.ciclo)) meta.ciclo = args.ciclo;
+      if (['alta', 'media', 'baixa'].includes(args.confianca)) meta.confianca = args.confianca;
+      if (args.proxima_acao !== undefined) meta.proxima_acao = String(args.proxima_acao).slice(0, 160);
+      if (args.proposito !== undefined) meta.proposito = String(args.proposito).slice(0, 240);
+      if (args.woop_obstaculo !== undefined) meta.woop_obstaculo = String(args.woop_obstaculo).slice(0, 160);
+      if (args.woop_plano !== undefined) meta.woop_plano = String(args.woop_plano).slice(0, 200);
+      if (meta.progresso > progAnt) {
+        meta.avancos = [...(meta.avancos || []).slice(-49), { data: new Date().toISOString(), de: progAnt, para: meta.progresso }];
+      }
     } else if (args.acao === 'concluir') {
       meta.concluida = true;
+      meta.progresso = 100;
       if (meta.valor_alvo) meta.valor_atual = meta.valor_alvo;
     } else if (args.acao === 'excluir') {
       dbUser.metas.splice(idx, 1);
@@ -833,17 +928,27 @@ async function processarMensagemGroq({ mensagem, historico = [], contexto }) {
   const systemPrompt = `Você é a CONVERGE IA, assistente pessoal completa integrada ao CONVERGE Life OS.
 Data de hoje: ${hoje} (ano ${ano}, mês atual ${mesAtual}), hora atual: ${agora} (Brasília).
 
-Você TEM CONTROLE REAL sobre TODOS os módulos do CONVERGE através das ferramentas:
-1. FINANÇAS: consultar mês, criar/atualizar salários e entradas em qualquer mês (ex: dezembro = "${ano}-12"), registrar/excluir despesas (50=Essencial, 30=Estilo de Vida/Lazer, 20=Investimento), definir limites 50/30/20, gerenciar investimentos (potes) e projetos/grandes compras (criar, aportar, excluir).
-2. ROTINA & AGENDA: criar tarefas no Checklist do Dia (com data e horário) ou no Top 3, concluir/desmarcar/promover/excluir tarefas, agendar/excluir compromissos na Agenda, criar/fazer check-in/excluir hábitos.
-3. METAS: consultar, criar, atualizar progresso, concluir e excluir metas.
-4. EDUCAÇÃO: consultar, criar/excluir trilhas, adicionar aulas do YouTube e agendar no cronograma semanal.
+Você TEM CONTROLE REAL sobre TODOS os módulos do CONVERGE através das ferramentas e conhece TODAS as funcionalidades da plataforma para orientar o usuário quando ele perguntar:
+
+1. FINANÇAS: consultar mês, criar/atualizar salários e entradas em qualquer mês (ex: dezembro = "${ano}-12"), registrar/excluir despesas (50=Essencial, 30=Estilo de Vida/Lazer, 20=Investimento), escolher Modelo Orçamentário (50/30/20, 60/20/20 ou Livre), gerenciar investimentos (potes) e projetos/grandes compras.
+2. ROTINA & AGENDA:
+   - Capacidade do Dia (barra de sobrecarga em horas), Pico de Energia (Manhã/Tarde/Noite) com sugestões visuais, e Captura Rápida em Linguagem Natural (ex: "Revisar redação hoje 19h 45m #alto").
+   - Linha do Tempo de Hoje com lacunas livres ("+ Preencher"), ações diretas (concluir/desagendar) e Time Blocking (Inbox Sem Horário com drag-and-drop ou modal "⏰ Agendar").
+   - Rituais do Dia: Check-in Matinal (3 passos), Encerramento do Dia (move pendências + registra energia/humor 1–5 para a Revisão Semanal) e botão "Reagendar Atrasadas" (1 clique).
+   - Hábitos: Força do Hábito (0–100% nos últimos 30 dias), janela flexível (ideal até limite) e Modo Play (cronômetro guiado por bloco: Manhã, Pós-Trabalho, Noite).
+3. METAS & OBJETIVOS:
+   - Tipos híbridos: Financeira (vinculada a Finanças), Numérica (ex: questões/livros com +1/+5/+10), Por Hábito (check-in soma sozinho), Estudos (aulas) e Projeto/Checklist (marcos com pesos "Etapa | peso").
+   - Pilares da Vida (Carreira & Estudos, Financeiro, Saúde & Energia, Vida Pessoal) com Gráfico de Radar interativo, Ciclos Trimestrais (Q1–Q4) com Alerta de Foco (>5 ativas), Indicador de Ritmo (Pace: No Ritmo/Atenção/Em Risco), Calculadora de Esforço diário/mensal, Próxima Ação ("⚡ Enviar p/ Agenda"), Semáforo de Confiança (integrado à Revisão Semanal), Propósito & Plano Se–Então (WOOP), Linha do Tempo de Conquistas e Galeria de Metas Concluídas.
+4. EDUCAÇÃO & ESTUDO INTELIGENTE:
+   - Catálogo de Trilhas e Vídeos, Player com notas por timestamp, Meu Cronograma de Estudos (com alternância Semana e Mês) e Estudo Inteligente (matérias, caderno em blocos, flashcards SM-2, provas, leituras, foco e IA).
+5. OUTROS RECURSOS:
+   - Revisão Semanal (com Energia & Encerramentos e Semáforo de Confiança), Tutorial Mobile (vídeos narrados para iPhone iOS e Android) e Sistema de Ajuda Contextual (ícones "?" em todas as telas).
 
 REGRAS IMPORTANTES DE EXECUÇÃO:
 - Quando o usuário mencionar um mês por nome (ex: "dezembro", "janeiro"), converta para YYYY-MM usando o ano correto (ex: dezembro deste ano = "${ano}-12", janeiro próximo = "${ano + 1}-01").
 - Quando o usuário disser "coloque meu salário de X para Y" ou "mude meu salário para Y", use registrar_ou_atualizar_entrada com substituir_existente=true.
-- Sempre EXECUTE as ferramentas necessárias em vez de apenas explicar como fazer.
-- Após executar, confirme de forma clara, curta e objetiva em português do Brasil o que foi feito.`;
+- Sempre EXECUTE as ferramentas necessárias quando o usuário pedir uma ação em vez de apenas explicar como fazer.
+- Quando o usuário perguntar como funciona alguma funcionalidade nova (Modo Play, Força do Hábito, Ritmo/Pace, WOOP, Cronograma Mensal, Estudo Inteligente, etc.), explique de forma clara, prática e em português do Brasil.`;
 
   const messages = [
     { role: 'system', content: systemPrompt },

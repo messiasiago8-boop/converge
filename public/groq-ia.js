@@ -41,9 +41,9 @@
             <p>Posso criar, editar, consultar e apagar itens em <strong>Finanças, Rotina, Agenda, Metas e Educação</strong>.</p>
             <div class="mt-3 flex flex-wrap gap-1.5">
               <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Resumo do meu dia</button>
-              <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Coloque meu salário de dezembro para R$ 1500</button>
-              <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Adicione estudar hoje às 19:00</button>
-              <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Crie uma meta de juntar R$ 5000</button>
+              <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Reagende minhas tarefas atrasadas</button>
+              <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Crie uma meta numérica de 500 questões</button>
+              <button type="button" class="groq-sugestao text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer">Como funciona o Modo Play e o Ritmo das Metas?</button>
             </div>
           </div>
         </div>
