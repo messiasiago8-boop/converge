@@ -1,7 +1,7 @@
 /**
  * loading.js — Sistema Global Inteligente de Carregamento (3 níveis)
- *  1. Barra de Progresso no Topo (Top Loading Bar)
- *  2. Overlay Global com vidro/blur (apenas se a requisição passar de 180ms)
+ *  1. Barra de Progresso no Topo (Top Loading Bar) contínua (sem reiniciar em chamadas sequenciais)
+ *  2. Overlay Global com vidro/blur (apenas se o ciclo passar de 200ms)
  *  3. Loading automático em botões de ação/formulário (try/finally fail-safe)
  */
 (function () {
@@ -10,14 +10,22 @@
   if (window.__nxLoadingInitialized) return;
   window.__nxLoadingInitialized = true;
 
-  const DELAY_OVERLAY_MS = 180;
+  const DELAY_OVERLAY_MS = 200;
+  const FINISH_DEBOUNCE_MS = 280;
   const FAILSAFE_TIMEOUT_MS = 25000;
   const SILENT_URL_RE = /(\/progresso\b|\/api\/push|manifest\.json|sw\.js|favicon)/i;
+  const IS_EMBEDDED = (() => {
+    try { return window.self !== window.top; } catch (e) { return true; }
+  })();
 
   let activeCount = 0;
+  let sessionActive = false;
   let overlayTimer = null;
+  let finishTimer = null;
   let failsafeTimer = null;
-  let barTimer = null;
+  let barHideTimer = null;
+  let currentBarPct = 0;
+
   let lastTriggerBtn = null;
   let lastTriggerAt = 0;
   let lastUserActionAt = 0;
@@ -26,7 +34,7 @@
   let overlayEl = null;
 
   function ensureUI() {
-    if (!document.body) return;
+    if (!document.body || IS_EMBEDDED) return;
     if (!topBarEl) {
       topBarEl = document.getElementById('nx-top-loader');
       if (!topBarEl) {
@@ -55,40 +63,58 @@
   }
 
   function startTopBar() {
+    if (IS_EMBEDDED) return;
     ensureUI();
     if (!topBarEl) return;
-    clearTimeout(barTimer);
+    clearTimeout(barHideTimer);
     topBarEl.classList.add('is-active');
-    topBarEl.style.width = '28%';
-    requestAnimationFrame(() => {
-      if (topBarEl && topBarEl.classList.contains('is-active')) {
-        topBarEl.style.width = '74%';
-      }
-    });
+    if (currentBarPct < 25) {
+      currentBarPct = 28;
+      topBarEl.style.width = '28%';
+      requestAnimationFrame(() => {
+        if (sessionActive && topBarEl) {
+          currentBarPct = 76;
+          topBarEl.style.width = '76%';
+        }
+      });
+    } else if (currentBarPct < 90) {
+      currentBarPct = Math.min(90, currentBarPct + 8);
+      topBarEl.style.width = `${currentBarPct}%`;
+    }
   }
 
   function finishTopBar() {
-    if (!topBarEl) return;
+    if (IS_EMBEDDED || !topBarEl) return;
+    currentBarPct = 100;
     topBarEl.style.width = '100%';
-    clearTimeout(barTimer);
-    barTimer = setTimeout(() => {
-      if (activeCount === 0 && topBarEl) {
+    clearTimeout(barHideTimer);
+    barHideTimer = setTimeout(() => {
+      if (!sessionActive && topBarEl) {
         topBarEl.classList.remove('is-active');
         setTimeout(() => {
-          if (activeCount === 0 && topBarEl) topBarEl.style.width = '0%';
+          if (!sessionActive && topBarEl) {
+            currentBarPct = 0;
+            topBarEl.style.width = '0%';
+          }
         }, 220);
       }
     }, 180);
   }
 
   function pulseTabBar() {
+    if (IS_EMBEDDED || sessionActive) return;
+    clearTimeout(finishTimer);
     startTopBar();
-    setTimeout(() => {
-      if (activeCount === 0) finishTopBar();
-    }, 240);
+    finishTimer = setTimeout(() => {
+      if (activeCount === 0) {
+        sessionActive = false;
+        finishTopBar();
+      }
+    }, 260);
   }
 
   function showOverlay(texto) {
+    if (IS_EMBEDDED) return;
     ensureUI();
     if (!overlayEl) return;
     const lbl = document.getElementById('nx-global-loader-text');
@@ -117,7 +143,6 @@
     if (loading) {
       if (btn.dataset.nxLoading === '1') return;
       const textoLimpo = (btn.textContent || '').trim();
-      // Evita alterar botões puramente icônicos curtos (ex: ✕, ↑, ↓, ✓)
       if (!btn.hasAttribute('data-loading') && textoLimpo.length <= 2) return;
       btn.dataset.nxLoading = '1';
       btn.dataset.nxOrigHtml = btn.innerHTML;
@@ -137,19 +162,23 @@
   }
 
   function beginRequest(usarOverlay, btnRef) {
+    clearTimeout(finishTimer);
+    finishTimer = null;
     activeCount += 1;
+    sessionActive = true;
     startTopBar();
     if (btnRef) setButtonLoading(btnRef, true);
 
-    if (usarOverlay && !overlayTimer && (!overlayEl || !overlayEl.classList.contains('is-visible'))) {
+    if (usarOverlay && !IS_EMBEDDED && !overlayTimer && (!overlayEl || !overlayEl.classList.contains('is-visible'))) {
       overlayTimer = setTimeout(() => {
-        if (activeCount > 0) showOverlay('Carregando...');
+        if (sessionActive && activeCount > 0) showOverlay('Carregando...');
       }, DELAY_OVERLAY_MS);
     }
 
     clearTimeout(failsafeTimer);
     failsafeTimer = setTimeout(() => {
       activeCount = 0;
+      sessionActive = false;
       hideOverlay();
       finishTopBar();
       document.querySelectorAll('[data-nx-loading="1"]').forEach(b => setButtonLoading(b, false));
@@ -160,13 +189,19 @@
     if (btnRef) setButtonLoading(btnRef, false);
     activeCount = Math.max(0, activeCount - 1);
     if (activeCount === 0) {
-      clearTimeout(failsafeTimer);
-      hideOverlay();
-      finishTopBar();
+      clearTimeout(finishTimer);
+      // Aguarda 280ms antes de encerrar: evita que chamadas sequenciais reiniciem o loading 3x
+      finishTimer = setTimeout(() => {
+        if (activeCount === 0) {
+          sessionActive = false;
+          clearTimeout(failsafeTimer);
+          hideOverlay();
+          finishTopBar();
+        }
+      }, FINISH_DEBOUNCE_MS);
     }
   }
 
-  // Captura botão/formulário recentemente acionado pelo usuário
   document.addEventListener('click', (e) => {
     lastUserActionAt = Date.now();
     const btn = e.target.closest && e.target.closest('button, [type="submit"]');
@@ -186,7 +221,6 @@
     }
   }, true);
 
-  // Interceptador global de window.fetch com proteção try/finally
   if (typeof window.fetch === 'function') {
     const originalFetch = window.fetch.bind(window);
     window.fetch = async function (input, init) {
@@ -195,7 +229,6 @@
       const isSilent = Boolean(
         (init && init.silent) ||
         SILENT_URL_RE.test(urlStr) ||
-        // Evita overlay em polling automático em segundo plano sem interação recente
         (method === 'GET' && urlStr.includes('/api/videos') && (Date.now() - lastUserActionAt > 2000))
       );
 
@@ -206,7 +239,6 @@
       const btnRef = (lastTriggerBtn && (Date.now() - lastTriggerAt <= 250)) ? lastTriggerBtn : null;
       if (btnRef) lastTriggerBtn = null;
 
-      // Overlay aparece em carregamentos principais (GET ou mutações sem botão específico) quando >180ms
       const usarOverlay = !btnRef;
       beginRequest(usarOverlay, btnRef);
       try {
@@ -217,9 +249,9 @@
     };
   }
 
-  // Observa trocas de abas/visões para animar a barra superior
   const TAB_RE = /^(aba[A-Z]\w*|view-(dashboard-geral|grid|schedule|lesson|estudos-os|financas|rotina|perfil|configuracoes|revisao|metas|tutorial-ios)|subview-rotina-(hoje|checklist|agenda))$/;
   function observarAbas() {
+    if (IS_EMBEDDED) return;
     const stateMap = new WeakMap();
     document.querySelectorAll('[id]').forEach((el) => {
       if (!TAB_RE.test(el.id)) return;
