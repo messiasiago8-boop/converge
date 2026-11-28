@@ -9,7 +9,8 @@
   const ebState = {
     paginaAtivaId: null,
     dragIndex: null,
-    saveTimer: null,
+    pendentes: new Map(),
+    fila: Promise.resolve(),
     syncedTimers: {}
   };
 
@@ -49,30 +50,49 @@
     el.className = `text-[11px] font-semibold ${ok ? 'text-emerald-700' : 'text-amber-700'}`;
   }
 
-  function agendarSalvamento() {
-    setStatus('Salvando...', false);
-    clearTimeout(ebState.saveTimer);
-    ebState.saveTimer = setTimeout(() => salvarPaginaAtiva(), 650);
-  }
-
-  async function salvarPaginaAtiva() {
+  function agendarSalvamento(campo = 'blocos') {
     const pag = getPaginaAtiva();
     if (!pag) return;
-    try {
-      await apiReq(`/api/estudos-os/paginas/${pag.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          titulo: pag.titulo,
-          materia_id: pag.materia_id,
-          status: pag.status,
-          blocos: pag.blocos
-        })
-      });
-      setStatus('Salvo ✓', true);
-    } catch (e) {
-      setStatus('Erro ao salvar', false);
-      console.warn('[EstudosBlocos]', e.message);
+    const anterior = ebState.pendentes.get(pag.id);
+    clearTimeout(anterior?.timer);
+    const pendente = {
+      campos: { ...anterior?.campos, [campo]: pag[campo] }
+    };
+    ebState.pendentes.set(pag.id, pendente);
+    setStatus('Salvando...', false);
+    pendente.timer = setTimeout(() => salvarPagina(pag.id), 650);
+  }
+
+  function salvarPagina(id = ebState.paginaAtivaId) {
+    const pendente = ebState.pendentes.get(id);
+    if (!pendente || pendente.enviado) return;
+    clearTimeout(pendente.timer);
+    const body = JSON.stringify(pendente.campos);
+    pendente.enviado = true;
+    ebState.fila = ebState.fila.then(async () => {
+      try {
+        await apiReq(`/api/estudos-os/paginas/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body
+        });
+        if (ebState.pendentes.get(id) !== pendente) return;
+        ebState.pendentes.delete(id);
+        if (id === ebState.paginaAtivaId) setStatus('Salvo ✓');
+      } catch (e) {
+        pendente.enviado = false;
+        if (id === ebState.paginaAtivaId && ebState.pendentes.get(id) === pendente) {
+          setStatus('Erro ao salvar. Clique em Salvar para tentar novamente.', false);
+        }
+        console.warn('[EstudosBlocos]', e.message);
+      }
+    });
+  }
+
+  function preservarEdicoes(dados) {
+    for (const pag of dados.paginas) {
+      const pendente = ebState.pendentes.get(pag.id);
+      if (pendente) Object.assign(pag, pendente.campos);
     }
   }
 
@@ -533,7 +553,9 @@
   }
 
   function abrirPagina(paginaId) {
+    if (ebState.paginaAtivaId !== paginaId) salvarPagina();
     ebState.paginaAtivaId = paginaId;
+    setStatus(ebState.pendentes.has(paginaId) ? 'Alterações pendentes' : 'Salvo ✓', !ebState.pendentes.has(paginaId));
     const pag = getPaginaAtiva();
     const { materias } = getDados();
 
@@ -575,36 +597,40 @@
 
   function atualizarPainelCaderno() {
     const { paginas } = getDados();
-    if (!ebState.paginaAtivaId && paginas.length > 0) {
-      ebState.paginaAtivaId = paginas[0].id;
-    }
-    abrirPagina(ebState.paginaAtivaId);
+    const ativa = paginas.find(p => p.id === ebState.paginaAtivaId);
+    abrirPagina(ativa?.id ?? paginas[0]?.id ?? null);
   }
 
   function inicializarEditor() {
     document.getElementById('btn-eos-nova-pagina-arvore')?.addEventListener('click', () => abrirModalNovaPagina(''));
     document.getElementById('btn-eos-criar-subpagina')?.addEventListener('click', () => abrirModalNovaPagina(ebState.paginaAtivaId || ''));
-    document.getElementById('btn-eos-salvar-blocos')?.addEventListener('click', () => salvarPaginaAtiva());
+    document.getElementById('btn-eos-salvar-blocos')?.addEventListener('click', () => salvarPagina());
 
     document.getElementById('eos-editor-titulo')?.addEventListener('input', (e) => {
       const pag = getPaginaAtiva();
       if (!pag) return;
-      pag.titulo = e.target.value;
+      const titulo = e.target.value.trim().slice(0, 160);
+      if (!titulo) return;
+      pag.titulo = titulo;
       renderizarArvore();
-      agendarSalvamento();
+      agendarSalvamento('titulo');
+    });
+    document.getElementById('eos-editor-titulo')?.addEventListener('blur', (e) => {
+      const pagina = getPaginaAtiva();
+      if (pagina) e.target.value = pagina.titulo;
     });
     document.getElementById('eos-editor-materia')?.addEventListener('change', (e) => {
       const pag = getPaginaAtiva();
       if (!pag) return;
       pag.materia_id = e.target.value ? parseInt(e.target.value, 10) : null;
       renderizarArvore();
-      agendarSalvamento();
+      agendarSalvamento('materia_id');
     });
     document.getElementById('eos-editor-status')?.addEventListener('change', (e) => {
       const pag = getPaginaAtiva();
       if (!pag) return;
       pag.status = e.target.value;
-      agendarSalvamento();
+      agendarSalvamento('status');
       if (pag.status === 'dominado' && typeof window.nxCelebrate === 'function') {
         window.nxCelebrate(document.getElementById('eos-editor-ativo'));
       }
@@ -634,6 +660,8 @@
   }
 
   window.EstudosBlocos = {
+    gravacoesEmCurso: () => ebState.fila,
+    preservarEdicoes,
     atualizarPainelCaderno,
     abrirPagina,
     abrirModalNovaPagina

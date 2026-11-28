@@ -13,6 +13,10 @@
     pomoModo: 'foco',
     pomoRodando: false,
     pomoTimer: null,
+    pomoFim: null,
+    pomoMateria: null,
+    sessaoPendente: null,
+    gravandoSessao: false,
     iaModo: 'perguntar'
   };
 
@@ -268,46 +272,87 @@
     const s = String(edState.pomoSegundos % 60).padStart(2, '0');
     if (disp) disp.textContent = `${m}:${s}`;
     if (modo) modo.textContent = edState.pomoModo === 'foco' ? 'Foco · 25 min' : 'Pausa · 5 min';
-    if (btn) btn.textContent = edState.pomoRodando ? '⏸ Pausar' : '▶ Iniciar';
+    if (btn) {
+      btn.disabled = edState.gravandoSessao;
+      btn.textContent = edState.gravandoSessao ? 'Registrando sessão…'
+        : edState.sessaoPendente ? 'Tentar registrar sessão'
+        : edState.pomoRodando ? '⏸ Pausar' : '▶ Iniciar';
+    }
+    const reset = document.getElementById('btn-eos-pomo-reset');
+    if (reset) reset.disabled = Boolean(edState.sessaoPendente);
+    if (modo && edState.sessaoPendente && !edState.gravandoSessao) {
+      modo.textContent = 'Sessão concluída. Falha ao registrar.';
+    }
 
     const { sessoes_foco } = getDados();
     const badge = document.getElementById('eos-foco-sessoes-badge');
     if (badge) badge.textContent = `${(sessoes_foco || []).length} ${(sessoes_foco || []).length === 1 ? 'sessão' : 'sessões'}`;
   }
 
+  async function registrarSessaoFoco() {
+    if (!edState.sessaoPendente || edState.gravandoSessao) return;
+    edState.gravandoSessao = true;
+    atualizarDisplayPomodoro();
+    try {
+      await apiReq('/api/estudos-os/sessoes-foco', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(edState.sessaoPendente)
+      });
+      edState.sessaoPendente = null;
+      edState.pomoModo = 'pausa';
+      edState.pomoSegundos = 5 * 60;
+      await recarregar();
+    } catch (erro) {
+      console.warn('[EstudosOS] Falha ao registrar foco:', erro.message);
+    } finally {
+      edState.gravandoSessao = false;
+      atualizarDisplayPomodoro();
+    }
+  }
+
+  function atualizarPomodoro() {
+    edState.pomoSegundos = Math.max(0, Math.ceil((edState.pomoFim - Date.now()) / 1000));
+    if (edState.pomoSegundos > 0) {
+      atualizarDisplayPomodoro();
+      return;
+    }
+
+    clearInterval(edState.pomoTimer);
+    edState.pomoRodando = false;
+    if (edState.pomoModo === 'foco') {
+      edState.sessaoPendente = {
+        materia_id: edState.pomoMateria,
+        duracao_min: 25,
+        chave: crypto.randomUUID()
+      };
+      registrarSessaoFoco();
+    } else {
+      edState.pomoModo = 'foco';
+      edState.pomoSegundos = 25 * 60;
+      atualizarDisplayPomodoro();
+    }
+  }
+
   function alternarPomodoro() {
+    if (edState.sessaoPendente) {
+      registrarSessaoFoco();
+      return;
+    }
     if (edState.pomoRodando) {
+      atualizarPomodoro();
       clearInterval(edState.pomoTimer);
       edState.pomoRodando = false;
       atualizarDisplayPomodoro();
       return;
     }
+    if (edState.pomoModo === 'foco' && edState.pomoSegundos === 25 * 60) {
+      edState.pomoMateria = document.getElementById('select-eos-pomo-materia')?.value || null;
+    }
+    edState.pomoFim = Date.now() + edState.pomoSegundos * 1000;
     edState.pomoRodando = true;
+    edState.pomoTimer = setInterval(atualizarPomodoro, 250);
     atualizarDisplayPomodoro();
-    edState.pomoTimer = setInterval(async () => {
-      if (edState.pomoSegundos > 0) {
-        edState.pomoSegundos -= 1;
-        atualizarDisplayPomodoro();
-        return;
-      }
-      clearInterval(edState.pomoTimer);
-      edState.pomoRodando = false;
-      if (edState.pomoModo === 'foco') {
-        const matId = document.getElementById('select-eos-pomo-materia')?.value || null;
-        await apiReq('/api/estudos-os/sessoes-foco', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ materia_id: matId, duracao_min: 25 })
-        }).catch(() => {});
-        edState.pomoModo = 'pausa';
-        edState.pomoSegundos = 5 * 60;
-        await recarregar();
-      } else {
-        edState.pomoModo = 'foco';
-        edState.pomoSegundos = 25 * 60;
-      }
-      atualizarDisplayPomodoro();
-    }, 1000);
   }
 
   function carregarPlaylist() {

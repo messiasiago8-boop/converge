@@ -270,6 +270,7 @@ app.get('/api/meus-dados', rotaPortal(async (req, res) => {
     const estudosRotina = Object.fromEntries(campos.map(campo => [campo, portal[campo] || []]));
     estudosRotina.planos_semanais = Object.values(portal.planos_semanais || {});
     estudosRotina.perfil = portal.perfil || {};
+    estudosRotina.estudos_os = garantirEstruturaEstudosOS(portal);
     res.attachment('converge-meus-dados.json');
     res.json({ versao: 1, exportado_em: new Date().toISOString(), portal: estudosRotina, financas });
   } catch (erro) {
@@ -892,8 +893,11 @@ app.delete('/api/estudos-os/materias/:id', rotaPortal(async (req, res) => {
   if (idx === -1) return res.status(404).json({ success: false, message: 'Matéria não encontrada.' });
 
   os.materias.splice(idx, 1);
-  // Desvincula páginas órfãs sem apagar o conteúdo do usuário
-  os.paginas.forEach(p => { if (p.materia_id === idNum) p.materia_id = null; });
+  for (const lista of [os.paginas, os.flashcards, os.erros, os.provas, os.leituras, os.sessoes_foco]) {
+    for (const item of lista) {
+      if (item.materia_id === idNum) item.materia_id = null;
+    }
+  }
   await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Matéria removida com sucesso.' });
 }));
@@ -977,6 +981,11 @@ app.delete('/api/estudos-os/paginas/:id', rotaPortal(async (req, res) => {
   os.paginas.splice(idx, 1);
   // Promove subpáginas para raiz em vez de perdê-las
   os.paginas.forEach(p => { if (p.parent_id === idNum) p.parent_id = null; });
+  for (const lista of [os.flashcards, os.erros]) {
+    for (const item of lista) {
+      if (item.pagina_id === idNum) item.pagina_id = null;
+    }
+  }
   await salvarBancoUsuario(dbUser, req.usuarioId);
   res.json({ success: true, message: 'Página removida com sucesso.' });
 }));
@@ -1252,12 +1261,18 @@ app.delete('/api/estudos-os/leituras/:id', rotaPortal(async (req, res) => {
 }));
 
 app.post('/api/estudos-os/sessoes-foco', rotaPortal(async (req, res) => {
-  const { materia_id, duracao_min } = req.body || {};
+  const { materia_id, duracao_min, chave } = req.body || {};
   const dbUser = await obterBancoUsuario(req.usuarioId);
   const os = garantirEstruturaEstudosOS(dbUser);
+  const chaveValida = typeof chave === 'string' && /^[a-f0-9-]{36}$/i.test(chave) ? chave : null;
+  if (chaveValida) {
+    const anterior = os.sessoes_foco.find(item => item.chave === chaveValida);
+    if (anterior) return res.json({ success: true, data: anterior });
+  }
   const sessao = {
+    ...(chaveValida ? { chave: chaveValida } : {}),
     id: proximoIdLista(os.sessoes_foco),
-    materia_id: materia_id ? parseInt(materia_id, 10) : null,
+    materia_id: os.materias.find(materia => materia.id === Number(materia_id))?.id ?? null,
     duracao_min: Math.max(1, Math.min(240, parseInt(duracao_min, 10) || 25)),
     data: new Date().toISOString().slice(0, 10)
   };

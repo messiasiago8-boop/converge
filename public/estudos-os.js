@@ -18,7 +18,7 @@
       sessoes_foco: []
     },
     subabaAtual: 'overview',
-    carregando: false
+    carregando: null
   };
 
   const CORES_MATERIA = {
@@ -53,11 +53,20 @@
     return json;
   }
 
-  function atualizarKPIs() {
-    const { materias, paginas, flashcards, provas, leituras } = eosState.dados;
+  function obterRevisoesPendentes() {
+    const { paginas, flashcards } = eosState.dados;
     const hoje = new Date().toISOString().slice(0, 10);
-    const revPendentes = paginas.filter(p => p.proxima_revisao && p.proxima_revisao.slice(0, 10) <= hoje).length
-      + flashcards.filter(f => f.proxima_revisao && f.proxima_revisao.slice(0, 10) <= hoje).length;
+    const venceu = item => item.proxima_revisao.slice(0, 10) <= hoje;
+    return {
+      paginas: paginas.filter(p => p.proxima_revisao ? venceu(p) : p.status === 'revisar'),
+      flashcards: flashcards.filter(f => !f.proxima_revisao || venceu(f))
+    };
+  }
+
+  function atualizarKPIs() {
+    const { materias, paginas, provas, leituras } = eosState.dados;
+    const revisoes = obterRevisoesPendentes();
+    const revPendentes = revisoes.paginas.length + revisoes.flashcards.length;
 
     const animar = (id, val) => {
       const el = document.getElementById(id);
@@ -216,18 +225,35 @@
   }
 
   async function carregar() {
-    if (eosState.carregando) return eosState.dados;
-    eosState.carregando = true;
+    // Uma atualização solicitada após gravar precisa consultar o servidor novamente.
+    const anterior = eosState.carregando;
+    const consulta = (async () => {
+      await anterior;
+      try {
+        const editor = window.EstudosBlocos;
+        let gravacoes;
+        let data;
+        do {
+          gravacoes = editor?.gravacoesEmCurso();
+          await gravacoes;
+          ({ data } = await apiEstudos('/api/estudos-os', { cache: 'no-store' }));
+        } while (gravacoes !== editor?.gravacoesEmCurso());
+        if (data) {
+          window.EstudosBlocos?.preservarEdicoes(data);
+          eosState.dados = data;
+          renderizarTudo();
+        }
+      } catch (e) {
+        console.warn('[EstudosOS] Falha ao carregar dados:', e.message);
+      }
+      return eosState.dados;
+    })();
+    eosState.carregando = consulta;
     try {
-      const json = await apiEstudos('/api/estudos-os');
-      if (json && json.data) eosState.dados = json.data;
-      renderizarTudo();
-    } catch (e) {
-      console.warn('[EstudosOS] Falha ao carregar dados:', e.message);
+      return await consulta;
     } finally {
-      eosState.carregando = false;
+      if (eosState.carregando === consulta) eosState.carregando = null;
     }
-    return eosState.dados;
   }
 
   function irParaSubaba(subaba = 'overview') {
@@ -329,6 +355,7 @@
   window.EstudosOS = {
     carregar,
     irParaSubaba,
+    obterRevisoesPendentes,
     getDados: () => eosState.dados
   };
 })();

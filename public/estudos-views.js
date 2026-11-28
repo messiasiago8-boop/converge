@@ -320,11 +320,7 @@
   function renderizarSRS() {
     preencherFiltros();
     const { materias, paginas, flashcards, erros } = getDados();
-    const hoje = new Date().toISOString().slice(0, 10);
-
-    // 1. Revisões de Hoje (páginas vencidas/hoje ou em status 'revisar' + flashcards vencidos/hoje)
-    const revPaginas = paginas.filter(p => (p.proxima_revisao && p.proxima_revisao.slice(0, 10) <= hoje) || p.status === 'revisar');
-    const revFlash = flashcards.filter(f => !f.proxima_revisao || f.proxima_revisao.slice(0, 10) <= hoje);
+    const { paginas: revPaginas, flashcards: revFlash } = window.EstudosOS.obterRevisoesPendentes();
     const totalHoje = revPaginas.length + revFlash.length;
 
     const badge = document.getElementById('eos-srs-hoje-badge');
@@ -379,13 +375,28 @@
             const kind = btn.getAttribute('data-kind');
             const id = btn.getAttribute('data-id');
             const nivel = btn.getAttribute('data-nivel');
-            await apiReq(`/api/estudos-os/${kind}/${id}/revisar`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ nivel })
-            });
-            if (typeof window.nxCelebrate === 'function') window.nxCelebrate(btn.closest('.p-3\\.5'));
-            await recarregar();
+            const grupo = btn.parentElement;
+            const botoes = grupo.querySelectorAll('button');
+            botoes.forEach(botao => { botao.disabled = true; });
+            try {
+              await apiReq(`/api/estudos-os/${kind}/${id}/revisar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nivel })
+              });
+              await recarregar();
+            } catch (erro) {
+              let aviso = grupo.querySelector('[role="alert"]');
+              if (!aviso) {
+                aviso = document.createElement('span');
+                aviso.setAttribute('role', 'alert');
+                aviso.className = 'text-xs text-rose-700';
+                grupo.append(aviso);
+              }
+              aviso.textContent = erro.message;
+            } finally {
+              botoes.forEach(botao => { botao.disabled = false; });
+            }
           });
         });
       }
